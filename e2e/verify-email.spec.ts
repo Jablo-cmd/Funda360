@@ -26,6 +26,6 @@ test('sends a verified signed-in user straight to the protected home', async ({ 
   });
 
   await page.goto('/verify-email');
-  await expect(page).toHaveURL('http://localhost:5173/');
-  await expect(page.getByRole('heading', { name: "You're signed in" })).toBeVisible();
+  await expect(page).toHaveURL('http://localhost:5173/dashboard');
+  await expect(page.getByRole('heading', { name: 'Welcome back, Ada' })).toBeVisible();
 });

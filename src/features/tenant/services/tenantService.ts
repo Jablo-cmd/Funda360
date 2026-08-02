@@ -2,7 +2,8 @@ import { supabase } from '@/lib/supabase';
 import type { SchoolRow } from '@/lib/database.types';
 import type { School } from '@/types/school.types';
 
-function toSchool(row: SchoolRow): School {
+/** Exported so schoolService (features/school) can reuse it instead of re-declaring its own mapper. */
+export function toSchool(row: SchoolRow): School {
   return {
     id: row.id,
     name: row.name,
@@ -16,7 +17,9 @@ function toSchool(row: SchoolRow): School {
     phone: row.phone,
     website: row.website,
     logoUrl: row.logo_url,
-    address: row.address,
+    physicalAddress: row.physical_address,
+    postalAddress: row.postal_address,
+    principalName: row.principal_name,
     timezone: row.timezone,
     currency: row.currency,
     language: row.language,

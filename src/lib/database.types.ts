@@ -28,7 +28,9 @@ export type SchoolRow = {
   phone: string | null;
   website: string | null;
   logo_url: string | null;
-  address: string | null;
+  physical_address: string | null;
+  postal_address: string | null;
+  principal_name: string | null;
   timezone: string;
   currency: string;
   language: string;
@@ -50,7 +52,9 @@ export type SchoolInsert = {
   phone?: string | null;
   website?: string | null;
   logo_url?: string | null;
-  address?: string | null;
+  physical_address?: string | null;
+  postal_address?: string | null;
+  principal_name?: string | null;
   timezone?: string;
   currency?: string;
   language?: string;
@@ -72,7 +76,9 @@ export type SchoolUpdate = {
   phone?: string | null;
   website?: string | null;
   logo_url?: string | null;
-  address?: string | null;
+  physical_address?: string | null;
+  postal_address?: string | null;
+  principal_name?: string | null;
   timezone?: string;
   currency?: string;
   language?: string;

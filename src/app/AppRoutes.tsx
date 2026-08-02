@@ -6,7 +6,9 @@ import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage';
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage';
-import { HomePlaceholderPage } from '@/pages/HomePlaceholderPage';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { SchoolProfilePage } from '@/features/school/pages/SchoolProfilePage';
 
 export function AppRoutes() {
   return (
@@ -21,11 +23,15 @@ export function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<TenantGate />}>
-          <Route path="/" element={<HomePlaceholderPage />} />
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/school/profile" element={<SchoolProfilePage />} />
+          </Route>
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

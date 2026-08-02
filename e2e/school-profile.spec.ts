@@ -1,0 +1,91 @@
+import { test, expect } from '@playwright/test';
+import { seedAuthenticatedSession } from './utils/mockAuth';
+import { buildMockProfileRow, buildMockSchoolRow, installDataMocks } from './utils/mockData';
+
+test('admin can access the school profile page from the sidebar', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+
+  await page.goto('/dashboard');
+  await page.getByRole('link', { name: 'School Profile', exact: true }).click();
+
+  await expect(page).toHaveURL(/\/school\/profile$/);
+  await expect(page.getByRole('heading', { name: 'School Profile' })).toBeVisible();
+});
+
+test('school details load correctly into the form', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, {
+    profile: buildMockProfileRow(),
+    school: buildMockSchoolRow({ name: 'Riverside Secondary School' }),
+  });
+
+  await page.goto('/school/profile');
+
+  await expect(page.getByLabel('School name')).toHaveValue('Riverside Secondary School');
+  await expect(page.getByLabel('Registration number')).toHaveValue('GDE-2024-00123');
+  await expect(page.getByLabel('Email')).toHaveValue('info@riverside.funda360.dev');
+  await expect(page.getByLabel('Phone')).toHaveValue('+27 11 555 0100');
+  await expect(page.getByLabel('Website')).toHaveValue('https://riverside.funda360.dev');
+  await expect(page.getByLabel('Physical address')).toHaveValue('12 River Road, Johannesburg, 2001');
+  await expect(page.getByLabel('Postal address')).toHaveValue('PO Box 456, Johannesburg, 2000');
+  await expect(page.getByLabel('Principal name')).toHaveValue('Thabo Nkosi');
+  await expect(page.getByText('Active')).toBeVisible();
+});
+
+test('school details update successfully', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+
+  await page.route('**/rest/v1/schools*', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...buildMockSchoolRow(), principal_name: 'Naledi Dlamini' }),
+    });
+  });
+
+  await page.goto('/school/profile');
+  await page.getByLabel('Principal name').fill('Naledi Dlamini');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+
+  await expect(page.getByRole('status')).toHaveText('School profile updated successfully.');
+  await expect(page.getByLabel('Principal name')).toHaveValue('Naledi Dlamini');
+});
+
+test('a role without school.manage permission sees a clear error on save', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'teacher' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow({ firstName: 'Naledi', lastName: 'Dlamini' }),
+    school: buildMockSchoolRow(),
+  });
+
+  // RLS rejects the write for a role without school.manage — PostgREST
+  // returns 403 with no matching row, which supabase-js surfaces as an error.
+  await page.route('**/rest/v1/schools*', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    await route.fulfill({
+      status: 403,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: '42501',
+        message: 'new row violates row-level security policy for table "schools"',
+        details: null,
+        hint: null,
+      }),
+    });
+  });
+
+  await page.goto('/school/profile');
+  await page.getByLabel('Principal name').fill('Should not persist');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+
+  await expect(page.getByRole('alert')).toHaveText('Failed to update school profile.');
+});
+
+test('unauthenticated visitors are redirected away from the school profile page', async ({ page }) => {
+  await page.goto('/school/profile');
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();
+});

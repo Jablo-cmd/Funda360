@@ -25,7 +25,8 @@ create extension if not exists pgcrypto;
 
 insert into public.schools (
   id, name, registration_number, education_department, school_type,
-  province, district, emis_number, email, phone, website, address, status
+  province, district, emis_number, email, phone, website,
+  physical_address, postal_address, principal_name, status
 ) values (
   '10000000-0000-0000-0000-000000000001',
   'Riverside Secondary School',
@@ -39,6 +40,8 @@ insert into public.schools (
   '+27 11 555 0100',
   'https://riverside.funda360.dev',
   '12 River Road, Johannesburg, 2001',
+  'PO Box 456, Johannesburg, 2000',
+  'Thabo Nkosi',
   'active'
 )
 on conflict (id) do nothing;

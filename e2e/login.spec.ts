@@ -45,14 +45,15 @@ test('signs in successfully, reaches the protected home, and signs out', async (
   await page.locator('#password').fill('correct-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
 
-  await expect(page).toHaveURL('http://localhost:5173/');
-  await expect(page.getByRole('heading', { name: "You're signed in" })).toBeVisible();
-  await expect(page.getByText('Ada Principal')).toBeVisible();
+  await expect(page).toHaveURL('http://localhost:5173/dashboard');
+  await expect(page.getByRole('heading', { name: 'Welcome back, Ada' })).toBeVisible();
+  await expect(page.getByText('Ada Principal').first()).toBeVisible();
   await expect(page.getByText('principal', { exact: true })).toBeVisible();
-  await expect(page.getByText('Riverside Secondary School')).toBeVisible();
-  await expect(page.getByText('ready')).toBeVisible();
+  await expect(page.getByText('Riverside Secondary School').first()).toBeVisible();
+  await expect(page.getByText('ready', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: /Ada Principal/ }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 

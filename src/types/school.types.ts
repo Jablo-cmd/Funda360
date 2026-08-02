@@ -17,7 +17,9 @@ export interface School {
   phone: string | null;
   website: string | null;
   logoUrl: string | null;
-  address: string | null;
+  physicalAddress: string | null;
+  postalAddress: string | null;
+  principalName: string | null;
   timezone: string;
   currency: string;
   language: string;
