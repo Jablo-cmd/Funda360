@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# OS
+.DS_Store
+
+# Vite
+*.local
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

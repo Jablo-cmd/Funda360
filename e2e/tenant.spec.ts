@@ -1,0 +1,47 @@
+import { test, expect } from '@playwright/test';
+import { seedAuthenticatedSession } from './utils/mockAuth';
+import { buildMockProfileRow, buildMockSchoolRow, installDataMocks } from './utils/mockData';
+
+test('shows a friendly notice when the signed-in user has no profile row', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, { profile: null });
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Profile not found' })).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText("couldn't find a profile");
+});
+
+test('shows a friendly notice when a non-platform role has no tenant assigned', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'teacher' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow({ tenantId: null, firstName: 'Naledi', lastName: 'Dlamini' }),
+  });
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'No school assigned' })).toBeVisible();
+});
+
+test('shows a friendly notice when the assigned school is inactive', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, {
+    profile: buildMockProfileRow(),
+    school: buildMockSchoolRow({ status: 'inactive' }),
+  });
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'School inactive' })).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('Riverside Secondary School');
+});
+
+test('a platform-level role with no tenant reaches the protected home directly', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'super_administrator' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow({ tenantId: null, firstName: 'Lerato', lastName: 'Molefe' }),
+  });
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: "You're signed in" })).toBeVisible();
+  await expect(page.getByText('Lerato Molefe')).toBeVisible();
+  await expect(page.getByText('super administrator')).toBeVisible();
+  await expect(page.getByText('ready')).toBeVisible();
+});

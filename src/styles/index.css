@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Funda360 Design System — Design Tokens
+ * Values are R G B triplets (no `rgb()` wrapper) so Tailwind can apply
+ * alpha-value opacity modifiers, e.g. bg-brand-600/50.
+ */
+:root {
+  --brand-50: 238 242 255;
+  --brand-100: 224 231 255;
+  --brand-200: 199 210 254;
+  --brand-300: 165 180 252;
+  --brand-400: 129 140 248;
+  --brand-500: 99 102 241;
+  --brand-600: 79 70 229;
+  --brand-700: 67 56 202;
+  --brand-800: 55 48 163;
+  --brand-900: 49 46 129;
+
+  --surface: 255 255 255;
+  --surface-raised: 255 255 255;
+  --surface-sunken: 248 250 252;
+
+  --border: 226 232 240;
+  --border-strong: 203 213 225;
+
+  --content-primary: 15 23 42;
+  --content-secondary: 71 85 105;
+  --content-tertiary: 148 163 184;
+  --content-inverse: 255 255 255;
+
+  --danger-50: 254 242 242;
+  --danger-500: 239 68 68;
+  --danger-600: 220 38 38;
+
+  --success-500: 34 197 94;
+
+  color-scheme: light;
+}
+
+:root.dark {
+  --surface: 15 23 42;
+  --surface-raised: 30 41 59;
+  --surface-sunken: 2 6 23;
+
+  --border: 51 65 85;
+  --border-strong: 71 85 105;
+
+  --content-primary: 241 245 249;
+  --content-secondary: 148 163 184;
+  --content-tertiary: 100 116 139;
+  --content-inverse: 15 23 42;
+
+  --danger-50: 69 10 10;
+  --danger-500: 248 113 113;
+  --danger-600: 239 68 68;
+
+  --success-500: 74 222 128;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-surface-sunken text-content-primary antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface;
+  }
+}
