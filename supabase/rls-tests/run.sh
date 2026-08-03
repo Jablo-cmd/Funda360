@@ -68,6 +68,7 @@ echo "==> loading fixtures"
 psql_exec < "$SCRIPT_DIR/02_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/03_academic_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/04_employee_fixtures.sql"
+psql_exec < "$SCRIPT_DIR/05_learner_fixtures.sql"
 
 echo "==> running regression tests"
 for test_file in "$SCRIPT_DIR"/tests/*.test.sql; do
