@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/lib/cn';
+import { useAuth } from '@/features/auth/context/authContext';
+import { hasPermission } from '@/features/rbac';
 import {
   BuildingIcon,
   ChalkboardIcon,
@@ -17,24 +19,27 @@ interface NavItem {
   icon: ComponentType<SVGProps<SVGSVGElement>>;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: GridIcon },
-  { label: 'School Profile', path: '/school/profile', icon: BuildingIcon },
-  { label: 'Users', icon: UsersIcon },
-  { label: 'Students', icon: GraduationCapIcon },
-  { label: 'Teachers', icon: ChalkboardIcon },
-  { label: 'Reports', icon: ChartIcon },
-  { label: 'Settings', icon: GearIcon },
-];
-
 export interface DashboardSidebarProps {
   onNavigate?: () => void;
 }
 
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
+  const { user } = useAuth();
+  const canViewUsers = hasPermission(user?.role ?? null, 'profile.view_any');
+
+  const navItems: NavItem[] = [
+    { label: 'Dashboard', path: '/dashboard', icon: GridIcon },
+    { label: 'School Profile', path: '/school/profile', icon: BuildingIcon },
+    ...(canViewUsers ? [{ label: 'Users', path: '/users', icon: UsersIcon }] : []),
+    { label: 'Students', icon: GraduationCapIcon },
+    { label: 'Teachers', icon: ChalkboardIcon },
+    { label: 'Reports', icon: ChartIcon },
+    { label: 'Settings', icon: GearIcon },
+  ];
+
   return (
     <nav aria-label="Main" className="flex h-full flex-col gap-1 overflow-y-auto p-3">
-      {NAV_ITEMS.map(({ label, path, icon: Icon }) =>
+      {navItems.map(({ label, path, icon: Icon }) =>
         path ? (
           <NavLink
             key={label}

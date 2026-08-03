@@ -2,7 +2,8 @@ import { supabase } from '@/lib/supabase';
 import type { ProfileRow, ProfileUpdate } from '@/lib/database.types';
 import type { Profile } from '@/types/profile.types';
 
-function toProfile(row: ProfileRow): Profile {
+/** Exported so userService (features/users) can reuse it instead of re-declaring its own mapper. */
+export function toProfile(row: ProfileRow): Profile {
   return {
     id: row.id,
     tenantId: row.tenant_id,
@@ -11,6 +12,7 @@ function toProfile(row: ProfileRow): Profile {
     email: row.email,
     phone: row.phone,
     avatarUrl: row.avatar_url,
+    role: row.role,
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -11,6 +11,8 @@
  * `interface` instead of a plain object `type`.
  */
 
+import type { UserRole } from '@/features/auth/types/auth.types';
+
 export type SchoolType = 'public' | 'private' | 'independent';
 export type SchoolStatus = 'pending' | 'active' | 'inactive' | 'suspended';
 export type ProfileStatus = 'active' | 'inactive' | 'suspended';
@@ -95,6 +97,7 @@ export type ProfileRow = {
   email: string;
   phone: string | null;
   avatar_url: string | null;
+  role: UserRole | null;
   status: ProfileStatus;
   created_at: string;
   updated_at: string;
@@ -108,6 +111,7 @@ export type ProfileInsert = {
   email: string;
   phone?: string | null;
   avatar_url?: string | null;
+  role?: UserRole | null;
   status?: ProfileStatus;
   created_at?: string;
   updated_at?: string;
@@ -121,6 +125,7 @@ export type ProfileUpdate = {
   email?: string;
   phone?: string | null;
   avatar_url?: string | null;
+  role?: UserRole | null;
   status?: ProfileStatus;
   created_at?: string;
   updated_at?: string;
@@ -141,6 +146,22 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      admin_create_user: {
+        Args: {
+          p_email: string;
+          p_first_name: string;
+          p_last_name: string;
+          p_phone: string | null;
+          p_role: UserRole;
+          p_tenant_id?: string | null;
+        };
+        Returns: { user_id: string; temporary_password: string }[];
+      };
+      admin_update_user_role: {
+        Args: { p_user_id: string; p_new_role: UserRole };
+        Returns: undefined;
+      };
+    };
   };
 };

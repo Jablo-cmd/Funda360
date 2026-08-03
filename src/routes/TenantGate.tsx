@@ -11,7 +11,7 @@ import { FullScreenNotice } from '@/components/ui/FullScreenNotice';
  * or broken page.
  */
 export function TenantGate() {
-  const { status: profileStatus, error: profileError } = useProfile();
+  const { status: profileStatus, profile, error: profileError } = useProfile();
   const { status: tenantStatus, tenant, error: tenantError } = useTenant();
 
   if (profileStatus === 'idle' || profileStatus === 'loading') {
@@ -32,6 +32,15 @@ export function TenantGate() {
       <FullScreenNotice
         title="Something went wrong"
         message={profileError ?? 'Failed to load your profile.'}
+      />
+    );
+  }
+
+  if (profile && profile.status !== 'active') {
+    return (
+      <FullScreenNotice
+        title="Account deactivated"
+        message="Your account has been deactivated. Please contact your school administrator."
       />
     );
   }

@@ -42,6 +42,9 @@ interface MockProfileOverrides {
   firstName?: string;
   lastName?: string;
   email?: string;
+  phone?: string | null;
+  role?: string | null;
+  status?: 'active' | 'inactive' | 'suspended';
 }
 
 export function buildMockProfileRow(overrides: MockProfileOverrides = {}) {
@@ -51,6 +54,9 @@ export function buildMockProfileRow(overrides: MockProfileOverrides = {}) {
     firstName = 'Ada',
     lastName = 'Principal',
     email = 'admin@funda360.com',
+    phone = null,
+    role = 'principal',
+    status = 'active',
   } = overrides;
   return {
     id,
@@ -58,9 +64,10 @@ export function buildMockProfileRow(overrides: MockProfileOverrides = {}) {
     first_name: firstName,
     last_name: lastName,
     email,
-    phone: null,
+    phone,
     avatar_url: null,
-    status: 'active',
+    role,
+    status,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
   };
@@ -90,4 +97,39 @@ export async function installDataMocks(
 
     return route.continue();
   });
+}
+
+/**
+ * Mocks the `profiles` LIST query the Users directory issues (identified by
+ * `limit`/`offset` params, since a single-row lookup instead filters by
+ * `id`). Also sets `Access-Control-Expose-Headers` — Content-Range is not a
+ * browser-safelisted response header, so without it supabase-js can't read
+ * the row count back out even though the header is present (verified while
+ * building this: the count silently came back as 0/null without it).
+ */
+export async function installUsersListMock(page: Page, users: ReturnType<typeof buildMockProfileRow>[]) {
+  await page.route('**/rest/v1/profiles*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    const isListQuery = url.searchParams.has('limit') || url.searchParams.has('offset');
+    if (!isListQuery) return route.fallback();
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: {
+        'content-range': `0-${Math.max(users.length - 1, 0)}/${users.length}`,
+        'access-control-expose-headers': 'content-range',
+      },
+      body: JSON.stringify(users),
+    });
+  });
+}
+
+/** Mocks a `.rpc('admin_create_user' | 'admin_update_user_role', ...)` call. */
+export async function installRpcMock(
+  page: Page,
+  fnName: 'admin_create_user' | 'admin_update_user_role',
+  handler: (route: Route) => Promise<void>,
+) {
+  await page.route(`**/rest/v1/rpc/${fnName}`, handler);
 }
