@@ -3,6 +3,7 @@ import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { ProfileProvider } from '@/features/profile/context/ProfileProvider';
 import { TenantProvider } from '@/features/tenant/context/TenantProvider';
 import { SchoolProvider } from '@/features/school/context/SchoolProvider';
+import { AcademicProvider } from '@/features/academic/context/AcademicProvider';
 import { AppRoutes } from '@/app/AppRoutes';
 
 export function App() {
@@ -12,7 +13,9 @@ export function App() {
         <ProfileProvider>
           <TenantProvider>
             <SchoolProvider>
-              <AppRoutes />
+              <AcademicProvider>
+                <AppRoutes />
+              </AcademicProvider>
             </SchoolProvider>
           </TenantProvider>
         </ProfileProvider>

@@ -1,0 +1,491 @@
+# FUNDA360 — PROJECT CONTEXT & ENGINEERING HANDOVER DOCUMENT
+
+**Status:** Living document. Last regenerated after an interim security patch (`20260803140000_prevent_direct_tenant_change.sql`, see §16) applied between the end of Sprint 1 and the start of Sprint 2 — Milestone 1 (Academic Structure).
+**Audience:** Any senior engineer (human or AI) picking up this codebase with zero prior context.
+**Rule:** Everything in this document is derived from reading the actual source in the repository at the time of writing, not from memory or assumption. Where a claim is architecturally load-bearing, the exact file is cited.
+
+---
+
+## 1. Overall Project Vision
+
+Funda360 is an **enterprise, multi-tenant School Management SaaS platform**, initially targeting South African schools (public, private, and independent) under provincial education departments (the seed data and field set — EMIS number, education department, province, district, ZAR currency, `Africa/Johannesburg` default timezone — reflect this), but architected generically enough to generalize.
+
+Core product premise: **one deployment serves many schools ("tenants"), each school's data is fully isolated from every other school's**, while a small set of platform-level operators (Super Administrator, Platform Administrator, Support Engineer) can operate across all tenants for support and administration purposes.
+
+The platform is being built up epic-by-epic, sprint-by-sprint, strictly additive: each sprint milestone is expected to **extend** the existing architecture, never rewrite or replace what's already shipped. This additive discipline is a standing instruction from the project's product owner (given verbatim at the start of every sprint brief) and is the single most important behavioral constraint for anyone continuing this work.
+
+The intended long-term shape (per `docs/FUNDA360 PRODUCT REQUIREMENTS DOCUMENT (PRD)` and related specs, not yet built) includes: academic structure (years/terms/grades/classes/subjects — **starting now**, Sprint 2 M1), student information, enrollment, attendance, timetabling, gradebook/assessment, finance/billing, HR/payroll, communications, transport, library, reporting/analytics — each as its own tenant-scoped, RBAC-gated feature module following the same conventions established in Sprint 1.
+
+## 2. Current Project Status
+
+- **Sprint 1 (Foundation): 100% complete, all 5 milestones committed to `main`.**
+- **Sprint 2, Milestone 1 (Academic Structure): implemented, quality-gated, not yet committed** (awaiting explicit instruction, per standing rule #13). See §14 for what shipped and §25 for the original brief this milestone was built against.
+- The app now has a working academic foundation on top of the multi-tenant shell: a user can log in, land in a dashboard, see/edit their school's profile (if authorized), see/manage the user directory (if authorized), and — new in this milestone — define academic years/terms/grades/classes/subjects for their school (if authorized). Students, attendance, timetabling, gradebook, finance, etc. still don't exist — those remain future epics.
+- The codebase has **zero TODO/FIXME/XXX placeholders**, passing lint/typecheck/unit/e2e suites (including the new `e2e/academic.spec.ts`), and a clean `npm run build` as of this milestone's quality gate.
+- **An interim security patch was applied after Sprint 1 and before Sprint 2 M1** (not itself a milestone): a critical `profiles.tenant_id` self-service tenant-isolation escalation, found during an independent architecture review, was verified, fixed, tested, and documented. See §16 for the full writeup and §15 for the now-committed Docker RLS harness this was verified against. This is exactly the class of gap the harness was designed to catch, and it hadn't — see §16 for the process fix, not just the code fix.
+
+## 3. Completed Sprints and Milestones
+
+### Sprint 1 — Foundation
+
+| # | Milestone | Commit | What shipped |
+|---|---|---|---|
+| 1 | Project Foundation | `edc79af` | Vite+React+TS+Tailwind scaffold; accessible, responsive Login page only — no auth wiring yet. |
+| 2 | Enterprise Authentication | (part of `42d7b20`) | Supabase Auth integration: sign-in/out, session persistence with a "remember me" storage-adapter switch, `AuthContext`/`AuthProvider`, `ProtectedRoute`/`PublicOnlyRoute`, forgot/reset password, email verification gate, auto token refresh, PKCE flow, loading/error states throughout. |
+| 3 | Multi-Tenant Architecture + RBAC Foundation | (part of `42d7b20`) | `schools`/`profiles` tables, Row Level Security, `current_tenant_id()`/`is_platform_admin()` SQL functions, the 24-role catalogue, `Permission` union + `ROLE_PERMISSIONS` matrix + `ROLE_RANK` hierarchy, `TenantProvider`/`ProfileProvider`, `TenantGate`, dev seed data, Docker-based RLS verification harness. |
+| 4 | School Administration Core | `c0c7c85` | `/school/profile` page; `schools` table gained `physical_address`/`postal_address`/`principal_name`; `can_manage_school()` + write RLS policy; `SchoolProvider`/`useSchool`. |
+| 5 | User & Role Management | `59886c3` | `/users` directory + `/users/:id` profile view; `profiles.role` denormalized mirror column; `admin_create_user`/`admin_update_user_role` SECURITY DEFINER RPCs; role-assignment rules (`can_assign_role` in SQL, mirrored by `canAssignRole` in TS); `RequirePermission` route guard; reusable `Modal` primitive; full `e2e/users.spec.ts` coverage. |
+
+Each milestone's brief mandated: implement → verify (lint/typecheck/unit/build/e2e) → fix everything → (from M4 onward) commit with an exact, pre-specified commit message. That discipline is expected to continue.
+
+### Sprint 2 — Academic & Operations (in progress)
+
+| # | Milestone | Commit | What shipped |
+|---|---|---|---|
+| 1 | Academic Structure | *(not yet committed)* | `academic_years`/`terms`/`grades`/`classes`/`subjects` tables; `set_active_academic_year()` SECURITY DEFINER RPC (atomic one-active-year switch); `can_view_academic()`/`can_manage_academic()` + role-gated RLS (narrower than `school.*` — Teacher gets view-only, most other roles get none); `academic.view`/`academic.manage` permissions; `src/features/academic/` module (5 services, 5 schemas, `AcademicProvider`, 4 list hooks, 6 pages); `/academic/*` routes; `e2e/academic.spec.ts`; RLS harness extended with 15 new academic regression tests. |
+
+- Milestones 2+ : not yet briefed.
+
+## 4. Folder Architecture
+
+```
+Funda360/
+├── docs/                          # Permanent specifications (PRD, SDD, DDS, RBAC spec, etc.) — read-only reference, not modified by feature work
+├── e2e/                           # Playwright end-to-end tests, fully network-mocked (no real backend touched)
+│   └── utils/                     # mockAuth.ts, mockData.ts — shared test-mocking helpers
+├── src/
+│   ├── app/
+│   │   └── AppRoutes.tsx          # single source of truth for the route tree
+│   ├── components/
+│   │   ├── layout/                # DashboardLayout, DashboardHeader, DashboardSidebar, UserMenu — app chrome
+│   │   └── ui/                    # Design-system primitives: Button, TextField, PasswordField, Checkbox, Modal, FullScreenSpinner, FullScreenNotice, Logo, ThemeToggle, icons.tsx
+│   ├── features/
+│   │   ├── auth/                  # {components,context,pages,schemas,services,types,utils}
+│   │   ├── profile/                # {context,services} — the signed-in user's own profile
+│   │   ├── tenant/                # {context,hooks,services} — active school resolution, tenant switching
+│   │   ├── rbac/                  # {constants,services,types,utils} — framework-level authorization
+│   │   ├── school/                # {components,context,hooks,pages,schemas,services,types} — School Administration
+│   │   └── users/                 # {components,hooks,pages,schemas,services,types,utils} — User & Role Management
+│   ├── hooks/                     # Cross-feature hooks not owned by one feature: usePermissions, useTheme
+│   ├── lib/                       # supabase.ts (client), database.types.ts (hand-maintained schema mirror), cn.ts
+│   ├── pages/                     # Top-level pages not big enough to be their own feature (DashboardPage)
+│   ├── routes/                    # Route guards: ProtectedRoute, PublicOnlyRoute, TenantGate, RequirePermission
+│   ├── styles/
+│   │   └── index.css              # Tailwind entrypoint + CSS custom-property design tokens
+│   └── types/                     # Cross-feature domain types + `types/index.ts` barrel (see §17)
+├── supabase/
+│   └── migrations/                # Timestamped, additive-only SQL migrations
+├── tailwind.config.ts
+├── eslint.config.js
+├── tsconfig.app.json / tsconfig.node.json / tsconfig.json
+└── package.json
+```
+
+**The `src/features/<name>/{components,context,hooks,pages,schemas,services,types,utils}` shape is mandatory for every new feature module.** Not every feature needs every subfolder (e.g. `tenant` has no `pages`, `rbac` has no `pages`/`context`) — include only the ones a feature actually needs, but never invent a different top-level shape.
+
+## 5. Technology Stack
+
+- **Runtime/build**: Vite 5, React 18.3, TypeScript 5.6 (strict mode, see §6)
+- **Routing**: React Router DOM 6.26 (nested layout routes + guard components, not a route-config object)
+- **Styling**: Tailwind CSS 3.4, CSS custom properties for theming (`darkMode: 'class'`), no CSS-in-JS, no component library (all primitives hand-built in `components/ui/`)
+- **Forms/validation**: React Hook Form 7.53 + Zod 3.23 via `@hookform/resolvers`
+- **Backend**: Supabase (`@supabase/supabase-js` **pinned to exact `2.45.4`** — see §6 for why) — Postgres, Auth (GoTrue), PostgREST, Row Level Security. No custom backend server; all business logic that needs elevated privilege lives in **SECURITY DEFINER Postgres functions** called via `supabase.rpc()`.
+- **Testing**: Vitest 2.1 (unit), Playwright 1.47 (e2e, Chromium, fully mocked network)
+- **Lint/format**: ESLint 9 (flat config) with `@typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-jsx-a11y`, `eslint-plugin-react-refresh`; Prettier 3.3 with `prettier-plugin-tailwindcss` for class sorting
+- **Path alias**: `@/*` → `src/*` (configured in `tsconfig.app.json`, relied on everywhere — never use relative `../../..` imports)
+
+npm scripts (`package.json`): `dev`, `build` (`tsc -b && vite build`), `preview`, `lint`, `format`/`format:check`, `typecheck` (`tsc -b --noEmit`), `test` (vitest run), `test:watch`, `test:e2e` (playwright).
+
+## 6. Coding Standards
+
+- **TypeScript strict mode is maximal**: `strict`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, `noUncheckedIndexedAccess`, `forceConsistentCasingInFileNames` are all on (`tsconfig.app.json`). `noUncheckedIndexedAccess` in particular means any array/index access is `T | undefined` — guard it explicitly (see `Modal.tsx`'s `if (!first || !last) return;`).
+- **`Database` Row/Insert/Update shapes in `src/lib/database.types.ts` MUST be declared as `type`, never `interface`.** This is a hard-won, previously-verified fact: postgrest-js's generic inference for `.update()`/`.insert()`/`.rpc()` silently degrades to `any`/`never` when these are `interface` instead of a plain object `type`. Documented in the file's own header comment. **Do not "clean this up" to interfaces — it will silently break query typing.**
+- **`@supabase/supabase-js` is pinned to the exact version `2.45.4`** in `package.json` (no `^`). A newer auto-resolved version (`^2.111.0`) was found to have incompatible generic-typing behavior during Milestone 3. Do not let this drift via `npm update`/`npm install` without re-verifying generics.
+- **No comments explaining *what* code does** (identifiers should already say that). Comments are reserved for *why* — a non-obvious constraint, a security boundary, a workaround, a cross-reference between the SQL and TS halves of a rule (see `can_assign_role()` ↔ `canAssignRole()` for the pattern to follow). This is the dominant commenting style throughout the existing codebase — preserve it.
+- **Every service module is a plain object of named async functions**, exported as a single `const xService = { fn1, fn2, ... }` (see `authService`, `schoolService`, `tenantService`, `profileService`, `userService`, `rbacService`). Never a class, never default-exported.
+- **Row ↔ domain-object mapping functions (`toProfile`, `toSchool`) are exported from the service that "owns" the table**, so other features' services reuse them instead of re-declaring their own mapper (`userService` imports `toProfile` from `profileService`; `schoolService` imports `toSchool` from `tenantService`). Follow this when Academic services need to map `academic_years`/`terms`/`grades`/`classes`/`subjects` rows.
+- **Context value objects are always memoized** (`useMemo`) and context files always export both the raw `Context` and a `useXxx()` accessor hook that throws if used outside its provider (`"useAuth must be used within an AuthProvider"` pattern) — copy this exactly for `AcademicContext`/`useAcademic`.
+- Prettier + `prettier-plugin-tailwindcss` enforce formatting and class-order; don't hand-fight either.
+
+## 7. UI/UX Principles
+
+- **Design system is entirely token-driven via CSS custom properties**, not hard-coded Tailwind colors — see `src/styles/index.css` for the full token set (`--brand-50..900`, `--surface`/`--surface-raised`/`--surface-sunken`, `--border`/`--border-strong`, `--content-primary/secondary/tertiary/inverse`, `--danger-*`, `--success-500`), mapped into Tailwind's `theme.extend.colors` in `tailwind.config.ts` using the `rgb(var(--x) / <alpha-value>)` pattern (enables `bg-brand-600/50`-style opacity modifiers). **Never introduce a raw hex/rgb color in a component — always go through a token class** (`bg-surface-raised`, `text-content-secondary`, etc.).
+- **Dark mode** is class-based (`darkMode: 'class'`, toggled via `.dark` on `<html>`), driven by `useTheme()` (`src/hooks/useTheme.ts`), persisted to `localStorage` under `funda360-theme`, and synced with a blocking inline script in `index.html` to avoid flash-of-unstyled-content. Every new component must render sensibly in both themes — the token system makes this automatic as long as only token classes are used.
+- **Every interactive element gets `.focus-ring`** (a utility class defined in `index.css`: `outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ...`) — never rely on browser-default focus outlines, never suppress focus outlines without replacing them.
+- **Loading states**: a small spinning ring built from a bordered `div` + `animate-spin-smooth` (a custom Tailwind keyframe), always paired with visually-hidden `sr-only` text for screen readers (see `Button`'s `isLoading`, `UsersPage`'s list-loading spinner).
+- **Error/status banners** are a fixed, repeated pattern: `role="alert"` + `bg-danger-50 border-danger-500/30 text-danger-600` for errors, `bg-success-500/10 border-success-500/30 text-success-500` + `role="status"` for success — copy this exactly, don't invent new banner styling per feature.
+- **Modals** always go through the shared `Modal` primitive (`src/components/ui/Modal.tsx`) — never a bespoke dialog implementation. It handles focus trap, Escape-to-close, backdrop click, `aria-modal`, and portal rendering to `document.body`.
+- **Forms**: React Hook Form + Zod resolver, `noValidate` on the `<form>` (validation is entirely Zod-driven, not native HTML validation), labeled inputs via the shared `TextField`, explicit `required` asterisk styling, field-level errors rendered as `role="alert"` paragraphs directly under the field.
+- **Responsive**: mobile-first Tailwind (`sm:`/`md:` breakpoints), a slide-in mobile nav drawer with backdrop in `DashboardLayout` for viewports below `md`.
+- Page content containers consistently use `mx-auto max-w-5xl px-4 py-8 sm:px-6` (or similar) — match existing page padding/width conventions rather than inventing new ones per page.
+
+## 8. Database Architecture
+
+All schema lives in `supabase/migrations/*.sql`, applied in filename-timestamp order, **strictly additive** (never edit a shipped migration — add a new one). Current migrations:
+
+1. `20260802125401_create_schools.sql` — `schools` table (the tenant root), `school_type`/`school_status` enums, uniqueness on `registration_number`/`emis_number` (partial, NULL-safe), `set_updated_at()` trigger function (shared by every table going forward).
+2. `20260802125402_create_profiles.sql` — `profiles` table (personal/contact info scoped by `tenant_id`), `profile_status` enum, unique lower-cased email index. **Deliberately excludes a `role` column** at this point — role starts life as a JWT-only claim.
+3. `20260802125403_row_level_security.sql` — `current_tenant_id()`, `is_platform_admin()`, enables + **forces** RLS on both tables, base SELECT/UPDATE policies.
+4. `20260802142648_school_admin_core.sql` — renames `address`→`physical_address`, adds `postal_address`/`principal_name`, `can_manage_school()`, write policy for `schools`.
+5. `20260802151501_user_role_management.sql` — adds `profiles.role` (denormalized JWT mirror, see §11), `can_manage_profiles()`, `profiles_update_by_manager` policy, `prevent_direct_role_change()`/`prevent_self_status_change()` triggers, `can_assign_role()`, `admin_create_user()`/`admin_update_user_role()` RPCs.
+6. `20260803140000_prevent_direct_tenant_change.sql` — **security patch**, applied between Sprint 1 and Sprint 2 M1. Adds `prevent_direct_tenant_change()`, a `before update` trigger on `profiles` blocking any change to `tenant_id` unless flagged via the same `app.allow_tenant_change` transaction-local `set_config()` pattern `prevent_direct_role_change()` already established for `role`. No function currently sets that flag, so today this is an unconditional block. See §16 for why this was needed — `tenant_id` had no equivalent protection to `role`'s, and was directly self-writable via `profiles_update_own`.
+7. `20260803150000_academic_structure.sql` — Sprint 2 M1. Adds `academic_years`/`terms`/`grades`/`classes`/`subjects` (all tenant-scoped via `school_id`, per the brief's literal field names — see §19 for why that's `school_id` and not a rename of `tenant_id`), the partial unique index enforcing one active academic year per school, `can_view_academic()`/`can_manage_academic()` (mirroring `academic.view`/`academic.manage`), role-gated SELECT/INSERT/UPDATE policies (no DELETE policy on any of the five — combined with FORCE RLS this makes hard-delete impossible, enforcing the brief's archive-only rule at the database layer), `terms_validate_academic_year_school()`/`classes_validate_grade_school()` (close the "a foreign key doesn't respect RLS" gap — a client could otherwise reference a different tenant's `academic_year_id`/`grade_id` despite never being able to `SELECT` it), `prevent_direct_year_activation()` (same transaction-local-flag pattern as migration 6, gating the `is_active` false→true transition so only the RPC below can activate a year), and `set_active_academic_year()` (SECURITY DEFINER, atomically deactivates the previous active year and activates the requested one in one transaction).
+
+Reusable building blocks any new migration should call, never redefine:
+- `public.set_updated_at()` — generic `updated_at = now()` trigger function.
+- `public.current_tenant_id()` — SECURITY DEFINER, resolves the caller's `tenant_id` from `profiles`. Use this for every new tenant-scoped table's RLS policies.
+- `public.is_platform_admin()` — reads the `role` JWT claim directly (`auth.jwt() -> 'app_metadata' ->> 'role'`), true for `super_administrator`/`platform_administrator`.
+
+Standard pattern for a new tenant-scoped table:
+```sql
+alter table public.<table> enable row level security;
+alter table public.<table> force row level security;
+
+create policy <table>_select_within_tenant_or_platform_admin
+  on public.<table> for select to authenticated
+  using (tenant_id = public.current_tenant_id() or public.is_platform_admin());
+```
+(`force row level security` is easy to forget and defeats the isolation guarantee for the table owner role — always pair it with `enable`.)
+
+`src/lib/database.types.ts` is a **hand-maintained mirror** of what `supabase gen types typescript` would output — kept manually in sync with every migration, one `Row`/`Insert`/`Update` type set per table added to `Database.public.Tables`, one entry per RPC added to `Database.public.Functions` with typed `Args`/`Returns` (needed for `supabase.rpc<FnName, Fn>()` generic resolution — see the two existing RPC entries for the exact shape required).
+
+## 9. Multi-Tenancy Strategy
+
+- **Tenant root** = `schools` table; every tenant-scoped table carries a `tenant_id uuid references public.schools(id)`.
+- **Isolation is enforced in Postgres itself via RLS**, not just filtered in application code — this is the explicit, stated last line of defense (see the comment header in migration 3). Every tenant-scoped table gets both `enable row level security` and `force row level security`.
+- **`profiles.tenant_id` is the source `current_tenant_id()` reads from** — not a JWT claim lookup — specifically so the RLS mechanism works immediately without needing a configured Auth Hook. (A real JWT `tenant_id` claim is also populated and used client-side, per §10, but the SQL-side tenant resolution goes through the `profiles` table to avoid a chicken-and-egg dependency on the hook.)
+- **Platform-level roles bypass tenant scoping entirely** via `is_platform_admin()`, which reads the JWT `role` claim directly and is `or`-ed into every tenant-scoped RLS policy.
+- **Client-side tenant resolution**: `TenantProvider` (`src/features/tenant/context/TenantProvider.tsx`) loads the active school once `ProfileProvider` has resolved a profile, exposes `{status, tenant, error, availableSchools, switchTenant, refetch}` via `useTenant()`. `status` is one of `idle | loading | ready | missing | inactive | error` — `TenantGate` (`src/routes/TenantGate.tsx`) renders a dedicated full-screen message for every non-`ready` state (no profile, no tenant assigned, school inactive/suspended, deactivated account, generic error) rather than a blank/broken page.
+- **Tenant switching** (`switchTenant(schoolId)`) is restricted to platform-level roles (checked via `rbacService.can(role, 'tenant.switch')`); `availableSchools` (every school, via RLS) is only populated for those roles — for a normal tenant-scoped user it's always `[]`.
+- `SchoolProvider` is explicitly a **thin composition over `TenantProvider`**, not an independent fetch — re-fetching the same row twice was identified as wasteful and avoided (see `SchoolProvider.tsx`'s header comment). New feature providers that need "the current school" should default to reading `useTenant().tenant?.school` rather than issuing their own query, unless they specifically need write operations `TenantProvider` intentionally doesn't expose (tenant context is read-only by design).
+
+## 10. Authentication Architecture
+
+- **Supabase Auth (GoTrue)**, `flowType: 'pkce'`, `autoRefreshToken: true`, `detectSessionInUrl: true` (see `src/lib/supabase.ts`).
+- **Session storage is dynamically switchable** between `localStorage` (persists across browser restarts) and `sessionStorage` (cleared on tab close) based on a "remember me" checkbox at login — implemented via a custom `authStorage` adapter in `supabase.ts` whose `getItem`/`setItem` resolve the backing store *per call* (`resolveStorage()` checks a `funda360-auth-persist` flag), rather than fixing the client's storage once at construction. `setAuthPersistence(remember)` must be called **before** `signInWithPassword` so the resulting session lands in the correct store.
+- **`AuthContext`/`AuthProvider`** (`src/features/auth/context/`): owns `status: 'initializing'|'authenticated'|'unauthenticated'`, `user: AuthenticatedUser | null`, and the actions `signIn`, `signOut`, `requestPasswordReset`, `updatePassword`, `resendVerificationEmail`, `hasRole`. Subscribes to `supabase.auth.onAuthStateChange`; on a `PASSWORD_RECOVERY` event, redirects to `/reset-password`.
+- **`AuthenticatedUser`** (`toAuthenticatedUser.ts`) is derived *entirely* from the Supabase `User` object's JWT-backed fields: `id`, `email`, `emailVerified` (from `email_confirmed_at`), **`role` and `tenantId` read from `user.app_metadata`** (not from any table). This is the authorization source of truth — see §11.
+- **Route guards**:
+  - `ProtectedRoute` — requires `status === 'authenticated'` and (if authenticated) `user.emailVerified`; else redirects to `/login` (preserving `state.from`) or `/verify-email`.
+  - `PublicOnlyRoute` — the inverse, for `/login`/`/forgot-password`; redirects already-authenticated users back to where they came from (or `/`).
+  - `TenantGate` — sits inside `ProtectedRoute`, handles the profile/tenant-loaded-but-not-ready cases (see §9).
+  - `RequirePermission` — generic permission-based guard, see §11.
+- **Provider nesting order** (`src/App.tsx`, load-bearing — each layer depends on state from the one above it):
+  ```
+  BrowserRouter
+   └ AuthProvider        (owns: session/user/role)
+      └ ProfileProvider  (needs: auth user id/role)
+         └ TenantProvider (needs: profile.tenantId)
+            └ SchoolProvider (needs: tenant.school)
+               └ AppRoutes
+  ```
+  Any new provider that depends on tenant/school context (e.g. a future `AcademicProvider`) must be nested **inside** `SchoolProvider` (or at minimum inside `TenantProvider`), following this same dependency chain.
+- Auth pages: Login, Forgot Password, Reset Password, Verify Email — all under `src/features/auth/pages/`, each with a matching Zod schema in `src/features/auth/schemas/`.
+
+## 11. RBAC Implementation
+
+This is the framework every future permission-gated feature (including Academic) must plug into — **do not build a parallel authorization mechanism**.
+
+- **Role catalogue**: `USER_ROLES` (24 roles) in `src/features/auth/types/auth.types.ts` — `super_administrator, platform_administrator, support_engineer, school_owner, principal, vice_principal, department_head, teacher, class_teacher, subject_teacher, hr_manager, finance_manager, accountant, receptionist, admissions_officer, librarian, transport_coordinator, sports_coordinator, medical_officer, parent, guardian, learner, guest, auditor`. `UserRole` is the derived literal union. This is mirrored **exactly** by the Postgres enum `public.user_role` (migration 5) — the SQL enum's own comment says "keep both in sync."
+- **Role is a JWT `app_metadata` claim, never a client-writable column** — this is the single most important RBAC invariant in the system. `profiles.role` (added in Milestone 5) is a **read-only mirror** for listing/filtering purposes only; see §13.
+- **Permission model** (`src/features/rbac/`):
+  - `Permission` (`types/permission.types.ts`) — closed string-literal union. Currently: `school.view | school.manage | tenant.switch | profile.view_own | profile.update_own | profile.view_any | profile.manage_any | academic.view | academic.manage`. The last two were added in Sprint 2 M1 — the first business-module permissions in the union (see §14) — and are deliberately narrower than `school.*` (populated for only 7 of the 24 roles, not the broader `school.view` set) per that milestone's explicit "no access unless permitted" brief.
+  - `ROLE_PERMISSIONS` (`constants/rolePermissions.ts`) — `Record<UserRole, readonly Permission[]>`, one entry per role (**all 24 must be present or TS errors**). `profile.view_own`/`profile.update_own` are deliberately omitted from every entry and instead granted to everyone via `BASELINE_PERMISSIONS` in `permissionHelpers.ts`.
+  - `ROLE_RANK` (`constants/roleHierarchy.ts`) — approximate total order for "at least as senior as" checks (not a strict org chart; side-branch roles like HR/finance/coordinators are ranked by trust level). Gaps of 5 between values, to allow inserting new roles later without renumbering.
+  - `hasPermission(role, permission)` / `hasAnyPermission` / `hasAllPermissions` / `can` (`utils/permissionHelpers.ts`) — the actual client-side gate, used everywhere. **This is a UI convenience, never the real security boundary** — RLS/SQL functions are (see §15).
+  - `hasRole(role, ...allowed)` / `isAtLeast(role, threshold)` (`utils/roleHelpers.ts`).
+  - `rbacService` (`services/rbacService.ts`) — a synchronous facade re-exporting the above, kept for architectural consistency with the other `*Service` modules even though it touches no backend.
+  - `usePermissions()` (`src/hooks/usePermissions.ts`) — combines `useAuth()`'s role with `rbacService` into one hook: `{role, can, canAny, canAll, hasRole, isAtLeast}`.
+  - `RequirePermission` (`src/routes/RequirePermission.tsx`) — generic route guard, `<Route element={<RequirePermission permission="x.y" />}>`, redirects to `/dashboard` on failure. **Reuse this directly for any new protected route** — do not write a bespoke guard per feature.
+- **Every SQL enforcement function that mirrors a TS permission check carries an explicit comment cross-referencing the exact TS construct it mirrors**, with a "keep in sync manually" note (e.g. `can_manage_school()` ↔ `school.manage`; `can_assign_role()` ↔ `canAssignRole()` in `userPermissions.ts`). This is a deliberate, load-bearing documentation convention — **follow it for every new SQL/TS authorization pair**, since role/permission data lives in the JWT and SQL can't introspect the TS union at all.
+
+## 12. School Module Architecture
+
+`src/features/school/` — School Administration (the `/school/profile` page).
+
+- **`schoolService`** (`services/schoolService.ts`) deliberately **does not own reads** — `getSchoolById`/`getCurrentSchool` delegate to `tenantService.getSchoolById` (features/tenant) to avoid duplicating the query. It only adds **writes**: `updateSchool` (general profile fields) and `updateSchoolSettings` (timezone/currency/language), both funneled through a shared `applyUpdate` helper, both gated by the `schools_update_by_management_or_platform_admin` RLS policy (`can_manage_school()`).
+- **`SchoolProvider`/`schoolContext`/`useSchool`** — see §9; re-syncs local state whenever `TenantProvider`'s `tenant` changes, applies the server's returned row directly to local state after a save **instead of calling `refetch()`** — calling tenant's `refetch()` was found to flip status to `'loading'`, unmounting the page mid-save via `TenantGate` (documented gotcha in `SchoolProvider.tsx`).
+- Types split into `SchoolProfileUpdateInput` (general info + address + branding + admin name) vs `SchoolSettingsUpdateInput` (timezone/currency/language) — kept distinct because they're rarely edited together and map to two visually separate form sections.
+- `School` domain type itself lives in `src/types/school.types.ts` (cross-feature, since both `tenant` and `school` features need it) — not inside `features/school/types/`.
+
+## 13. User Management Architecture
+
+`src/features/users/` — the `/users` directory and `/users/:id` profile view (Milestone 5).
+
+- **`profiles.role` is a denormalized mirror of the JWT claim**, added specifically because a JWT only carries its *own* owner's claims — there is no way to list/filter *other* users by role without either this column or an admin API call per row. It is written **exclusively** through `admin_update_user_role()`/`admin_create_user()`, enforced at the database layer (not just convention) by the `prevent_direct_role_change()` trigger (see §15).
+- **`userService`** (`services/userService.ts`): `getUsers` (paginated, filterable by search/role/status, `{count:'exact'}`), `getUserById`, `createUser` (→ `admin_create_user` RPC), `updateUser` (**delegates to `profileService.updateProfile`** — deliberate reuse, "the same RLS-gated column set applies whether editing yourself or, as a manager, someone else"), `updateUserRole` (→ `admin_update_user_role` RPC), `deactivateUser` (sets `status: 'inactive'`).
+- **`ASSIGNABLE_ROLES`** (`types/user.types.ts`) = `['school_owner', 'principal', 'teacher']` — a deliberate subset of the full 24-role catalogue exposed through the Create/Change-Role UI, with `ASSIGNABLE_ROLE_LABELS` mapping `school_owner` → the display label **"School Administrator"** (no new role was added — it's a label, not a role).
+- **`userPermissions.ts`**: `canManageUsers` (→ `profile.manage_any`), `canManageUser(actorRole, targetRole)` (adds an `isAtLeast` seniority check on top — a principal can manage teachers but not another principal), `canAssignRole(actorRole, newRole, currentRole)` (mirrors `can_assign_role()` SQL function exactly — school_owner can assign within the 3 assignable roles, principal can only promote/create teachers, platform admins unrestricted).
+- **`useUsersList`/`useUserProfile`** — standard `{data, isLoading, error, refetch}`-shaped hooks, `useUsersList` additionally owns `filters`/`page`/`pageSize` state.
+- Components: `UsersTable`, `UsersFiltersBar`, `UsersPagination`, `CreateUserModal` (shows a one-time temporary password on success — no email invite flow exists yet, see §21), `EditUserModal`, `ChangeRoleModal`, `DeactivateUserDialog` — all modals go through the shared `Modal` primitive.
+- **Routing**: `/users` and `/users/:id`, wrapped in `<Route element={<RequirePermission permission="profile.view_any" />}>` inside `DashboardLayout` (`AppRoutes.tsx`). Sidebar "Users" link conditionally rendered in `DashboardSidebar.tsx` via the same permission check.
+- `TenantGate` was extended in this milestone to also block deactivated accounts (`profile.status !== 'active'`) with a dedicated full-screen notice — this is what makes "Deactivate user" functionally meaningful, not just cosmetic.
+
+## 14. Academic Structure Module Architecture (Sprint 2 Milestone 1 — shipped, not yet committed)
+
+`src/features/academic/` — Academic Years/Terms/Grades/Classes/Subjects. Original brief reproduced verbatim in §25.
+
+- **Five tenant-scoped tables**: `academic_years`, `terms` (FK → `academic_years`, plus a denormalized `school_id` — see below), `grades`, `classes` (FK → `grades`, plus `school_id`), `subjects`. All use `school_id` (not `tenant_id`) per the brief's literal field names — same precedent as `profiles.tenant_id`/`profiles.id` in Milestone 5 (§19): a brief's literal name is used verbatim for a genuinely new column, without renaming any existing concept.
+- **`terms.active`/no separate archive column in the brief**: the brief's literal field list for `terms` omits an archive flag, but the brief's own ARCHIVE RULE section states unconditionally that academic entities are never hard-deleted. `active` was added to `terms` for consistency with `grades.active`/`classes.active`/`subjects.active` — flagged here per standing rule #14 (a brief's literal fields vs. an explicit stated requirement), not silently guessed.
+- **One active academic year per school**: a partial unique index (`academic_years_one_active_per_school`, `on academic_years (school_id) where is_active`), never enforced in application code. `set_active_academic_year()` (SECURITY DEFINER) atomically deactivates whichever year was previously active and activates the requested one in a single transaction, modeled directly on `admin_update_user_role()`. A second, independent guard closes the gap a naive implementation would miss: `prevent_direct_year_activation()` (a `before update` trigger using the same transaction-local `set_config()` flag pattern as `prevent_direct_role_change()`/`prevent_direct_tenant_change()`) blocks any direct client `UPDATE` from flipping `is_active` false→true — only the RPC may. Archiving (`is_active` true→false) is a plain, ungated `UPDATE`, since only the *activation* direction needs atomicity/exclusivity.
+- **FK-doesn't-respect-RLS gap, closed for both child tables**: a foreign key only checks that the referenced row exists, not that the caller could ever `SELECT` it under RLS — so without an extra check, a caller authorized for their own school could still reference another tenant's `academic_year_id`/`grade_id` (guessed or leaked UUID) while setting `school_id` to their own tenant, corrupting the row's effective tenant scope. `terms_validate_academic_year_school()` and `classes_validate_grade_school()` (plain `before insert or update` triggers) reject any row where the child's `school_id` doesn't match the parent's. Verified directly in the RLS harness (tests 12–13, §15) — a caller authorized for School B is rejected when referencing a School A parent, even though the RLS INSERT policy alone would have let the row through (it only checks `school_id`, not the parent chain).
+- **Narrower access model than `school.*`**: `can_view_academic()`/`can_manage_academic()` mirror `academic.view`/`academic.manage` (not blanket tenant access like `schools_select_within_tenant_or_platform_admin`) — `academic.view` is `school_owner`/`principal`/`teacher`/`class_teacher`/`subject_teacher` + platform admins only (the three teacher-variant roles grouped together because they already carry an identical framework-level permission set in `ROLE_PERMISSIONS`); `academic.manage` is `school_owner`/`principal` + platform admins only. Every other role (including `vice_principal`/`hr_manager`/etc., which *do* get `school.view`) gets neither, per the brief's explicit "no access unless explicitly permitted."
+- **No DELETE policy on any of the five tables** — combined with `force row level security`, this makes hard-delete impossible for any authenticated caller, enforcing the brief's "never hard deleted, archive means active=false" rule at the database layer rather than leaving it to UI convention (verified in the harness, test 14: a manager's `DELETE` silently matches zero rows).
+- **Services**: one file per entity (`academicYearService`, `termService`, `gradeService`, `classService`, `subjectService`) rather than one combined file — matches the handbook's own prior recommendation (§18) for five distinct entities with CRUD each. Each exports its row→domain mapper (`toAcademicYear`, `toTerm`, etc.) for reuse, following the `toProfile`/`toSchool` convention.
+- **`AcademicProvider`** (`context/AcademicProvider.tsx`): read-only per the brief (`currentAcademicYear`, `academicYears`, `loading`, `refresh`) — loads off `useSchool()`'s already-resolved school id rather than re-deriving tenant/school itself (§21 discipline), nested inside `SchoolProvider` in `App.tsx`. Mutations live in the per-entity services, called directly from pages/hooks, which call `refresh()` afterward to resync — the same shape `UsersPage` uses, not routed through the provider.
+- **Four list hooks** (`useGrades`, `useClasses`, `useSubjects`, `useTerms`) follow the standard `{data, isLoading, error, refetch}` shape. No server-side pagination — per §21's own prior guidance, these lists are typically small enough not to need it; each page does a lightweight client-side active/archived filter instead.
+- **Routes**: `/academic`, `/academic/years`, `/academic/terms`, `/academic/grades`, `/academic/classes`, `/academic/subjects`, all behind a single `RequirePermission permission="academic.view"` wrapper (no new route guard). Write actions (Create/Edit/Archive/Activate buttons) are additionally gated client-side by `usePermissions().can('academic.manage')`, mirroring the `school.manage`/`profile.manage_any` pattern.
+- **Sidebar**: a single "Academic" entry (`/academic`, the overview page) added to `DashboardSidebar.tsx`, conditionally rendered on `academic.view` — not a nested submenu, consistent with the existing flat nav pattern. The five sub-areas are reachable via link cards on the overview page.
+- **New icons**: `CalendarIcon`, `LayersIcon`, `BookIcon` added to `src/components/ui/icons.tsx` (existing `GraduationCapIcon`/`ChalkboardIcon` were reused as-is for Grades/Classes) — no inline SVG, no icon package, per §17.
+- **A real, live regression risk found and fixed while building this**: `AcademicProvider` is mounted unconditionally at the app root (inside `SchoolProvider`), so it fires an `academic_years` fetch as soon as any e2e test resolves a real school — which every existing School/Users test does. `e2e/utils/mockData.ts`'s `installDataMocks` now defaults `academic_years` list queries to `[]` unless a test overrides it, so no pre-existing test needed to change; verified by running the full pre-existing suite (not just the new academic tests) both before and after this change.
+
+Beyond Milestone 1, the natural next epics (per the inert "Soon"-badged sidebar placeholders in `DashboardSidebar.tsx`) are Students, Teachers/Staff scheduling, Reports, and eventually Settings — none scoped yet.
+
+## 15. Testing Strategy
+
+- **Unit tests (Vitest)**: colocated `*.test.ts` next to the module under test (see `src/features/rbac/utils/{permissionHelpers,roleHelpers}.test.ts`) — pure-logic modules (permission/role helpers, future validation utils) get unit tests; anything touching Supabase goes through the e2e layer instead, not mocked-Supabase unit tests.
+- **e2e (Playwright)**: **fully network-mocked, no real Supabase backend touched, ever.** Two shared helper modules:
+  - `e2e/utils/mockAuth.ts` — `buildMockUser`/`buildMockSession` (constructs a fake GoTrue session with a given `role`/`tenant_id` in `app_metadata`), `seedAuthenticatedSession(page, overrides)` (seeds `localStorage['funda360-auth']` before the app boots — bypasses the login form entirely for tests that don't need to test login itself), `installAuthMocks`, `fulfillJson`/`fulfillAuthError`.
+  - `e2e/utils/mockData.ts` — `buildMockSchoolRow`/`buildMockProfileRow`, `installDataMocks` (mocks the profile/school single-row GETs `ProfileProvider`/`TenantProvider` issue after sign-in — **also always intercepts the `academic_years` list query, defaulting to `[]`**, since `AcademicProvider` fires it unconditionally as soon as any school resolves; see the §14 note on the regression this would otherwise have caused in every pre-existing School/Users test), `installUsersListMock` (paginated list mock — see the CORS gotcha below), `installRpcMock` (mocks `supabase.rpc()` calls by function name — `admin_create_user`/`admin_update_user_role` only), `buildMockAcademicYearRow`/`buildMockGradeRow`/`buildMockClassRow`/`buildMockSubjectRow`/`buildMockTermRow`, `installAcademicListMock` (generic GET-list mock for any of the five academic tables), `installSetActiveAcademicYearMock`.
+  - **Known, documented gotcha**: `Content-Range` is not a browser-safelisted CORS response header. A paginated list mock **must** set `'access-control-expose-headers': 'content-range'` or supabase-js silently can't read the row count back out client-side even though the header is present on the response (real Supabase's PostgREST gateway sets this by default; test mocks must replicate it explicitly). Already baked into `installUsersListMock`. Not needed for `installAcademicListMock` — none of the academic pages paginate (see §14).
+  - **List vs. single-row query detection** is done via `url.searchParams.has('limit') || url.searchParams.has('offset')` — this version of postgrest-js does not send a `Range` header, so don't try to detect list queries that way.
+  - **`e2e/academic.spec.ts`** (Sprint 2 M1) covers: academic year CRUD, the end-date-before-start-date Zod validation, the one-active-year switch (a stateful in-test mock — the only spec file that needs one, since this is the one flow where the UI must visibly reflect a mutation's effect on a *different* row, not just its own), grade/class/subject/term CRUD, teacher read-only enforcement, `academic.view`-less role redirect, and a tenant-isolation-shaped rendering check (same caveat as the Users directory's equivalent test — real isolation is RLS, verified independently in the harness below, not by this mocked test).
+- **Database/RLS verification**: a **Docker-based Postgres harness** (`postgres:16-alpine` + a hand-built `auth` schema stub providing `auth.users`, `auth.identities`, `auth.uid()`, `auth.jwt()`, and an `authenticated` role) was used across Milestones 3, 4, and 5 to verify every migration's RLS policies, triggers, and SECURITY DEFINER RPCs *before* writing any application code against them. **As of the §16 security patch, this harness is committed at `supabase/rls-tests/` and is directly re-runnable** (`supabase/rls-tests/run.sh` — spins up a throwaway container, applies the auth stub, applies every real migration in `supabase/migrations/` in filename order, loads fixtures, runs every `tests/*.test.sql` file, exits non-zero on any failure). Previously it existed only as an ad hoc process during Milestones 3–5 and left no artifact in the repo — this was itself a contributing factor in the §16 finding (a process gap, not just a code gap: nothing forced a regression test for every self-service column-protection trigger to be written down and rerun). **Every new migration protecting a column via a trigger (following the `prevent_direct_role_change()` pattern) must add a corresponding `tests/*.test.sql` file to this harness, not just rely on manual verification during development.** Extended for Sprint 2 M1 (`03_academic_fixtures.sql`, `tests/academic_structure.test.sql`, 15 tests): role-gated view/manage split (teacher can view/not manage, parent gets neither), cross-tenant create/select rejection, the one-active-year partial unique index, the activation-guard trigger (direct `UPDATE` to activate rejected, direct `UPDATE` to archive allowed), `set_active_academic_year()`'s atomic switch and its manager-only check, both FK-doesn't-respect-RLS triggers (`terms`/`classes` against a mismatched parent tenant), the DELETE-is-impossible guarantee, and case-insensitive unique names. All 23 tests (8 pre-existing + 15 new) pass together — no regressions from adding the new tables/triggers.
+  - Gotcha encountered while building it: Postgres `exception when insufficient_privilege` only catches SQLSTATE 42501; a bare `raise exception '...'` defaults to SQLSTATE `P0001` and will **not** be caught by that handler — use `exception when others then` + a `sqlerrm like '%...%'` string check instead (the pattern used throughout the existing test scripts).
+  - Gotcha: column-level `GRANT` restrictions are **not sufficient** protection against a specific-column write in real Supabase — `authenticated` gets blanket table-level grants by default, which silently re-opens whatever a narrower column grant tried to close. The verified, real enforcement mechanism is a `BEFORE UPDATE` trigger gated by a transaction-local `set_config()` flag that only the relevant SECURITY DEFINER function sets immediately before its own write (see `prevent_direct_role_change()`).
+- **Quality gate for every milestone** (mandatory, repeat for every future milestone): `npm run typecheck`, `npm run lint`, `npx vitest run`, `npm run build` all clean; grep the diff for `TODO|FIXME|XXX` (must be empty); run the full Playwright suite **at least twice** (flake check) before considering a milestone done.
+
+## 16. Security Decisions
+
+- **JWT `app_metadata` is the sole authorization source of truth for `role` and `tenant_id`** — never a table, never client-supplied input. Every table mirror of this data (`profiles.role`, `profiles.tenant_id`) is documented as a read/query convenience only, kept in sync exclusively by SECURITY DEFINER functions, never writable directly by ordinary client UPDATEs.
+- **RLS is enabled *and forced*** (`force row level security`) on every tenant-scoped table — forcing closes the loophole where the table owner role would otherwise bypass RLS.
+- **Elevated/privileged operations (creating a user, changing a role) are SECURITY DEFINER Postgres functions**, not a service-role key exposed to the browser and not an unverifiable Edge Function — this keeps every privileged code path inside the same Docker-harness-verifiable, version-controlled SQL migration history as everything else.
+- **Tenant isolation for privileged RPCs is enforced inside the function body itself**, not just relied upon via RLS on the tables it touches — e.g. `admin_create_user`'s `p_tenant_id` parameter is silently ignored for any caller who isn't a platform admin (`v_effective_tenant := public.current_tenant_id()` unconditionally for non-platform callers), verified by a dedicated Docker-harness test proving a non-platform caller cannot override their own tenant.
+- **Column-level write protection is done via triggers checking a transaction-local flag**, never trusted to `GRANT`/`REVOKE` alone (see §15 gotcha). Any future "this column should only ever be written by function X" requirement should follow the exact `prevent_direct_role_change()` pattern: a `BEFORE UPDATE` trigger raising if the column changed and `current_setting('app.some_flag', true) <> 'true'`, with the privileged function calling `perform set_config('app.some_flag', 'true', true)` immediately before its own UPDATE.
+- **Self-service restrictions enforced via triggers, not RLS policy composition**: a user (even a manager) can never change their own `status` — expressing "any row in my tenant, except my own" cleanly across a single USING/CHECK pair was judged awkward, so it's a trigger (`prevent_self_status_change()`) that inspects both OLD and NEW rows instead.
+- **No secrets or service-role keys in client code** — the anon key + RLS + SECURITY DEFINER functions are the entire privilege model; there is no server component beyond Postgres/PostgREST/GoTrue.
+- **Client-side `hasPermission`/`RequirePermission` checks are explicitly documented as UI convenience only** — every load-bearing authorization decision has a corresponding RLS policy or SQL function that would reject the request even if the UI gate were somehow bypassed.
+
+### 16.1 Security Incident — `profiles.tenant_id` self-service tenant-isolation escalation (fixed)
+
+**Found**: during an independent architecture review of this document, verified against the actual migrations (not just the prose), immediately before Sprint 2 M1 began. **Status: fixed** via `supabase/migrations/20260803140000_prevent_direct_tenant_change.sql`.
+
+**The vulnerability**: `profiles_update_own` (Milestone 3, `20260802125403_row_level_security.sql`) is `using (id = auth.uid()) with check (id = auth.uid())` — that predicate only restricts *which row* a user may update, not *which columns*. `role` and self-`status` changes each got a dedicated `before update` trigger (`prevent_direct_role_change()`, `prevent_self_status_change()`, both Milestone 5) closing exactly this gap for those two columns. `tenant_id` — the column `current_tenant_id()` (§9) reads directly, and the value every tenant-scoped RLS policy in the system is built on — had no equivalent trigger. The Milestone 5 migration's own header comment already documents *why* the column-level `grant update (first_name, last_name, phone, avatar_url, status) ...` isn't sufficient protection on its own (Supabase grants `authenticated` blanket table privileges by default, independent of migration history) — that reasoning was applied to `role` but not extended to `tenant_id`.
+
+**Exact exploit path**: any authenticated user, any role — a `learner` or `guest` account is sufficient — could issue
+```
+PATCH /rest/v1/profiles?id=eq.<own-id>
+{ "tenant_id": "<any-other-school-id>" }
+```
+This satisfies both `profiles_update_own`'s `USING` and `WITH CHECK` (own row, `id` unchanged), and prior to the fix nothing rejected the `tenant_id` change itself. Once written, `current_tenant_id()` resolves to the attacker-chosen school for every subsequent request in that session, granting that tenant's data — a full cross-tenant confidentiality breach, directly contradicting §1's core premise ("each school's data is fully isolated from every other school's") and standing rule #6. **Verified empirically** (not just by code inspection) by running the exploit against a harness build of the pre-patch migrations: the `UPDATE` succeeded and moved a fixture user from School A into School B.
+
+**Not reachable through the existing UI**: verified that no current service (`profileService.updateProfile`, `userService.updateUser`) ever constructs a payload containing `tenant_id` — `ProfileUpdateInput` only exposes `firstName`/`lastName`/`phone`/`avatarUrl`. The gap was reachable only via a direct API call bypassing the app's service layer entirely (which nothing in the RLS/grant layer prevented — see rule #7: the UI is not the real gate). A regression test (`e2e/users.spec.ts`, `'editing a user never sends tenant_id in the update payload'`) now asserts the edit-user PATCH request never includes `tenant_id`, so a future form change can't silently start exercising this path — but the actual enforcement is the DB trigger below, not this app-level check.
+
+**The fix**: `prevent_direct_tenant_change()`, a `before update` trigger on `profiles`, mirroring `prevent_direct_role_change()` exactly — blocks any change to `tenant_id` unless a transaction-local `app.allow_tenant_change` flag was set `true` (via `set_config(...)`) by a privileged `SECURITY DEFINER` function immediately before its own `UPDATE`. **No function currently sets this flag** — nothing in the shipped codebase has a legitimate reason to move an existing user to a different tenant — so today this trigger blocks 100% of `tenant_id` changes, including for platform admins attempting a raw table `UPDATE` (verified in the harness — `is_platform_admin()` is not consulted by this trigger at all, by design, per the brief: "if no legitimate tenant transfer functionality currently exists, completely block tenant_id changes"). The flag mechanism is included so a future, deliberate "transfer user to another school" admin function can be added the same way `admin_update_user_role()` was, without a second migration to introduce the trigger machinery.
+
+**Why this didn't break anything**: `switchTenant()` (§9, `TenantProvider`) is purely client-side session state for platform-level roles — it never writes `profiles.tenant_id` — so blocking all direct writes to that column doesn't affect tenant switching. Verified via the harness that `admin_update_user_role()` (role-only updates) and `admin_create_user()` (INSERT, not UPDATE) are both unaffected, since the new trigger only fires when `tenant_id` itself changes.
+
+**Regression coverage added** (`supabase/rls-tests/tests/profiles_tenant_id_protection.test.sql`, run via `supabase/rls-tests/run.sh` — see §15): self-change blocked; platform-admin raw-`UPDATE` bypass blocked; `current_tenant_id()` unchanged after a blocked attempt; cross-tenant `SELECT` still impossible; non-sensitive self-edit columns still writable; pre-existing self-status-change protection still enforced; `admin_update_user_role()` and `admin_create_user()` both still functional. All 8 pass; full suite re-run clean.
+
+**Standing rule going forward** (added to §26 as rule #16):
+
+> Every security-sensitive mirrored column (such as `tenant_id` or `role`) must be protected by both RLS and trigger-level enforcement. RLS controls row access; triggers protect immutable security attributes.
+
+**Process finding, not just a code finding**: the Docker RLS harness that was supposed to catch exactly this class of gap (§15) had never been committed to the repo — it existed only as an ad hoc, re-run-from-memory process across Milestones 3–5, with no persisted test file proving `role`'s protection was ever regression-tested either. It's now committed at `supabase/rls-tests/`, directly re-runnable, and covers both the new `tenant_id` protection and the pre-existing `role`/`status` protections it was assumed (but not provably shown) to already cover. **Every future column-protection trigger must ship with a corresponding `tests/*.test.sql` file in this harness, not just manual verification during development** — that discipline, not just this one patch, is what would have caught this before it shipped.
+
+**Related finding, not fixed (lower severity, documented for a future decision)**: the same review noted `profiles.email` is self-writable via `profiles_update_own` with no equivalent protection, and — unlike `first_name`/`last_name`/`phone`/`avatar_url` — it mirrors `auth.users.email` (the actual login identifier) and is what the Users directory lists/searches by. This is a data-integrity/impersonation-in-listings risk, not a tenant-isolation breach, and is *not* fixed by this patch — flagged here so it's a deliberate future decision (fix or explicitly accept) rather than a silent gap.
+
+## 17. Existing Reusable Components (`src/components/ui/`)
+
+- **`Button`** (`Button.tsx`) — `variant: 'primary'|'secondary'|'ghost'`, `isLoading`, `leftIcon`, forwards ref, full-width by default (`w-full h-11`), built-in spinner replaces `leftIcon` while loading, `aria-busy`.
+- **`TextField`** (`TextField.tsx`) — labeled input with `error`/`hint`/`rightElement` slots, auto-generates an `id` via `useId()` if none given, wires `aria-invalid`/`aria-describedby` automatically, forwards ref (works directly with `react-hook-form`'s `register()`).
+- **`PasswordField`** — (exists, not re-read in this pass) password variant of TextField with a show/hide toggle using `EyeIcon`/`EyeOffIcon`.
+- **`Checkbox`** — (exists, not re-read in this pass) used for "remember me" on Login.
+- **`Modal`** (`Modal.tsx`) — accessible dialog: focus trap (Tab/Shift+Tab cycling), Escape-to-close, backdrop-click-to-close, `role="dialog" aria-modal="true" aria-labelledby`, renders via `createPortal` to `document.body`, locks `document.body` scroll while open, auto-focuses the first focusable field on open. Props: `{isOpen, onClose, title, children, footer?}`. **Use this for every dialog — never build a bespoke one.**
+- **`FullScreenSpinner`** / **`FullScreenNotice`** — full-viewport loading/error/informational states, used by every route guard (`ProtectedRoute`, `PublicOnlyRoute`, `TenantGate`).
+- **`ThemeToggle`** — sun/moon icon toggle wired to `useTheme()`.
+- **`Logo`** — brand mark.
+- **`icons.tsx`** — hand-drawn inline SVG icon set (no icon library dependency): `EyeIcon`, `EyeOffIcon`, `SunIcon`, `MoonIcon`, `CheckIcon`, `GridIcon`, `BuildingIcon`, `UsersIcon`, `GraduationCapIcon`, `ChalkboardIcon`, `ChartIcon`, `GearIcon`, `ChevronDownIcon`, `MenuIcon`, `CloseIcon`, `LogOutIcon`, `SearchIcon`. **Add new icons here** (consistent `viewBox="0 0 24 24"`, `stroke="currentColor"`, `strokeWidth={1.75}`, rounded caps/joins) rather than inlining SVG markup in a component or pulling in an icon package.
+- **Layout**: `DashboardLayout` (header + collapsible sidebar + mobile drawer + `<Outlet/>`), `DashboardHeader`, `DashboardSidebar` (permission-aware nav item list), `UserMenu` (in the header — profile menu/sign-out).
+
+## 18. Existing Providers, Hooks, and Services
+
+**Providers** (nesting order matters, see §10):
+`AuthProvider` → `ProfileProvider` → `TenantProvider` → `SchoolProvider` → `AcademicProvider`.
+
+**Context accessor hooks** (all throw if used outside their provider):
+`useAuth()`, `useProfile()`, `useTenant()`, `useSchool()`, `useAcademic()`.
+
+**Cross-feature hooks** (`src/hooks/`):
+`usePermissions()` — `{role, can, canAny, canAll, hasRole, isAtLeast}`.
+`useTheme()` — `{theme, toggleTheme, setTheme}`.
+
+**Feature-owned hooks**:
+`useUsersList()`, `useUserProfile()` (both in `features/users/hooks/`) — standard data-fetch hook shape: state + `isLoading`/`error`/`refetch` (and for lists, `filters`/`page`/`setPage`/`setFilters`).
+`useGrades()`, `useClasses()`, `useSubjects()`, `useTerms()` (all in `features/academic/hooks/`) — same `{data, isLoading, error, refetch}` shape, no pagination (see §14).
+
+**Services** (plain-object-of-functions, see §6):
+- `authService` — `getSession`, `signInWithPassword`, `signOut`, `requestPasswordReset`, `updatePassword`, `resendVerificationEmail`.
+- `profileService` — `getProfileById`, `updateProfile` (+ exports `toProfile` mapper for reuse).
+- `tenantService` — `getSchoolById`, `listAvailableSchools` (+ exports `toSchool` mapper for reuse).
+- `schoolService` — `getSchoolById`/`getCurrentSchool` (delegate to `tenantService`), `updateSchool`, `updateSchoolSettings`.
+- `rbacService` — synchronous facade over `features/rbac/utils/*` (no backend calls).
+- `userService` — `getUsers`, `getUserById`, `createUser`, `updateUser` (delegates to `profileService.updateProfile`), `updateUserRole`, `deactivateUser`.
+- `academicYearService` — `getAcademicYears`, `getAcademicYear`, `createAcademicYear`, `updateAcademicYear`, `archiveAcademicYear`, `setActiveAcademicYear` (+ exports `toAcademicYear`).
+- `termService` — `getTerms`, `getTerm`, `createTerm`, `updateTerm`, `archiveTerm`, `restoreTerm` (+ exports `toTerm`).
+- `gradeService` — `getGrades`, `getGrade`, `createGrade`, `updateGrade`, `archiveGrade`, `restoreGrade` (+ exports `toGrade`).
+- `classService` — `getClasses`, `getClass`, `createClass`, `updateClass`, `archiveClass`, `restoreClass` (+ exports `toClass`).
+- `subjectService` — `getSubjects`, `getSubject`, `createSubject`, `updateSubject`, `archiveSubject`, `restoreSubject` (+ exports `toSubject`).
+
+One service file per academic entity (not one combined `academicService`) — five distinct entities with CRUD each read more cleanly this way; each follows the exact plain-object-of-functions shape every other service uses.
+
+## 19. Naming Conventions
+
+- **Files**: `PascalCase.tsx` for components/pages/providers (`CreateUserModal.tsx`, `SchoolProvider.tsx`), `camelCase.ts` for everything else (services, hooks, utils, types, schemas) — e.g. `userService.ts`, `useUsersList.ts`, `userPermissions.ts`, `user.types.ts`, `createUserSchema.ts`. Context files are the one lower-camel exception even though they export a `Context` object: `authContext.ts`, `schoolContext.ts`, `tenantContext.ts`, `profileContext.ts` — but the **Provider component** itself is `PascalCase.tsx` (`AuthProvider.tsx`, `SchoolProvider.tsx`).
+- **Types/interfaces**: `PascalCase` (`Profile`, `School`, `Tenant`, `UserRole`, `Permission`). Row/Insert/Update DB-mirror types are suffixed accordingly: `ProfileRow`, `ProfileInsert`, `ProfileUpdate`.
+- **Permission strings**: `<domain>.<action>` dot-namespaced lowercase (`school.view`, `school.manage`, `profile.view_any`, `tenant.switch`) — multi-word actions use `snake_case` after the dot (`view_own`, `manage_any`). Follow this exactly for `academic.view`/`academic.manage`.
+- **SQL functions**: `snake_case`, verb-first for actions (`admin_create_user`, `admin_update_user_role`, `set_active_academic_year`), `can_<verb>_<noun>` for authorization predicates (`can_manage_school`, `can_manage_profiles`, `can_assign_role`).
+- **SQL tables/columns**: `snake_case`, singular concepts pluralized for the table name (`schools`, `profiles`), `tenant_id` (not `school_id`) is the established FK name for "which school does this belong to" throughout — **note**: the Academic brief's literal field list says `school_id` for the new tables; that's fine to use verbatim for these specific new tables since the brief names them explicitly, but don't rename the existing `profiles.tenant_id`/`schools.id` relationship to match — see §11 of the M5 migration's own header comment for the precedent of "reuse the existing column, don't rename to match a brief's literal wording."
+- **React Hook Form + Zod**: schema file `xSchema.ts` exports `xSchema` (the Zod object), `XFormValues` (`z.infer<typeof xSchema>` type), and `xDefaultValues` (a `XFormValues` object) — see `createUserSchema.ts` for the exact triple.
+- **Test IDs/fixtures**: e2e mock builders are `buildMockXRow(overrides)` / `buildMockX(overrides)`, mock installers are `installXMocks(page, ...)` — keep new academic-entity mocks in this same naming family (`buildMockAcademicYearRow`, `installAcademicYearsListMock`, etc.) inside `e2e/utils/mockData.ts` rather than a new file, to keep one shared mocking surface.
+
+## 20. File Structure Conventions
+
+(See §4 for the tree; this section is the *rule*, not the *inventory*.)
+
+- New business feature → new folder under `src/features/<name>/`, subfolders **only as needed** from the fixed set `{components, context, hooks, pages, schemas, services, types, utils}`.
+- A type used by **more than one feature** (e.g. `School`, `Profile`, `Tenant`) lives in `src/types/<name>.types.ts`, re-exported through the `src/types/index.ts` barrel — each concept owned by exactly one feature's types file, the barrel only re-exports, never redefines (explicit rule stated in that file's own header comment). A type used by **only one** feature stays inside that feature's own `types/` folder (e.g. `CreateUserInput` lives in `features/users/types/user.types.ts`, not the global barrel).
+- Route guards live in `src/routes/`, never inside a feature folder, even if a guard is conceptually tied to one feature (`RequirePermission` is generic and reusable, not `features/rbac/routes/`).
+- The single route tree lives entirely in `src/app/AppRoutes.tsx` — never scatter `<Route>` declarations across feature files.
+- Design-system primitives live in `src/components/ui/`; app-chrome/layout components live in `src/components/layout/`; anything more specific than that belongs inside the owning feature's `components/`.
+- Migrations are one file per logical unit of schema change, named `<yyyymmddhhmmss>_<snake_case_description>.sql`, and are **append-only** — a mistake in a shipped migration gets fixed by a new migration, never an edit to an old one.
+
+## 21. Performance Considerations
+
+- **Providers avoid redundant fetches by composing on top of each other's already-loaded state** rather than each independently querying Supabase — the explicit, documented rationale behind `SchoolProvider` reusing `TenantProvider`'s already-loaded `tenant.school` instead of issuing its own `getSchoolById` call. Apply the same discipline to `AcademicProvider`: it likely wants to load off of `useTenant()`/`useSchool()`'s resolved school id, and should not re-derive tenant/school itself.
+- **Avoid triggering a `TenantProvider`/`ProfileProvider` refetch from an unrelated feature's mutation** — doing so flips shared status to `'loading'`, which (via `TenantGate`) unmounts every gated page in the tree, not just the one that triggered it. Update local state directly with the mutation's response instead (see `SchoolProvider.updateSchool`).
+- **Pagination is server-side** via PostgREST's `.range(from, to)` + `{count: 'exact'}`, not client-side slicing of a fully-fetched list (`userService.getUsers`) — follow this for any Academic list view expected to grow (Classes/Subjects potentially; Academic Years/Terms/Grades are typically small enough not to strictly need it, but stay consistent if in doubt).
+- No memoization library, no React Query/SWR — data fetching is hand-rolled `useEffect` + `useState` per hook. This is a deliberate simplicity choice for the project's current size; if a future milestone's data-fetching complexity (e.g. cross-entity academic-year-scoped queries with lots of cache invalidation) starts to strain this, that would be a discussion to have with the product owner before introducing a new dependency, not a unilateral addition.
+- Icons are hand-authored inline SVG components (no icon font, no icon package) — zero extra bundle weight per icon, trivial tree-shaking.
+
+## 22. Accessibility Standards
+
+`eslint-plugin-jsx-a11y` runs as part of the standard lint gate — a11y violations are lint errors, not suggestions.
+
+- Every form field has a real, associated `<label>` (`TextField`/`PasswordField` wire `htmlFor`/`id` automatically, including auto-generated ids via `useId()` when none is passed).
+- Every error message uses `role="alert"`; every success/status message uses `role="status"`.
+- Every focusable element gets a visible focus ring via the shared `.focus-ring` utility class — never `outline-none` without it.
+- Modals: full focus trap, `aria-modal="true"`, `role="dialog"`, `aria-labelledby` pointing at the visible title, Escape closes, focus returns sensibly (first focusable field auto-focused on open).
+- Icon-only buttons always have an explicit `aria-label` (e.g. the mobile-nav close button, the modal close button).
+- Loading spinners always pair a visual `aria-hidden="true"` spinner with an `sr-only` text equivalent ("Loading users…", etc.) for screen readers.
+- Decorative icons get `aria-hidden="true"` (the default in every icon component in `icons.tsx`).
+- Color is never the sole information channel — status banners pair color with an icon/role/explicit text, not just a background tint.
+
+## 23. Current Technical Debt
+
+- **No transactional email system.** New users get a one-time temporary password rendered directly in the Create User modal's success state — there is no invite email, no Supabase email-template wiring, no Edge Function. This was flagged as a Sprint 2 recommendation at the end of Milestone 5 and is still outstanding.
+- **`profiles.role` requires manual sync discipline.** It is a denormalized mirror with real (trigger-enforced) protection against direct writes, but any *new* code path that needs to change a user's role must remember to go through `admin_update_user_role()` — there is no way for TypeScript to statically prevent someone from writing a naive `supabase.from('profiles').update({role: ...})` call elsewhere; it would simply fail at runtime via the trigger. Worth a lint rule or code-review checklist item if this becomes a recurring risk.
+- **The RBAC SQL/TS mirrors (`can_assign_role()`/`canAssignRole()`, `can_manage_school()`/`ROLE_PERMISSIONS['school.manage']`, etc.) are kept in sync *manually*, by convention and comment cross-reference, not by any shared code-generation step.** This is an accepted, documented tradeoff (role/permission data fundamentally lives in the JWT and Postgres RLS can't introspect a TypeScript union), but it is a real ongoing risk of drift as more permissions are added — every future one needs the same disciplined cross-referencing comments on both sides.
+- **No CI pipeline referenced/observed in this pass** — the quality gate (lint/typecheck/test/build/e2e) is currently run manually at the end of each milestone. Worth confirming/adding if not already present elsewhere.
+- **No dependency-update-triggered generic-typing regression test.** The `@supabase/supabase-js` pin to `2.45.4` protects against a known-bad version, but there's no automated check that would catch a *future* version reintroducing the same interface-vs-type generic degradation if someone bumps the pin.
+- **`profiles.email` is self-writable via `profiles_update_own` with no trigger protection** (found alongside the `tenant_id` issue in §16.1, not fixed — deliberately out of scope for that patch since it's a data-integrity/impersonation-in-listings risk, not a tenant-isolation breach). It mirrors `auth.users.email` (the real login identifier) and is what the Users directory lists/searches by, so a self-rewrite could desynchronize display/search from the actual login email. Needs a product-owner decision (fix with a trigger like `tenant_id`/`role`, or explicitly accept) before Sprint 2 M1 adds more list/search UIs following this same pattern.
+
+## 24. Known Limitations
+
+- **No transactional/business functionality exists yet** beyond auth, tenant/school administration, and user/role management — no students, no attendance, no timetabling, no gradebook, no finance, nothing academic (that's precisely what Sprint 2 M1 begins to address).
+- **Only 3 of the 24 roles are exposed through the user-creation/role-assignment UI** (`school_owner`/"School Administrator", `principal`, `teacher`) — the other 21 roles exist in the type system and RBAC matrix (and are assignable in principle by a platform admin via direct RPC call) but have no UI path to be assigned to anyone yet.
+- **Tenant switching only exists for platform-level roles**, and even for them it's a simple `switchTenant(schoolId)` with no persisted "which school was I last viewing" — it resets to the profile's own tenant (or none) on every fresh session for platform-level users.
+- **No soft-delete/undo pattern established yet** — `deactivateUser` sets `status: 'inactive'`, there is no equivalent for schools, and no established convention yet for whether new Academic entities (e.g. a Class or Subject) should be hard-deleted or soft-archived. **The Sprint 2 M1 brief explicitly uses "Archive" language for Grades/Classes/Subjects and an `active`/`is_active` boolean column** — treat this as the new precedent (boolean-flag soft-archive, not a hard DELETE) and consider retrofitting `schools`/`profiles` to match later if the product owner wants consistency, but don't do so unprompted.
+- **No file/image upload mechanism** exists yet even though `schools.logo_url`/`profiles.avatar_url` are already schema fields — both are currently plain free-text URL fields with no actual upload UI wired to Supabase Storage.
+- **Single-language, single-currency-per-school** (no i18n framework, `language`/`currency`/`timezone` are per-school config strings with no enforcement or dropdown-limited set beyond what the School Profile form's Zod schema validates).
+
+## 25. Next Milestone — Sprint 2, Milestone 1: Academic Structure
+
+**Status: not started.** This is the literal, verbatim brief as given by the product owner — treat it as the binding spec for this unit of work:
+
+> You are the Lead Software Architect for Funda360, an enterprise multi-tenant School Management SaaS platform.
+>
+> We have successfully completed Sprint 1.
+>
+> COMPLETED: Milestone 1 – Project Foundation, Milestone 2 – Enterprise Authentication, Milestone 3 – Multi-Tenant Architecture & RBAC, Milestone 4 – School Administration Core, Milestone 5 – User & Role Management.
+>
+> The application now includes: Enterprise authentication, Multi-tenancy, Row Level Security, RBAC, School administration, User management, Dashboard shell, Feature-based architecture, Enterprise testing suite.
+>
+> DO NOT rewrite or replace existing architecture. Always extend the current codebase.
+>
+> **SPRINT 2 MILESTONE 1 — ACADEMIC STRUCTURE**
+>
+> OBJECTIVE: Build the complete academic foundation for each school. Every school must be able to define its own academic structure independently. Everything must remain tenant isolated.
+>
+> DATABASE: Review existing migrations first. Create new migrations only where required. Implement the following entities.
+>
+> **Academic Years** — Fields: id, school_id, name, start_date, end_date, is_active, created_at, updated_at. Requirements: Only one active academic year per school; RLS enabled; Proper indexes; Audit timestamps.
+>
+> **Terms** — Fields: id, academic_year_id, school_id, name, start_date, end_date, sequence, created_at, updated_at. Requirements: Linked to Academic Year; RLS; Tenant isolation.
+>
+> **Grades** — Fields: id, school_id, name, code, description, sort_order, active, created_at, updated_at. Examples: Grade R, Grade 1, Grade 8.
+>
+> **Classes** — Fields: id, grade_id, school_id, name, capacity, active, created_at, updated_at. Examples: Grade 8A, Grade 8B, Grade 9 Blue.
+>
+> **Subjects** — Fields: id, school_id, name, code, description, active, created_at, updated_at. Examples: Mathematics, English, Life Sciences, Accounting.
+>
+> FEATURE ARCHITECTURE: Create `src/features/academic/` with structure: components/, context/, hooks/, pages/, schemas/, services/, types/, utils/. Follow the existing architecture used by auth, school, users.
+>
+> SERVICE LAYER: Typed services for:
+> - Academic Years: getAcademicYears(), getAcademicYear(), createAcademicYear(), updateAcademicYear(), deleteAcademicYear(), setActiveAcademicYear()
+> - Terms: CRUD
+> - Grades: CRUD
+> - Classes: CRUD
+> - Subjects: CRUD
+>
+> Requirements: Proper typing, Error handling, Tenant-aware queries, Respect existing RLS.
+>
+> STATE MANAGEMENT: Create AcademicProvider. Responsibilities: current academic year, academic years, loading state, refresh. Create reusable hooks.
+>
+> VALIDATION: React Hook Form + Zod. Validate: Dates, Required fields, Unique names where appropriate, Capacity.
+>
+> USER INTERFACE: Create pages: /academic, /academic/years, /academic/terms, /academic/grades, /academic/classes, /academic/subjects. Integrate into dashboard navigation. Create responsive professional UI. Use existing design system.
+>
+> ACADEMIC YEAR: Administrator can Create, Edit, Archive, Activate. Only one academic year may be active.
+>
+> GRADES: Administrator can Create grades, Edit grades, Archive grades, Sort grades.
+>
+> CLASSES: Administrator can Create classes, Assign grade, Set capacity, Archive classes.
+>
+> SUBJECTS: Administrator can Create, Edit, Archive, Search.
+>
+> PERMISSIONS: Use existing RBAC. School Administrator: Full access. Principal: Manage academic structure. Teacher: Read only. Other users: No access unless explicitly permitted. Protect routes. Protect services.
+>
+> TESTING: Create `e2e/academic.spec.ts`. Test: ✅ Academic Year CRUD, ✅ Only one active year, ✅ Grade CRUD, ✅ Class CRUD, ✅ Subject CRUD, ✅ Tenant isolation, ✅ Permission enforcement. Add unit tests where appropriate.
+>
+> QUALITY: Run npm run lint, npm run test, npm run build. Fix all issues. No TODO placeholders. No duplicated logic. Maintain enterprise coding standards.
+>
+> FINAL DELIVERY: Provide: 1. Files created, 2. Files modified, 3. Database migrations, 4. Security summary, 5. Test summary, 6. Architectural decisions, 7. Recommendations for Sprint 2 Milestone 2.
+>
+> Commit using: `git add .` then `git commit -m "feat(academic): implement Sprint 2 Milestone 1 - academic structure"`
+
+A suggested (non-binding) execution order for this milestone is preserved in `/workspaces/Funda360/HANDOVER.md` at the repo root — a disposable working note, not a permanent spec; this section is the permanent record of the requirement itself.
+
+## 26. Rules for Future Development
+
+These are standing rules, accumulated from explicit product-owner instruction and hard-won implementation experience. Violating any of these has either already caused a real bug in this project or is exactly the kind of thing the product owner has explicitly forbidden.
+
+1. **Never rewrite or replace existing architecture.** Every sprint brief has repeated this instruction verbatim. Extend; don't refactor foundations as a side effect of a new feature.
+2. **Never bypass a layer.** Components call hooks/context, hooks/context call services, services call Supabase. Never call `supabase.*` directly from a component or page.
+3. **No duplicated logic.** If a mapper, permission check, or query already exists (`toProfile`, `toSchool`, `hasPermission`, `current_tenant_id()`), reuse/export it — don't re-derive it in a new feature.
+4. **`Database` Row/Insert/Update types are always `type`, never `interface`.**
+5. **Role and tenant_id authorization always flows from the JWT `app_metadata`**, never from a client-supplied value or a table column treated as authoritative. Any denormalized mirror column is read-only from the client's perspective and is written only by a SECURITY DEFINER function.
+6. **Every tenant-scoped table gets RLS `enable`d *and* `force`d**, with policies built on `current_tenant_id()`/`is_platform_admin()`.
+7. **Every client-side permission gate has a corresponding server-side (RLS or SQL function) enforcement.** The UI check is for UX only; assume it can be bypassed and verify the real gate independently (Docker harness or equivalent).
+8. **Cross-reference SQL and TS halves of any authorization rule with an explicit comment** naming the other side, so future changes to one prompt someone to check the other.
+9. **Migrations are append-only.** Never edit a shipped migration; add a new one.
+10. **Follow the established `src/features/<name>/{...}` shape** for every new feature module; only include the subfolders actually needed.
+11. **Reuse `Modal`, `Button`, `TextField`, `icons.tsx`, and the token-based Tailwind classes** for all new UI — never hand-roll a parallel dialog/button/input/icon implementation or hard-code a color.
+12. **Every milestone ends with the full quality gate** (typecheck, lint, unit tests, build, e2e run at least twice, TODO/FIXME grep) passing clean before it is considered done, and — once instructed — committed with the exact message given.
+13. **Do not commit unless explicitly instructed to**, and when instructed, use exactly the commit message given.
+14. **Ask/flag rather than guess** when a brief's literal field names conflict with existing schema concepts (e.g. the M5 brief's `user_id`/`school_id` vs. the existing `profiles.id`/`tenant_id`) — the established resolution pattern is: keep the existing column where it's already the same concept, document the mapping explicitly in the migration's header comment, and only add genuinely new columns for genuinely new concepts.
+15. **If a `Write` tool call times out repeatedly on a large file, fall back to a `Bash` heredoc** (`cat > file << 'EOF' ... EOF`) rather than giving up or truncating the file.
+16. **Every security-sensitive mirrored column (such as `tenant_id` or `role`) must be protected by both RLS and trigger-level enforcement.** RLS controls row access; triggers protect immutable security attributes. A column-level `GRANT` restriction alone is not sufficient (Supabase's default blanket `authenticated` grants override it) — this is the exact gap that let `profiles.tenant_id` be self-writable via `profiles_update_own` until the §16.1 patch. Every new trigger written to satisfy this rule must ship with a corresponding regression test in `supabase/rls-tests/tests/` (§15) — not just manual verification during development.
+
+---
+*End of document. Regenerate or amend this file (rather than relying on conversation memory) whenever a milestone completes or a significant architectural decision is made.*

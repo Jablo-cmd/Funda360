@@ -86,6 +86,36 @@ test('admin can assign a role to a teacher', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Change role' })).toHaveCount(0);
 });
 
+test('editing a user never sends tenant_id in the update payload', async ({ page }) => {
+  // Regression guard for the profiles.tenant_id self-service escalation
+  // fix (see supabase/migrations/20260803140000_prevent_direct_tenant_change.sql).
+  // The real protection is the DB-side trigger (verified in the RLS
+  // harness, supabase/rls-tests/), which blocks this even if the app ever
+  // did send it — this test exists so a future change to the edit-user
+  // form that starts sending tenant_id fails fast in CI, long before it
+  // would reach that trigger in production.
+  await seedAuthenticatedSession(page, { role: 'principal' });
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+  await installUsersListMock(page, [
+    buildMockProfileRow({ id: TEACHER_ID, firstName: 'Zola', lastName: 'Teacher', email: 'zola@riverside.test', role: 'teacher' }),
+  ]);
+
+  let patchBody: unknown;
+  await page.route('**/rest/v1/profiles*', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    patchBody = route.request().postDataJSON();
+    await fulfillJson(route, buildMockProfileRow({ id: TEACHER_ID, firstName: 'Zolani', lastName: 'Teacher', role: 'teacher' }));
+  });
+
+  await page.goto('/users');
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByLabel('First name').fill('Zolani');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Edit user' })).toHaveCount(0);
+  expect(patchBody).not.toHaveProperty('tenant_id');
+});
+
 test('a role without profile.view_any is blocked from the users directory', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'teacher' });
   await installDataMocks(page, {

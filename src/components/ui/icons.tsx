@@ -292,6 +292,61 @@ export function LogOutIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function CalendarIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect x="3.5" y="4.5" width="17" height="16" rx="1.5" />
+      <path d="M3.5 9.5h17M8 3v3M16 3v3" />
+    </svg>
+  );
+}
+
+export function LayersIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M12 3.5 21 8l-9 4.5L3 8Z" />
+      <path d="M3 12.5 12 17l9-4.5" />
+      <path d="M3 16.5 12 21l9-4.5" />
+    </svg>
+  );
+}
+
+export function BookIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 17.5v-13Z" />
+      <path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20" />
+    </svg>
+  );
+}
+
 export function SearchIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

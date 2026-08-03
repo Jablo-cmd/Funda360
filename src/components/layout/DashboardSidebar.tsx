@@ -10,6 +10,7 @@ import {
   GearIcon,
   GraduationCapIcon,
   GridIcon,
+  LayersIcon,
   UsersIcon,
 } from '@/components/ui/icons';
 
@@ -26,11 +27,13 @@ export interface DashboardSidebarProps {
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const { user } = useAuth();
   const canViewUsers = hasPermission(user?.role ?? null, 'profile.view_any');
+  const canViewAcademic = hasPermission(user?.role ?? null, 'academic.view');
 
   const navItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: GridIcon },
     { label: 'School Profile', path: '/school/profile', icon: BuildingIcon },
     ...(canViewUsers ? [{ label: 'Users', path: '/users', icon: UsersIcon }] : []),
+    ...(canViewAcademic ? [{ label: 'Academic', path: '/academic', icon: LayersIcon }] : []),
     { label: 'Students', icon: GraduationCapIcon },
     { label: 'Teachers', icon: ChalkboardIcon },
     { label: 'Reports', icon: ChartIcon },

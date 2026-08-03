@@ -10,4 +10,6 @@ export type Permission =
   | 'profile.view_own'
   | 'profile.update_own'
   | 'profile.view_any'
-  | 'profile.manage_any';
+  | 'profile.manage_any'
+  | 'academic.view'
+  | 'academic.manage';

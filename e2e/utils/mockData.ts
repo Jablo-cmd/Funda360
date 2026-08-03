@@ -73,14 +73,174 @@ export function buildMockProfileRow(overrides: MockProfileOverrides = {}) {
   };
 }
 
+interface MockAcademicYearOverrides {
+  id?: string;
+  schoolId?: string;
+  name?: string;
+  startDate?: string;
+  endDate?: string;
+  isActive?: boolean;
+}
+
+export function buildMockAcademicYearRow(overrides: MockAcademicYearOverrides = {}) {
+  const {
+    id = 'year-2026',
+    schoolId = MOCK_TENANT_ID,
+    name = '2026 Academic Year',
+    startDate = '2026-01-15',
+    endDate = '2026-12-05',
+    isActive = true,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    name,
+    start_date: startDate,
+    end_date: endDate,
+    is_active: isActive,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockGradeOverrides {
+  id?: string;
+  schoolId?: string;
+  name?: string;
+  code?: string | null;
+  sortOrder?: number;
+  active?: boolean;
+}
+
+export function buildMockGradeRow(overrides: MockGradeOverrides = {}) {
+  const { id = 'grade-8', schoolId = MOCK_TENANT_ID, name = 'Grade 8', code = 'G8', sortOrder = 8, active = true } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    name,
+    code,
+    description: null,
+    sort_order: sortOrder,
+    active,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockClassOverrides {
+  id?: string;
+  gradeId?: string;
+  schoolId?: string;
+  name?: string;
+  capacity?: number;
+  active?: boolean;
+}
+
+export function buildMockClassRow(overrides: MockClassOverrides = {}) {
+  const { id = 'class-8a', gradeId = 'grade-8', schoolId = MOCK_TENANT_ID, name = 'Grade 8A', capacity = 32, active = true } = overrides;
+  return {
+    id,
+    grade_id: gradeId,
+    school_id: schoolId,
+    name,
+    capacity,
+    active,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockSubjectOverrides {
+  id?: string;
+  schoolId?: string;
+  name?: string;
+  code?: string | null;
+  active?: boolean;
+}
+
+export function buildMockSubjectRow(overrides: MockSubjectOverrides = {}) {
+  const { id = 'subject-math', schoolId = MOCK_TENANT_ID, name = 'Mathematics', code = 'MATH', active = true } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    name,
+    code,
+    description: null,
+    active,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockTermOverrides {
+  id?: string;
+  academicYearId?: string;
+  schoolId?: string;
+  name?: string;
+  sequence?: number;
+  active?: boolean;
+}
+
+export function buildMockTermRow(overrides: MockTermOverrides = {}) {
+  const {
+    id = 'term-1',
+    academicYearId = 'year-2026',
+    schoolId = MOCK_TENANT_ID,
+    name = 'Term 1',
+    sequence = 1,
+    active = true,
+  } = overrides;
+  return {
+    id,
+    academic_year_id: academicYearId,
+    school_id: schoolId,
+    name,
+    sequence,
+    start_date: '2026-01-15',
+    end_date: '2026-04-01',
+    active,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+/** Mocks a `.from('<table>').select('*').eq(...)` LIST query (GET, no `limit`/`offset` params — see installUsersListMock for that shape) for one of the academic tables. */
+export async function installAcademicListMock(
+  page: Page,
+  table: 'academic_years' | 'terms' | 'grades' | 'classes' | 'subjects',
+  rows: Record<string, unknown>[],
+) {
+  await page.route(`**/rest/v1/${table}*`, async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, rows);
+  });
+}
+
+/** Mocks a `.rpc('set_active_academic_year', ...)` call. */
+export async function installSetActiveAcademicYearMock(page: Page, handler: (route: Route) => Promise<void>) {
+  await page.route('**/rest/v1/rpc/set_active_academic_year', handler);
+}
+
 /**
  * Mocks the PostgREST endpoints ProfileProvider/TenantProvider call after
  * sign-in. Pass `null` for a table to simulate "no row found" (maybeSingle
  * resolving to null) instead of omitting the mock entirely.
+ *
+ * Also always intercepts the `academic_years` list query AcademicProvider
+ * issues as soon as a school resolves (it's mounted unconditionally at the
+ * app root, inside SchoolProvider — see App.tsx) — defaults to an empty
+ * list unless a test overrides it via `academicYears`, so every existing
+ * test that resolves a real school doesn't need to know about the Academic
+ * feature just to avoid an unmocked request falling through to the real
+ * network.
  */
 export async function installDataMocks(
   page: Page,
-  data: { profile?: ReturnType<typeof buildMockProfileRow> | null; school?: ReturnType<typeof buildMockSchoolRow> | null },
+  data: {
+    profile?: ReturnType<typeof buildMockProfileRow> | null;
+    school?: ReturnType<typeof buildMockSchoolRow> | null;
+    academicYears?: ReturnType<typeof buildMockAcademicYearRow>[];
+  },
 ) {
   await page.route('**/rest/v1/**', async (route: Route) => {
     const url = new URL(route.request().url());
@@ -93,6 +253,10 @@ export async function installDataMocks(
     if (url.pathname.endsWith('/schools')) {
       if (data.school === undefined) return route.continue();
       return data.school === null ? fulfillJson(route, null) : fulfillJson(route, data.school);
+    }
+
+    if (url.pathname.endsWith('/academic_years') && route.request().method() === 'GET') {
+      return fulfillJson(route, data.academicYears ?? []);
     }
 
     return route.continue();

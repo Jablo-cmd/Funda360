@@ -131,6 +131,180 @@ export type ProfileUpdate = {
   updated_at?: string;
 };
 
+export type AcademicYearRow = {
+  id: string;
+  school_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AcademicYearInsert = {
+  id?: string;
+  school_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AcademicYearUpdate = {
+  id?: string;
+  school_id?: string;
+  name?: string;
+  start_date?: string;
+  end_date?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TermRow = {
+  id: string;
+  academic_year_id: string;
+  school_id: string;
+  name: string;
+  sequence: number;
+  start_date: string;
+  end_date: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TermInsert = {
+  id?: string;
+  academic_year_id: string;
+  school_id: string;
+  name: string;
+  sequence: number;
+  start_date: string;
+  end_date: string;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TermUpdate = {
+  id?: string;
+  academic_year_id?: string;
+  school_id?: string;
+  name?: string;
+  sequence?: number;
+  start_date?: string;
+  end_date?: string;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type GradeRow = {
+  id: string;
+  school_id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GradeInsert = {
+  id?: string;
+  school_id: string;
+  name: string;
+  code?: string | null;
+  description?: string | null;
+  sort_order?: number;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type GradeUpdate = {
+  id?: string;
+  school_id?: string;
+  name?: string;
+  code?: string | null;
+  description?: string | null;
+  sort_order?: number;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ClassRow = {
+  id: string;
+  grade_id: string;
+  school_id: string;
+  name: string;
+  capacity: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClassInsert = {
+  id?: string;
+  grade_id: string;
+  school_id: string;
+  name: string;
+  capacity: number;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ClassUpdate = {
+  id?: string;
+  grade_id?: string;
+  school_id?: string;
+  name?: string;
+  capacity?: number;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SubjectRow = {
+  id: string;
+  school_id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubjectInsert = {
+  id?: string;
+  school_id: string;
+  name: string;
+  code?: string | null;
+  description?: string | null;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SubjectUpdate = {
+  id?: string;
+  school_id?: string;
+  name?: string;
+  code?: string | null;
+  description?: string | null;
+  active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -143,6 +317,31 @@ export type Database = {
         Row: ProfileRow;
         Insert: ProfileInsert;
         Update: ProfileUpdate;
+      };
+      academic_years: {
+        Row: AcademicYearRow;
+        Insert: AcademicYearInsert;
+        Update: AcademicYearUpdate;
+      };
+      terms: {
+        Row: TermRow;
+        Insert: TermInsert;
+        Update: TermUpdate;
+      };
+      grades: {
+        Row: GradeRow;
+        Insert: GradeInsert;
+        Update: GradeUpdate;
+      };
+      classes: {
+        Row: ClassRow;
+        Insert: ClassInsert;
+        Update: ClassUpdate;
+      };
+      subjects: {
+        Row: SubjectRow;
+        Insert: SubjectInsert;
+        Update: SubjectUpdate;
       };
     };
     Views: Record<string, never>;
@@ -161,6 +360,10 @@ export type Database = {
       admin_update_user_role: {
         Args: { p_user_id: string; p_new_role: UserRole };
         Returns: undefined;
+      };
+      set_active_academic_year: {
+        Args: { p_academic_year_id: string };
+        Returns: AcademicYearRow;
       };
     };
   };
