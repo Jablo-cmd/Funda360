@@ -18,6 +18,8 @@ import { TermsPage } from '@/features/academic/pages/TermsPage';
 import { GradesPage } from '@/features/academic/pages/GradesPage';
 import { ClassesPage } from '@/features/academic/pages/ClassesPage';
 import { SubjectsPage } from '@/features/academic/pages/SubjectsPage';
+import { LearnersPage } from '@/features/learners/pages/LearnersPage';
+import { LearnerProfilePage } from '@/features/learners/pages/LearnerProfilePage';
 
 export function AppRoutes() {
   return (
@@ -48,6 +50,11 @@ export function AppRoutes() {
               <Route path="/academic/grades" element={<GradesPage />} />
               <Route path="/academic/classes" element={<ClassesPage />} />
               <Route path="/academic/subjects" element={<SubjectsPage />} />
+            </Route>
+
+            <Route element={<RequirePermission permission="learner.view" />}>
+              <Route path="/learners" element={<LearnersPage />} />
+              <Route path="/learners/:id" element={<LearnerProfilePage />} />
             </Route>
           </Route>
         </Route>

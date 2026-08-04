@@ -32,9 +32,9 @@ describe('hasPermission', () => {
     expect(hasPermission('principal', 'tenant.switch')).toBe(false);
   });
 
-  it('never grants business-module permissions (there are none defined yet)', () => {
+  it('rejects an out-of-catalogue permission at the type level', () => {
     // @ts-expect-error — intentionally probing an out-of-catalogue permission
-    expect(hasPermission('super_administrator', 'learner.view')).toBe(false);
+    expect(hasPermission('super_administrator', 'finance.view')).toBe(false);
   });
 });
 

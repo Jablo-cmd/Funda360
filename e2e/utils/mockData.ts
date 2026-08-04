@@ -297,3 +297,274 @@ export async function installRpcMock(
 ) {
   await page.route(`**/rest/v1/rpc/${fnName}`, handler);
 }
+
+interface MockLearnerOverrides {
+  id?: string;
+  schoolId?: string;
+  learnerNumber?: string;
+  admissionNumber?: string;
+  firstName?: string;
+  lastName?: string;
+  idNumber?: string | null;
+  status?: string;
+}
+
+export function buildMockLearnerRow(overrides: MockLearnerOverrides = {}) {
+  const {
+    id = 'learner-1',
+    schoolId = MOCK_TENANT_ID,
+    learnerNumber = 'LRN-0001',
+    admissionNumber = 'ADM-0001',
+    firstName = 'Naledi',
+    lastName = 'Dube',
+    idNumber = null,
+    status = 'active',
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    profile_id: null,
+    learner_number: learnerNumber,
+    admission_number: admissionNumber,
+    first_name: firstName,
+    last_name: lastName,
+    preferred_name: null,
+    gender: 'female',
+    date_of_birth: '2012-03-14',
+    id_number: idNumber,
+    passport_number: null,
+    passport_country: null,
+    nationality: 'South African',
+    home_language: 'English',
+    additional_languages: null,
+    photo_url: null,
+    transport_mode: null,
+    transport_notes: null,
+    boarding_type: 'day_scholar',
+    status,
+    status_reason: null,
+    admission_date: '2026-01-15',
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockEnrollmentOverrides {
+  id?: string;
+  schoolId?: string;
+  learnerId?: string;
+  academicYearId?: string;
+  gradeId?: string;
+  classId?: string | null;
+  enrollmentStatus?: string;
+}
+
+export function buildMockLearnerEnrollmentRow(overrides: MockEnrollmentOverrides = {}) {
+  const {
+    id = 'enrollment-1',
+    schoolId = MOCK_TENANT_ID,
+    learnerId = 'learner-1',
+    academicYearId = 'year-2026',
+    gradeId = 'grade-8',
+    classId = 'class-8a',
+    enrollmentStatus = 'enrolled',
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    learner_id: learnerId,
+    academic_year_id: academicYearId,
+    grade_id: gradeId,
+    class_id: classId,
+    house: null,
+    stream: null,
+    enrollment_date: '2026-01-15',
+    enrollment_status: enrollmentStatus,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockGuardianOverrides {
+  id?: string;
+  schoolId?: string;
+  learnerId?: string;
+  guardianProfileId?: string;
+  relationshipType?: string;
+  isPrimary?: boolean;
+}
+
+export function buildMockLearnerGuardianRow(overrides: MockGuardianOverrides = {}) {
+  const {
+    id = 'guardian-1',
+    schoolId = MOCK_TENANT_ID,
+    learnerId = 'learner-1',
+    guardianProfileId = 'guardian-profile-1',
+    relationshipType = 'mother',
+    isPrimary = true,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    learner_id: learnerId,
+    guardian_profile_id: guardianProfileId,
+    relationship_type: relationshipType,
+    is_primary: isPrimary,
+    custody_notes: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockEmergencyContactOverrides {
+  id?: string;
+  schoolId?: string;
+  learnerId?: string;
+  name?: string;
+  phone?: string;
+}
+
+export function buildMockLearnerEmergencyContactRow(overrides: MockEmergencyContactOverrides = {}) {
+  const {
+    id = 'contact-1',
+    schoolId = MOCK_TENANT_ID,
+    learnerId = 'learner-1',
+    name = 'Zanele Dube',
+    phone = '+27 82 555 0101',
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    learner_id: learnerId,
+    name,
+    relationship: 'Aunt',
+    phone,
+    alternate_phone: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockMedicalInformationOverrides {
+  id?: string;
+  schoolId?: string;
+  learnerId?: string;
+  allergies?: string | null;
+}
+
+export function buildMockLearnerMedicalInformationRow(overrides: MockMedicalInformationOverrides = {}) {
+  const { id = 'medical-1', schoolId = MOCK_TENANT_ID, learnerId = 'learner-1', allergies = 'Peanuts' } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    learner_id: learnerId,
+    allergies,
+    medication: null,
+    medical_conditions: null,
+    doctor_name: null,
+    doctor_phone: null,
+    medical_aid_provider: null,
+    medical_aid_number: null,
+    emergency_medical_notes: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockDocumentOverrides {
+  id?: string;
+  schoolId?: string;
+  learnerId?: string;
+  documentType?: string;
+  active?: boolean;
+}
+
+export function buildMockLearnerDocumentRow(overrides: MockDocumentOverrides = {}) {
+  const {
+    id = 'document-1',
+    schoolId = MOCK_TENANT_ID,
+    learnerId = 'learner-1',
+    documentType = 'birth_certificate',
+    active = true,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    learner_id: learnerId,
+    document_type: documentType,
+    file_url: 'https://files.funda360.dev/docs/birth-certificate.pdf',
+    file_name: 'birth-certificate.pdf',
+    uploaded_at: '2026-01-01T00:00:00Z',
+    notes: null,
+    active,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+/**
+ * Mocks the `learners` LIST query (paginated like `profiles` — identified by
+ * `limit`/`offset` params, see installUsersListMock for why Content-Range
+ * needs `access-control-expose-headers`).
+ */
+export async function installLearnersListMock(page: Page, learners: ReturnType<typeof buildMockLearnerRow>[]) {
+  await page.route('**/rest/v1/learners*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    const isListQuery = url.searchParams.has('limit') || url.searchParams.has('offset');
+    if (!isListQuery) return route.fallback();
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: {
+        'content-range': `0-${Math.max(learners.length - 1, 0)}/${learners.length}`,
+        'access-control-expose-headers': 'content-range',
+      },
+      body: JSON.stringify(learners),
+    });
+  });
+}
+
+/** Mocks the single-learner `.eq('id', ...).maybeSingle()` fetch (GET, no `limit`/`offset` params) LearnerProfilePage issues. */
+export async function installLearnerDetailMock(page: Page, learner: ReturnType<typeof buildMockLearnerRow> | null) {
+  await page.route('**/rest/v1/learners*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    const isListQuery = url.searchParams.has('limit') || url.searchParams.has('offset');
+    if (isListQuery) return route.fallback();
+    await fulfillJson(route, learner);
+  });
+}
+
+/** Mocks a `.from('<table>').select('*').eq(...)` LIST query (GET, unpaginated) for one of the learner child tables. */
+export async function installLearnerChildListMock(
+  page: Page,
+  table: 'learner_enrollments' | 'learner_guardians' | 'learner_emergency_contacts' | 'learner_documents',
+  rows: Record<string, unknown>[],
+) {
+  await page.route(`**/rest/v1/${table}*`, async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, rows);
+  });
+}
+
+/** Mocks the `learner_medical_information` `.eq('learner_id', ...).maybeSingle()` fetch MedicalInformationCard issues. */
+export async function installLearnerMedicalInformationMock(
+  page: Page,
+  record: ReturnType<typeof buildMockLearnerMedicalInformationRow> | null,
+) {
+  await page.route('**/rest/v1/learner_medical_information*', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, record);
+  });
+}
+
+/** Mocks a `.rpc('change_learner_status' | 'promote_learner', ...)` call. */
+export async function installLearnerRpcMock(
+  page: Page,
+  fnName: 'change_learner_status' | 'promote_learner',
+  handler: (route: Route) => Promise<void>,
+) {
+  await page.route(`**/rest/v1/rpc/${fnName}`, handler);
+}

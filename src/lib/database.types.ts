@@ -17,6 +17,29 @@ export type SchoolType = 'public' | 'private' | 'independent';
 export type SchoolStatus = 'pending' | 'active' | 'inactive' | 'suspended';
 export type ProfileStatus = 'active' | 'inactive' | 'suspended';
 
+export type LearnerStatus =
+  | 'prospective'
+  | 'applied'
+  | 'accepted'
+  | 'enrolled'
+  | 'active'
+  | 'suspended'
+  | 'transferred'
+  | 'graduated'
+  | 'withdrawn';
+export type BoardingType = 'day_scholar' | 'boarder';
+export type LearnerEnrollmentStatus = 'enrolled' | 'promoted' | 'repeated' | 'transferred_out' | 'withdrawn';
+export type GuardianRelationshipType = 'mother' | 'father' | 'legal_guardian' | 'grandparent' | 'sibling' | 'other';
+export type LearnerDocumentType =
+  | 'birth_certificate'
+  | 'id_copy'
+  | 'passport'
+  | 'permit'
+  | 'transfer_letter'
+  | 'medical_certificate'
+  | 'report_card'
+  | 'other';
+
 export type SchoolRow = {
   id: string;
   name: string;
@@ -305,6 +328,333 @@ export type SubjectUpdate = {
   updated_at?: string;
 };
 
+export type LearnerRow = {
+  id: string;
+  school_id: string;
+  profile_id: string | null;
+  learner_number: string;
+  admission_number: string;
+  first_name: string;
+  last_name: string;
+  preferred_name: string | null;
+  gender: string | null;
+  date_of_birth: string;
+  id_number: string | null;
+  passport_number: string | null;
+  passport_country: string | null;
+  nationality: string | null;
+  home_language: string | null;
+  additional_languages: string[] | null;
+  photo_url: string | null;
+  transport_mode: string | null;
+  transport_notes: string | null;
+  boarding_type: BoardingType | null;
+  status: LearnerStatus;
+  status_reason: string | null;
+  admission_date: string;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerInsert = {
+  id?: string;
+  school_id: string;
+  profile_id?: string | null;
+  learner_number: string;
+  admission_number: string;
+  first_name: string;
+  last_name: string;
+  preferred_name?: string | null;
+  gender?: string | null;
+  date_of_birth: string;
+  id_number?: string | null;
+  passport_number?: string | null;
+  passport_country?: string | null;
+  nationality?: string | null;
+  home_language?: string | null;
+  additional_languages?: string[] | null;
+  photo_url?: string | null;
+  transport_mode?: string | null;
+  transport_notes?: string | null;
+  boarding_type?: BoardingType | null;
+  status?: LearnerStatus;
+  status_reason?: string | null;
+  admission_date: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerUpdate = {
+  id?: string;
+  school_id?: string;
+  profile_id?: string | null;
+  learner_number?: string;
+  admission_number?: string;
+  first_name?: string;
+  last_name?: string;
+  preferred_name?: string | null;
+  gender?: string | null;
+  date_of_birth?: string;
+  id_number?: string | null;
+  passport_number?: string | null;
+  passport_country?: string | null;
+  nationality?: string | null;
+  home_language?: string | null;
+  additional_languages?: string[] | null;
+  photo_url?: string | null;
+  transport_mode?: string | null;
+  transport_notes?: string | null;
+  boarding_type?: BoardingType | null;
+  status?: LearnerStatus;
+  status_reason?: string | null;
+  admission_date?: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerEnrollmentRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  grade_id: string;
+  class_id: string | null;
+  house: string | null;
+  stream: string | null;
+  enrollment_date: string;
+  enrollment_status: LearnerEnrollmentStatus;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerEnrollmentInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  grade_id: string;
+  class_id?: string | null;
+  house?: string | null;
+  stream?: string | null;
+  enrollment_date: string;
+  enrollment_status?: LearnerEnrollmentStatus;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerEnrollmentUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  academic_year_id?: string;
+  grade_id?: string;
+  class_id?: string | null;
+  house?: string | null;
+  stream?: string | null;
+  enrollment_date?: string;
+  enrollment_status?: LearnerEnrollmentStatus;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerGuardianRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  guardian_profile_id: string;
+  relationship_type: GuardianRelationshipType;
+  is_primary: boolean;
+  custody_notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerGuardianInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  guardian_profile_id: string;
+  relationship_type: GuardianRelationshipType;
+  is_primary?: boolean;
+  custody_notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerGuardianUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  guardian_profile_id?: string;
+  relationship_type?: GuardianRelationshipType;
+  is_primary?: boolean;
+  custody_notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerEmergencyContactRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  name: string;
+  relationship: string | null;
+  phone: string;
+  alternate_phone: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerEmergencyContactInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  name: string;
+  relationship?: string | null;
+  phone: string;
+  alternate_phone?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerEmergencyContactUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  name?: string;
+  relationship?: string | null;
+  phone?: string;
+  alternate_phone?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerMedicalInformationRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  allergies: string | null;
+  medication: string | null;
+  medical_conditions: string | null;
+  doctor_name: string | null;
+  doctor_phone: string | null;
+  medical_aid_provider: string | null;
+  medical_aid_number: string | null;
+  emergency_medical_notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerMedicalInformationInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  allergies?: string | null;
+  medication?: string | null;
+  medical_conditions?: string | null;
+  doctor_name?: string | null;
+  doctor_phone?: string | null;
+  medical_aid_provider?: string | null;
+  medical_aid_number?: string | null;
+  emergency_medical_notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerMedicalInformationUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  allergies?: string | null;
+  medication?: string | null;
+  medical_conditions?: string | null;
+  doctor_name?: string | null;
+  doctor_phone?: string | null;
+  medical_aid_provider?: string | null;
+  medical_aid_number?: string | null;
+  emergency_medical_notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerDocumentRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  document_type: LearnerDocumentType;
+  file_url: string;
+  file_name: string | null;
+  uploaded_at: string;
+  notes: string | null;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerDocumentInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  document_type: LearnerDocumentType;
+  file_url: string;
+  file_name?: string | null;
+  uploaded_at?: string;
+  notes?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerDocumentUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  document_type?: LearnerDocumentType;
+  file_url?: string;
+  file_name?: string | null;
+  uploaded_at?: string;
+  notes?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -343,6 +693,36 @@ export type Database = {
         Insert: SubjectInsert;
         Update: SubjectUpdate;
       };
+      learners: {
+        Row: LearnerRow;
+        Insert: LearnerInsert;
+        Update: LearnerUpdate;
+      };
+      learner_enrollments: {
+        Row: LearnerEnrollmentRow;
+        Insert: LearnerEnrollmentInsert;
+        Update: LearnerEnrollmentUpdate;
+      };
+      learner_guardians: {
+        Row: LearnerGuardianRow;
+        Insert: LearnerGuardianInsert;
+        Update: LearnerGuardianUpdate;
+      };
+      learner_emergency_contacts: {
+        Row: LearnerEmergencyContactRow;
+        Insert: LearnerEmergencyContactInsert;
+        Update: LearnerEmergencyContactUpdate;
+      };
+      learner_medical_information: {
+        Row: LearnerMedicalInformationRow;
+        Insert: LearnerMedicalInformationInsert;
+        Update: LearnerMedicalInformationUpdate;
+      };
+      learner_documents: {
+        Row: LearnerDocumentRow;
+        Insert: LearnerDocumentInsert;
+        Update: LearnerDocumentUpdate;
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -364,6 +744,19 @@ export type Database = {
       set_active_academic_year: {
         Args: { p_academic_year_id: string };
         Returns: AcademicYearRow;
+      };
+      change_learner_status: {
+        Args: { p_learner_id: string; p_new_status: LearnerStatus; p_reason?: string | null };
+        Returns: LearnerRow;
+      };
+      promote_learner: {
+        Args: {
+          p_learner_id: string;
+          p_new_academic_year_id: string;
+          p_new_grade_id: string;
+          p_new_class_id: string | null;
+        };
+        Returns: LearnerEnrollmentRow;
       };
     };
   };

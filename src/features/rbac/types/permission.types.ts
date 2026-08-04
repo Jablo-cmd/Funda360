@@ -1,6 +1,5 @@
 /**
- * Framework-level permission catalogue only — no business-module
- * permissions (learner/finance/attendance/etc.) until those epics exist.
+ * Framework-level and business-module permission catalogue.
  * Extend this union as each new module lands its own permission set.
  */
 export type Permission =
@@ -12,4 +11,9 @@ export type Permission =
   | 'profile.view_any'
   | 'profile.manage_any'
   | 'academic.view'
-  | 'academic.manage';
+  | 'academic.manage'
+  | 'learner.view'
+  | 'learner.manage'
+  | 'learner.view_sensitive'
+  | 'learner.view_medical'
+  | 'learner.manage_medical';
