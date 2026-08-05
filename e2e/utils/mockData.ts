@@ -722,3 +722,21 @@ export async function installEmployeeRpcMock(
 ) {
   await page.route(`**/rest/v1/rpc/${fnName}`, handler);
 }
+
+/**
+ * Mocks the unpaginated `.select(...).eq('school_id', ...)` row fetch the
+ * Reports feature issues against `learners` or `employees` (GET, no
+ * `limit`/`offset` params — unlike the paginated list queries those same
+ * tables also serve, see installLearnersListMock/installEmployeesListMock).
+ */
+export async function installReportRowsMock(
+  page: Page,
+  table: 'learners' | 'employees',
+  rows: Record<string, unknown>[],
+) {
+  await page.route(`**/rest/v1/${table}*`, async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.has('limit') || url.searchParams.has('offset')) return route.fallback();
+    await fulfillJson(route, rows);
+  });
+}

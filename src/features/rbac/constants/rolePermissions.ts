@@ -8,6 +8,17 @@ import type { Permission } from '@/features/rbac/types/permission.types';
  * deliberately omitted here rather than repeated 24 times.
  *
  * Framework-level and business-module permissions.
+ *
+ * `reports.view`/`reports.export` (Reports & Analytics) follow a derived
+ * rule rather than being assigned ad hoc: `reports.view` goes to any role
+ * holding at least one of `academic.view`/`employee.view`/`learner.view`
+ * (a role with none of the three would see an empty Reports section, so
+ * granting it would be pointless); `reports.export` — deliberately
+ * narrower, same shape as `learner.view_sensitive` being narrower than
+ * `learner.view` — goes only to roles additionally holding at least one
+ * `.manage`-tier permission among `academic.manage`/`employee.manage`/
+ * `learner.manage`/`learner.manage_medical`, since removing data from the
+ * app as a file is a more consequential action than viewing it on screen.
  */
 export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   super_administrator: [
@@ -25,6 +36,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'learner.manage_medical',
     'employee.view',
     'employee.manage',
+    'reports.view',
+    'reports.export',
   ],
   platform_administrator: [
     'school.view',
@@ -41,6 +54,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'learner.manage_medical',
     'employee.view',
     'employee.manage',
+    'reports.view',
+    'reports.export',
   ],
   support_engineer: ['school.view', 'profile.view_any'],
   school_owner: [
@@ -57,6 +72,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'learner.manage_medical',
     'employee.view',
     'employee.manage',
+    'reports.view',
+    'reports.export',
   ],
   principal: [
     'school.view',
@@ -70,22 +87,47 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'learner.view_sensitive',
     'learner.view_medical',
     'employee.view',
+    'reports.view',
+    'reports.export',
   ],
   vice_principal: ['school.view', 'profile.view_any'],
   department_head: ['school.view', 'profile.view_any'],
-  hr_manager: ['school.view', 'profile.view_any', 'profile.manage_any', 'employee.view', 'employee.manage'],
+  hr_manager: [
+    'school.view',
+    'profile.view_any',
+    'profile.manage_any',
+    'employee.view',
+    'employee.manage',
+    'reports.view',
+    'reports.export',
+  ],
   finance_manager: ['school.view'],
   accountant: ['school.view'],
   receptionist: ['school.view', 'profile.view_any'],
-  admissions_officer: ['school.view', 'profile.view_any', 'learner.view', 'learner.manage', 'learner.view_sensitive'],
+  admissions_officer: [
+    'school.view',
+    'profile.view_any',
+    'learner.view',
+    'learner.manage',
+    'learner.view_sensitive',
+    'reports.view',
+    'reports.export',
+  ],
   librarian: ['school.view'],
   transport_coordinator: ['school.view'],
   sports_coordinator: ['school.view'],
-  medical_officer: ['school.view', 'learner.view', 'learner.view_medical', 'learner.manage_medical'],
+  medical_officer: [
+    'school.view',
+    'learner.view',
+    'learner.view_medical',
+    'learner.manage_medical',
+    'reports.view',
+    'reports.export',
+  ],
   auditor: ['school.view', 'profile.view_any'],
-  teacher: ['school.view', 'academic.view'],
-  class_teacher: ['school.view', 'academic.view'],
-  subject_teacher: ['school.view', 'academic.view'],
+  teacher: ['school.view', 'academic.view', 'reports.view'],
+  class_teacher: ['school.view', 'academic.view', 'reports.view'],
+  subject_teacher: ['school.view', 'academic.view', 'reports.view'],
   parent: [],
   guardian: [],
   learner: [],

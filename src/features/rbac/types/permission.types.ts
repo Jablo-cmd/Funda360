@@ -18,4 +18,6 @@ export type Permission =
   | 'learner.view_medical'
   | 'learner.manage_medical'
   | 'employee.view'
-  | 'employee.manage';
+  | 'employee.manage'
+  | 'reports.view'
+  | 'reports.export';

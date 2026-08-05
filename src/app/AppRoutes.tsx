@@ -23,6 +23,10 @@ import { LearnerProfilePage } from '@/features/learners/pages/LearnerProfilePage
 import { EmployeesPage } from '@/features/employees/pages/EmployeesPage';
 import { EmployeeProfilePage } from '@/features/employees/pages/EmployeeProfilePage';
 import { DepartmentsPage } from '@/features/employees/pages/DepartmentsPage';
+import { ReportsOverviewPage } from '@/features/reports/pages/ReportsOverviewPage';
+import { LearnerReportPage } from '@/features/reports/pages/LearnerReportPage';
+import { EmployeeReportPage } from '@/features/reports/pages/EmployeeReportPage';
+import { AcademicReportPage } from '@/features/reports/pages/AcademicReportPage';
 
 export function AppRoutes() {
   return (
@@ -64,6 +68,13 @@ export function AppRoutes() {
               <Route path="/employees" element={<EmployeesPage />} />
               <Route path="/employees/departments" element={<DepartmentsPage />} />
               <Route path="/employees/:id" element={<EmployeeProfilePage />} />
+            </Route>
+
+            <Route element={<RequirePermission permission="reports.view" />}>
+              <Route path="/reports" element={<ReportsOverviewPage />} />
+              <Route path="/reports/learners" element={<LearnerReportPage />} />
+              <Route path="/reports/employees" element={<EmployeeReportPage />} />
+              <Route path="/reports/academic" element={<AcademicReportPage />} />
             </Route>
           </Route>
         </Route>

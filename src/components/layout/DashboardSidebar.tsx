@@ -31,6 +31,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const canViewEmployees = hasPermission(user?.role ?? null, 'employee.view');
   const canViewAcademic = hasPermission(user?.role ?? null, 'academic.view');
   const canViewLearners = hasPermission(user?.role ?? null, 'learner.view');
+  const canViewReports = hasPermission(user?.role ?? null, 'reports.view');
 
   const navItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: GridIcon },
@@ -42,7 +43,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       ? [{ label: 'Students', path: '/learners', icon: GraduationCapIcon }]
       : [{ label: 'Students', icon: GraduationCapIcon }]),
     { label: 'Teachers', icon: ChalkboardIcon },
-    { label: 'Reports', icon: ChartIcon },
+    ...(canViewReports ? [{ label: 'Reports', path: '/reports', icon: ChartIcon }] : [{ label: 'Reports', icon: ChartIcon }]),
     { label: 'Settings', icon: GearIcon },
   ];
 
