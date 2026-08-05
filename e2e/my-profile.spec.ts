@@ -5,9 +5,11 @@ import {
   buildMockProfileRow,
   buildMockEmployeeRow,
   buildMockLearnerRow,
+  buildMockLearnerMedicalInformationRow,
   installDataMocks,
   installEmployeeDetailMock,
   installReportRowsMock,
+  installLearnerMedicalInformationMock,
 } from './utils/mockData';
 
 test('an employee-linked account sees the Employee Information section', async ({ page }) => {
@@ -28,11 +30,40 @@ test('a guardian linked to exactly one learner sees My Children with one entry',
   await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
   await installEmployeeDetailMock(page, null);
   await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
+  await installLearnerMedicalInformationMock(page, null);
 
   await page.goto('/my-profile');
   await expect(page.getByRole('heading', { name: 'My Children' })).toBeVisible();
   await expect(page.getByText('Naledi')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Employee Information' })).toHaveCount(0);
+});
+
+test('a guardian sees their linked child\'s medical information when a record exists', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'guardian' });
+  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
+  await installEmployeeDetailMock(page, null);
+  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
+  await installLearnerMedicalInformationMock(
+    page,
+    buildMockLearnerMedicalInformationRow({ learnerId: 'learner-1', allergies: 'Peanuts' }),
+  );
+
+  await page.goto('/my-profile');
+  await expect(page.getByRole('heading', { name: 'Medical information' })).toBeVisible();
+  await expect(page.getByText('Peanuts')).toBeVisible();
+});
+
+test('a guardian\'s linked child with no medical record shows no Medical information section', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'guardian' });
+  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
+  await installEmployeeDetailMock(page, null);
+  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
+  await installLearnerMedicalInformationMock(page, null);
+
+  await page.goto('/my-profile');
+  await expect(page.getByText('Naledi')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Medical information' })).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
 test('a guardian linked to more than one learner sees all of them', async ({ page }) => {
@@ -43,6 +74,7 @@ test('a guardian linked to more than one learner sees all of them', async ({ pag
     buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi', lastName: 'Dube' }),
     buildMockLearnerRow({ id: 'learner-2', firstName: 'Thabo', lastName: 'Dube' }),
   ]);
+  await installLearnerMedicalInformationMock(page, null);
 
   await page.goto('/my-profile');
   await expect(page.getByText('Naledi Dube')).toBeVisible();
