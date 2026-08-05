@@ -6,10 +6,12 @@ import {
   buildMockEmployeeRow,
   buildMockLearnerRow,
   buildMockLearnerMedicalInformationRow,
+  buildMockLearnerEmergencyContactRow,
   installDataMocks,
   installEmployeeDetailMock,
   installReportRowsMock,
   installLearnerMedicalInformationMock,
+  installLearnerChildListMock,
 } from './utils/mockData';
 
 test('an employee-linked account sees the Employee Information section', async ({ page }) => {
@@ -31,6 +33,7 @@ test('a guardian linked to exactly one learner sees My Children with one entry',
   await installEmployeeDetailMock(page, null);
   await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
   await installLearnerMedicalInformationMock(page, null);
+  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
 
   await page.goto('/my-profile');
   await expect(page.getByRole('heading', { name: 'My Children' })).toBeVisible();
@@ -47,6 +50,7 @@ test('a guardian sees their linked child\'s medical information when a record ex
     page,
     buildMockLearnerMedicalInformationRow({ learnerId: 'learner-1', allergies: 'Peanuts' }),
   );
+  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
 
   await page.goto('/my-profile');
   await expect(page.getByRole('heading', { name: 'Medical information' })).toBeVisible();
@@ -59,10 +63,40 @@ test('a guardian\'s linked child with no medical record shows no Medical informa
   await installEmployeeDetailMock(page, null);
   await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
   await installLearnerMedicalInformationMock(page, null);
+  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
 
   await page.goto('/my-profile');
   await expect(page.getByText('Naledi')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Medical information' })).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('a guardian sees emergency contacts for a linked learner', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'guardian' });
+  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
+  await installEmployeeDetailMock(page, null);
+  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
+  await installLearnerMedicalInformationMock(page, null);
+  await installLearnerChildListMock(page, 'learner_emergency_contacts', [
+    buildMockLearnerEmergencyContactRow({ learnerId: 'learner-1', name: 'Zanele Dube' }),
+  ]);
+
+  await page.goto('/my-profile');
+  await expect(page.getByRole('heading', { name: 'Emergency Contacts' })).toBeVisible();
+  await expect(page.getByText('Zanele Dube')).toBeVisible();
+});
+
+test('a guardian with no emergency contacts sees no emergency-contact section', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'guardian' });
+  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
+  await installEmployeeDetailMock(page, null);
+  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
+  await installLearnerMedicalInformationMock(page, null);
+  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
+
+  await page.goto('/my-profile');
+  await expect(page.getByText('Naledi')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Emergency Contacts' })).toHaveCount(0);
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
@@ -75,6 +109,7 @@ test('a guardian linked to more than one learner sees all of them', async ({ pag
     buildMockLearnerRow({ id: 'learner-2', firstName: 'Thabo', lastName: 'Dube' }),
   ]);
   await installLearnerMedicalInformationMock(page, null);
+  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
 
   await page.goto('/my-profile');
   await expect(page.getByText('Naledi Dube')).toBeVisible();

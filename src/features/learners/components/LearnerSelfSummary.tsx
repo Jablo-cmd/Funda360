@@ -1,4 +1,5 @@
 import { useMedicalInformation } from '@/features/learners/hooks/useMedicalInformation';
+import { useEmergencyContacts } from '@/features/learners/hooks/useEmergencyContacts';
 import type { Learner } from '@/features/learners/types/learner.types';
 
 export interface LearnerSelfSummaryProps {
@@ -8,12 +9,14 @@ export interface LearnerSelfSummaryProps {
 /**
  * Read-only self/guardian-view summary of a single linked learner — no
  * manage actions, unlike LearnerProfilePage. Also shows this learner's
- * medical information when a record exists; RLS (learner_medical_information_select's
+ * medical information and emergency contacts when present; RLS
+ * (learner_medical_information_select's and learner_emergency_contacts_select's
  * guardian/self clauses) is what confines this to the caller's own linked
  * learner(s), not any check in this component.
  */
 export function LearnerSelfSummary({ learner }: LearnerSelfSummaryProps) {
   const { medicalInformation, error: medicalError } = useMedicalInformation(learner.id);
+  const { emergencyContacts, error: emergencyContactsError } = useEmergencyContacts(learner.id);
 
   return (
     <div className="rounded-card border border-border bg-surface-raised p-6 shadow-card dark:shadow-card-dark">
@@ -89,6 +92,43 @@ export function LearnerSelfSummary({ learner }: LearnerSelfSummaryProps) {
               <dd className="mt-1 text-sm text-content-primary">{medicalInformation.emergencyMedicalNotes ?? '—'}</dd>
             </div>
           </dl>
+        </div>
+      )}
+
+      {emergencyContactsError && (
+        <div
+          role="alert"
+          className="mt-6 rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
+        >
+          {emergencyContactsError}
+        </div>
+      )}
+
+      {emergencyContacts.length > 0 && (
+        <div className="mt-6 border-t border-border pt-5">
+          <h4 className="text-xs font-medium uppercase tracking-wide text-content-tertiary">Emergency Contacts</h4>
+          <div className="mt-3 flex flex-col gap-4">
+            {emergencyContacts.map((contact) => (
+              <dl key={contact.id} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-content-tertiary">Name</dt>
+                  <dd className="mt-1 text-sm text-content-primary">{contact.name}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-content-tertiary">Relationship</dt>
+                  <dd className="mt-1 text-sm text-content-primary">{contact.relationship ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-content-tertiary">Phone</dt>
+                  <dd className="mt-1 text-sm text-content-primary">{contact.phone}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-content-tertiary">Alternate phone</dt>
+                  <dd className="mt-1 text-sm text-content-primary">{contact.alternatePhone ?? '—'}</dd>
+                </div>
+              </dl>
+            ))}
+          </div>
         </div>
       )}
     </div>
