@@ -117,6 +117,13 @@ async function getEmployee(id: string): Promise<Employee | null> {
   return data ? toEmployee(data) : null;
 }
 
+/** Self-service: the employee record linked to the caller's own profile, if any. RLS (employees_select's `profile_id = auth.uid()` clause) is what actually confines this to the caller's own row. */
+async function getMyEmployee(profileId: string): Promise<Employee | null> {
+  const { data, error } = await supabase.from('employees').select('*').eq('profile_id', profileId).maybeSingle();
+  if (error) throw error;
+  return data ? toEmployee(data) : null;
+}
+
 function toInsertPayload(schoolId: string, input: CreateEmployeeInput): EmployeeInsert {
   return {
     school_id: schoolId,
@@ -217,6 +224,7 @@ async function provisionLogin(
 export const employeeService = {
   getEmployees,
   getEmployee,
+  getMyEmployee,
   searchEmployeeCandidates,
   createEmployee,
   updateEmployee,

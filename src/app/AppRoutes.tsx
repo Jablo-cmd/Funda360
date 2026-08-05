@@ -9,6 +9,7 @@ import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage';
 import { VerifyEmailPage } from '@/features/auth/pages/VerifyEmailPage';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { MyProfilePage } from '@/pages/MyProfilePage';
 import { SchoolProfilePage } from '@/features/school/pages/SchoolProfilePage';
 import { UsersPage } from '@/features/users/pages/UsersPage';
 import { UserProfilePage } from '@/features/users/pages/UserProfilePage';
@@ -43,6 +44,7 @@ export function AppRoutes() {
         <Route element={<TenantGate />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/my-profile" element={<MyProfilePage />} />
             <Route path="/school/profile" element={<SchoolProfilePage />} />
 
             <Route element={<RequirePermission permission="profile.view_any" />}>

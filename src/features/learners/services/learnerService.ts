@@ -80,6 +80,19 @@ async function getLearner(id: string): Promise<Learner | null> {
   return data ? toLearner(data) : null;
 }
 
+/**
+ * Self-service: every learner the caller is a guardian of, plus their own
+ * linked record if they are a learner themselves. Deliberately unfiltered —
+ * RLS (learners_select's `profile_id = auth.uid()` and `is_learner_guardian(id)`
+ * clauses) is what narrows this to the caller's own rows, not a client-side
+ * filter or role check.
+ */
+async function getMyLearners(): Promise<Learner[]> {
+  const { data, error } = await supabase.from('learners').select('*').order('last_name', { ascending: true });
+  if (error) throw error;
+  return data.map(toLearner);
+}
+
 function toInsertPayload(schoolId: string, input: CreateLearnerInput): LearnerInsert {
   return {
     school_id: schoolId,
@@ -155,6 +168,7 @@ async function changeStatus(id: string, newStatus: LearnerStatus, reason: string
 export const learnerService = {
   getLearners,
   getLearner,
+  getMyLearners,
   createLearner,
   updateLearner,
   changeStatus,

@@ -35,6 +35,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
 
   const navItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: GridIcon },
+    { label: 'My Profile', path: '/my-profile', icon: UsersIcon },
     { label: 'School Profile', path: '/school/profile', icon: BuildingIcon },
     ...(canViewUsers ? [{ label: 'Users', path: '/users', icon: UsersIcon }] : []),
     ...(canViewEmployees ? [{ label: 'Employees', path: '/employees', icon: BriefcaseIcon }] : []),
