@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 import { useAuth } from '@/features/auth/context/authContext';
 import { hasPermission } from '@/features/rbac';
 import {
+  BriefcaseIcon,
   BuildingIcon,
   ChalkboardIcon,
   ChartIcon,
@@ -27,6 +28,7 @@ export interface DashboardSidebarProps {
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const { user } = useAuth();
   const canViewUsers = hasPermission(user?.role ?? null, 'profile.view_any');
+  const canViewEmployees = hasPermission(user?.role ?? null, 'employee.view');
   const canViewAcademic = hasPermission(user?.role ?? null, 'academic.view');
   const canViewLearners = hasPermission(user?.role ?? null, 'learner.view');
 
@@ -34,6 +36,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     { label: 'Dashboard', path: '/dashboard', icon: GridIcon },
     { label: 'School Profile', path: '/school/profile', icon: BuildingIcon },
     ...(canViewUsers ? [{ label: 'Users', path: '/users', icon: UsersIcon }] : []),
+    ...(canViewEmployees ? [{ label: 'Employees', path: '/employees', icon: BriefcaseIcon }] : []),
     ...(canViewAcademic ? [{ label: 'Academic', path: '/academic', icon: LayersIcon }] : []),
     ...(canViewLearners
       ? [{ label: 'Students', path: '/learners', icon: GraduationCapIcon }]

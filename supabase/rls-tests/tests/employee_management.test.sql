@@ -14,8 +14,10 @@ begin
     test_util.jwt_claims('88888888-8888-8888-8888-888888888888', 'hr_manager', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
   execute 'set local role authenticated';
 
+  -- 6, not the original 4 — 06_employee_provisioning_fixtures.sql added two
+  -- more School A employees for the provisioning regression suite.
   select count(*) into v_count from public.employees where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  call test_util.record('HR manager can view own school employee directory', v_count = 4, 'rows visible: ' || v_count);
+  call test_util.record('HR manager can view own school employee directory', v_count = 6, 'rows visible: ' || v_count);
 
   execute 'reset role';
 end;
@@ -32,6 +34,7 @@ begin
     test_util.jwt_claims('77777777-7777-7777-7777-777777777777', 'principal', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
   execute 'set local role authenticated';
 
+  -- 6, not the original 4 — see the count-1 test above for why.
   select count(*) into v_count from public.employees where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
   begin
@@ -40,7 +43,7 @@ begin
     call test_util.record('principal can view but not create employees', false, 'INSERT succeeded unexpectedly');
   exception when others then
     get stacked diagnostics v_error = message_text;
-    call test_util.record('principal can view but not create employees', v_count = 4, 'view rows=' || v_count || ', insert blocked: ' || v_error);
+    call test_util.record('principal can view but not create employees', v_count = 6, 'view rows=' || v_count || ', insert blocked: ' || v_error);
   end;
 
   execute 'reset role';

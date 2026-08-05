@@ -7,7 +7,7 @@ import type { Permission } from '@/features/rbac/types/permission.types';
  * (see hasPermission in utils/permissionHelpers.ts), so those two are
  * deliberately omitted here rather than repeated 24 times.
  *
- * Framework-level permissions only — no business-module permissions yet.
+ * Framework-level and business-module permissions.
  */
 export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   super_administrator: [
@@ -23,6 +23,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'learner.view_sensitive',
     'learner.view_medical',
     'learner.manage_medical',
+    'employee.view',
+    'employee.manage',
   ],
   platform_administrator: [
     'school.view',
@@ -37,6 +39,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'learner.view_sensitive',
     'learner.view_medical',
     'learner.manage_medical',
+    'employee.view',
+    'employee.manage',
   ],
   support_engineer: ['school.view', 'profile.view_any'],
   school_owner: [
@@ -51,6 +55,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'learner.view_sensitive',
     'learner.view_medical',
     'learner.manage_medical',
+    'employee.view',
+    'employee.manage',
   ],
   principal: [
     'school.view',
@@ -63,10 +69,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'learner.manage',
     'learner.view_sensitive',
     'learner.view_medical',
+    'employee.view',
   ],
   vice_principal: ['school.view', 'profile.view_any'],
   department_head: ['school.view', 'profile.view_any'],
-  hr_manager: ['school.view', 'profile.view_any', 'profile.manage_any'],
+  hr_manager: ['school.view', 'profile.view_any', 'profile.manage_any', 'employee.view', 'employee.manage'],
   finance_manager: ['school.view'],
   accountant: ['school.view'],
   receptionist: ['school.view', 'profile.view_any'],

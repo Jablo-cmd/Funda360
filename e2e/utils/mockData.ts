@@ -568,3 +568,157 @@ export async function installLearnerRpcMock(
 ) {
   await page.route(`**/rest/v1/rpc/${fnName}`, handler);
 }
+
+interface MockDepartmentOverrides {
+  id?: string;
+  schoolId?: string;
+  name?: string;
+  code?: string | null;
+  active?: boolean;
+}
+
+export function buildMockDepartmentRow(overrides: MockDepartmentOverrides = {}) {
+  const {
+    id = 'department-hr',
+    schoolId = MOCK_TENANT_ID,
+    name = 'Human Resources',
+    code = 'HR',
+    active = true,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    name,
+    code,
+    description: null,
+    active,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockEmployeeOverrides {
+  id?: string;
+  schoolId?: string;
+  employeeNumber?: string;
+  firstName?: string;
+  lastName?: string;
+  departmentId?: string | null;
+  jobTitle?: string | null;
+  employmentStatus?: string;
+  reportsToEmployeeId?: string | null;
+  workEmail?: string | null;
+  profileId?: string | null;
+}
+
+export function buildMockEmployeeRow(overrides: MockEmployeeOverrides = {}) {
+  const {
+    id = 'employee-1',
+    schoolId = MOCK_TENANT_ID,
+    employeeNumber = 'EMP-0001',
+    firstName = 'Karabo',
+    lastName = 'Mokoena',
+    departmentId = 'department-hr',
+    jobTitle = 'HR Officer',
+    employmentStatus = 'active',
+    reportsToEmployeeId = null,
+    workEmail = 'karabo.mokoena@riverside.funda360.dev',
+    profileId = null,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    profile_id: profileId,
+    employee_number: employeeNumber,
+    first_name: firstName,
+    last_name: lastName,
+    work_email: workEmail,
+    work_phone: '+27 11 555 0199',
+    id_number: null,
+    date_of_birth: null,
+    department_id: departmentId,
+    job_title: jobTitle,
+    employment_type: 'full_time',
+    employment_status: employmentStatus,
+    hire_date: '2024-02-01',
+    termination_date: null,
+    reports_to_employee_id: reportsToEmployeeId,
+    emergency_contact_name: null,
+    emergency_contact_phone: null,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+/** Mocks the `departments` LIST query (GET, unpaginated — a small bounded catalogue, same shape as installAcademicListMock). */
+export async function installDepartmentsListMock(page: Page, departments: ReturnType<typeof buildMockDepartmentRow>[]) {
+  await page.route('**/rest/v1/departments*', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, departments);
+  });
+}
+
+/**
+ * Mocks the `employees` LIST query (paginated like `profiles`/`learners`).
+ * Identified by the `offset` param specifically (not `limit`/`offset`, the
+ * shape used elsewhere) — `employees` uniquely also has a `.limit()`-only
+ * caller (searchEmployeeCandidates, see installEmployeeCandidatesMock)
+ * hitting the same table, which `.limit()` alone sets `limit` without
+ * `offset` for (see PostgrestTransformBuilder: `.range()` sets both,
+ * `.limit()` sets only `limit`) — checking `offset` alone keeps the two
+ * mocks from colliding.
+ */
+export async function installEmployeesListMock(page: Page, employees: ReturnType<typeof buildMockEmployeeRow>[]) {
+  await page.route('**/rest/v1/employees*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() !== 'GET' || !url.searchParams.has('offset')) return route.fallback();
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: {
+        'content-range': `0-${Math.max(employees.length - 1, 0)}/${employees.length}`,
+        'access-control-expose-headers': 'content-range',
+      },
+      body: JSON.stringify(employees),
+    });
+  });
+}
+
+/** Mocks the single-employee `.eq('id', ...).maybeSingle()` fetch (GET, no `limit`/`offset` params) EmployeeProfilePage issues. */
+export async function installEmployeeDetailMock(page: Page, employee: ReturnType<typeof buildMockEmployeeRow> | null) {
+  await page.route('**/rest/v1/employees*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() !== 'GET' || url.searchParams.has('offset') || url.searchParams.has('limit')) {
+      return route.fallback();
+    }
+    await fulfillJson(route, employee);
+  });
+}
+
+/** Mocks the `.limit(20)` candidate search (GET, `limit` present without `offset`) EmployeeFormModal's "reports to" picker issues. */
+export async function installEmployeeCandidatesMock(
+  page: Page,
+  candidates: { id: string; first_name: string; last_name: string }[],
+) {
+  await page.route('**/rest/v1/employees*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() !== 'GET' || !url.searchParams.has('limit') || url.searchParams.has('offset')) {
+      return route.fallback();
+    }
+    await fulfillJson(route, candidates);
+  });
+}
+
+/** Mocks a `.rpc('terminate_employee' | 'reactivate_employee' | 'provision_employee_login', ...)` call. */
+export async function installEmployeeRpcMock(
+  page: Page,
+  fnName: 'terminate_employee' | 'reactivate_employee' | 'provision_employee_login',
+  handler: (route: Route) => Promise<void>,
+) {
+  await page.route(`**/rest/v1/rpc/${fnName}`, handler);
+}

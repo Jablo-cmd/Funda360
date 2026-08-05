@@ -1,0 +1,95 @@
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { TextField } from '@/components/ui/TextField';
+import { departmentService } from '@/features/employees/services/departmentService';
+import {
+  departmentSchema,
+  departmentDefaultValues,
+  type DepartmentFormValues,
+} from '@/features/employees/schemas/departmentSchema';
+import type { Department } from '@/features/employees/types/employee.types';
+
+export interface DepartmentFormModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  schoolId: string;
+  department?: Department | null;
+  onSaved: () => void;
+}
+
+export function DepartmentFormModal({ isOpen, onClose, schoolId, department, onSaved }: DepartmentFormModalProps) {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const isEditing = Boolean(department);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<DepartmentFormValues>({ resolver: zodResolver(departmentSchema), defaultValues: departmentDefaultValues });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    reset(
+      department
+        ? {
+            name: department.name,
+            code: department.code ?? '',
+            description: department.description ?? '',
+          }
+        : departmentDefaultValues,
+    );
+    setSubmitError(null);
+  }, [isOpen, department, reset]);
+
+  const onValid = async (values: DepartmentFormValues) => {
+    setSubmitError(null);
+    try {
+      const payload = {
+        name: values.name,
+        code: values.code?.trim() || null,
+        description: values.description?.trim() || null,
+      };
+      if (department) {
+        await departmentService.updateDepartment(department.id, payload);
+      } else {
+        await departmentService.createDepartment(schoolId, payload);
+      }
+      onSaved();
+      onClose();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to save department.');
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditing ? 'Edit department' : 'Add department'}
+      footer={
+        <Button type="submit" form="department-form" isLoading={isSubmitting}>
+          {isSubmitting ? 'Saving…' : 'Save'}
+        </Button>
+      }
+    >
+      <form noValidate id="department-form" onSubmit={handleSubmit(onValid)} className="flex flex-col gap-4">
+        {submitError && (
+          <div
+            role="alert"
+            className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
+          >
+            {submitError}
+          </div>
+        )}
+
+        <TextField label="Name" required placeholder="Finance" error={errors.name?.message} {...register('name')} />
+        <TextField label="Code" placeholder="FIN" error={errors.code?.message} {...register('code')} />
+        <TextField label="Description" error={errors.description?.message} {...register('description')} />
+      </form>
+    </Modal>
+  );
+}

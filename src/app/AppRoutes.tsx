@@ -20,6 +20,9 @@ import { ClassesPage } from '@/features/academic/pages/ClassesPage';
 import { SubjectsPage } from '@/features/academic/pages/SubjectsPage';
 import { LearnersPage } from '@/features/learners/pages/LearnersPage';
 import { LearnerProfilePage } from '@/features/learners/pages/LearnerProfilePage';
+import { EmployeesPage } from '@/features/employees/pages/EmployeesPage';
+import { EmployeeProfilePage } from '@/features/employees/pages/EmployeeProfilePage';
+import { DepartmentsPage } from '@/features/employees/pages/DepartmentsPage';
 
 export function AppRoutes() {
   return (
@@ -55,6 +58,12 @@ export function AppRoutes() {
             <Route element={<RequirePermission permission="learner.view" />}>
               <Route path="/learners" element={<LearnersPage />} />
               <Route path="/learners/:id" element={<LearnerProfilePage />} />
+            </Route>
+
+            <Route element={<RequirePermission permission="employee.view" />}>
+              <Route path="/employees" element={<EmployeesPage />} />
+              <Route path="/employees/departments" element={<DepartmentsPage />} />
+              <Route path="/employees/:id" element={<EmployeeProfilePage />} />
             </Route>
           </Route>
         </Route>

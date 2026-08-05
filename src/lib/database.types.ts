@@ -13,6 +13,9 @@
 
 import type { UserRole } from '@/features/auth/types/auth.types';
 
+export type EmploymentType = 'full_time' | 'part_time' | 'contract' | 'temporary';
+export type EmploymentStatus = 'active' | 'on_leave' | 'suspended' | 'terminated';
+
 export type SchoolType = 'public' | 'private' | 'independent';
 export type SchoolStatus = 'pending' | 'active' | 'inactive' | 'suspended';
 export type ProfileStatus = 'active' | 'inactive' | 'suspended';
@@ -655,6 +658,123 @@ export type LearnerDocumentUpdate = {
   updated_at?: string;
 };
 
+export type DepartmentRow = {
+  id: string;
+  school_id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DepartmentInsert = {
+  id?: string;
+  school_id: string;
+  name: string;
+  code?: string | null;
+  description?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type DepartmentUpdate = {
+  id?: string;
+  school_id?: string;
+  name?: string;
+  code?: string | null;
+  description?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type EmployeeRow = {
+  id: string;
+  school_id: string;
+  profile_id: string | null;
+  employee_number: string;
+  first_name: string;
+  last_name: string;
+  work_email: string | null;
+  work_phone: string | null;
+  id_number: string | null;
+  date_of_birth: string | null;
+  department_id: string | null;
+  job_title: string | null;
+  employment_type: EmploymentType | null;
+  employment_status: EmploymentStatus;
+  hire_date: string;
+  termination_date: string | null;
+  reports_to_employee_id: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EmployeeInsert = {
+  id?: string;
+  school_id: string;
+  profile_id?: string | null;
+  employee_number: string;
+  first_name: string;
+  last_name: string;
+  work_email?: string | null;
+  work_phone?: string | null;
+  id_number?: string | null;
+  date_of_birth?: string | null;
+  department_id?: string | null;
+  job_title?: string | null;
+  employment_type?: EmploymentType | null;
+  employment_status?: EmploymentStatus;
+  hire_date: string;
+  termination_date?: string | null;
+  reports_to_employee_id?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type EmployeeUpdate = {
+  id?: string;
+  school_id?: string;
+  profile_id?: string | null;
+  employee_number?: string;
+  first_name?: string;
+  last_name?: string;
+  work_email?: string | null;
+  work_phone?: string | null;
+  id_number?: string | null;
+  date_of_birth?: string | null;
+  department_id?: string | null;
+  job_title?: string | null;
+  employment_type?: EmploymentType | null;
+  employment_status?: EmploymentStatus;
+  hire_date?: string;
+  termination_date?: string | null;
+  reports_to_employee_id?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -723,6 +843,16 @@ export type Database = {
         Insert: LearnerDocumentInsert;
         Update: LearnerDocumentUpdate;
       };
+      departments: {
+        Row: DepartmentRow;
+        Insert: DepartmentInsert;
+        Update: DepartmentUpdate;
+      };
+      employees: {
+        Row: EmployeeRow;
+        Insert: EmployeeInsert;
+        Update: EmployeeUpdate;
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -757,6 +887,18 @@ export type Database = {
           p_new_class_id: string | null;
         };
         Returns: LearnerEnrollmentRow;
+      };
+      terminate_employee: {
+        Args: { p_employee_id: string; p_termination_date: string };
+        Returns: EmployeeRow;
+      };
+      reactivate_employee: {
+        Args: { p_employee_id: string };
+        Returns: EmployeeRow;
+      };
+      provision_employee_login: {
+        Args: { p_employee_id: string; p_role: UserRole; p_phone?: string | null };
+        Returns: { user_id: string; temporary_password: string }[];
       };
     };
   };
