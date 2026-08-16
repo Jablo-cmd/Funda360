@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { userService } from '@/features/users/services/userService';
 import type { UsersListFilters } from '@/features/users/types/user.types';
 import type { Profile } from '@/types/profile.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 const PAGE_SIZE = 20;
 
@@ -34,7 +35,7 @@ export function useUsersList(): UseUsersListResult {
       setUsers(result.users);
       setTotalCount(result.totalCount);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users.');
+      setError(getDbErrorMessage(err, 'Failed to load users.'));
     } finally {
       setIsLoading(false);
     }

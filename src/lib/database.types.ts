@@ -331,6 +331,48 @@ export type SubjectUpdate = {
   updated_at?: string;
 };
 
+export type ClassTeacherAssignmentRow = {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  class_id: string;
+  subject_id: string | null;
+  teacher_profile_id: string;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClassTeacherAssignmentInsert = {
+  id?: string;
+  school_id: string;
+  academic_year_id: string;
+  class_id: string;
+  subject_id?: string | null;
+  teacher_profile_id: string;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ClassTeacherAssignmentUpdate = {
+  id?: string;
+  school_id?: string;
+  academic_year_id?: string;
+  class_id?: string;
+  subject_id?: string | null;
+  teacher_profile_id?: string;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type LearnerRow = {
   id: string;
   school_id: string;
@@ -818,6 +860,11 @@ export type Database = {
         Row: SubjectRow;
         Insert: SubjectInsert;
         Update: SubjectUpdate;
+      };
+      class_teacher_assignments: {
+        Row: ClassTeacherAssignmentRow;
+        Insert: ClassTeacherAssignmentInsert;
+        Update: ClassTeacherAssignmentUpdate;
       };
       learners: {
         Row: LearnerRow;

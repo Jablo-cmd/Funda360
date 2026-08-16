@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { termService } from '@/features/academic/services/termService';
 import type { Term } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseTermsResult {
   terms: Term[];
@@ -25,7 +26,7 @@ export function useTerms(academicYearId: string | undefined): UseTermsResult {
     try {
       setTerms(await termService.getTerms(academicYearId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load terms.');
+      setError(getDbErrorMessage(err, 'Failed to load terms.'));
     } finally {
       setIsLoading(false);
     }

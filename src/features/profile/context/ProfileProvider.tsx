@@ -5,8 +5,12 @@ import type { UserRole } from '@/features/auth/types/auth.types';
 import { profileService } from '@/features/profile/services/profileService';
 import type { ProfileUpdateInput } from '@/features/profile/services/profileService';
 import { ProfileContext } from '@/features/profile/context/profileContext';
-import type { ProfileContextValue, ProfileLoadStatus } from '@/features/profile/context/profileContext';
+import type {
+  ProfileContextValue,
+  ProfileLoadStatus,
+} from '@/features/profile/context/profileContext';
 import type { UserProfile } from '@/types/profile.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { status: authStatus, user } = useAuth();
@@ -30,7 +34,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         setStatus('error');
         setProfile(null);
-        setError(err instanceof Error ? err.message : 'Failed to load profile.');
+        setError(getDbErrorMessage(err, 'Failed to load profile.'));
       }
     },
     [],

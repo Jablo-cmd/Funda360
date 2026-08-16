@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { learnerService } from '@/features/learners/services/learnerService';
 import type { Learner, LearnersListFilters } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 const PAGE_SIZE = 20;
 
@@ -37,7 +38,7 @@ export function useLearnersList(schoolId: string | undefined): UseLearnersListRe
       setLearners(result.learners);
       setTotalCount(result.totalCount);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load learners.');
+      setError(getDbErrorMessage(err, 'Failed to load learners.'));
     } finally {
       setIsLoading(false);
     }

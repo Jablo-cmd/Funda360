@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { classService } from '@/features/academic/services/classService';
 import type { Class } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseClassesResult {
   classes: Class[];
@@ -24,7 +25,7 @@ export function useClasses(schoolId: string | undefined): UseClassesResult {
     try {
       setClasses(await classService.getClasses(schoolId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load classes.');
+      setError(getDbErrorMessage(err, 'Failed to load classes.'));
     } finally {
       setIsLoading(false);
     }

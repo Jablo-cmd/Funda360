@@ -8,6 +8,7 @@ import { departmentService } from '@/features/employees/services/departmentServi
 import { DepartmentsTable } from '@/features/employees/components/DepartmentsTable';
 import { DepartmentFormModal } from '@/features/employees/components/DepartmentFormModal';
 import type { Department } from '@/features/employees/types/employee.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function DepartmentsPage() {
   const navigate = useNavigate();
@@ -21,7 +22,9 @@ export function DepartmentsPage() {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const visibleDepartments = showArchived ? departments : departments.filter((department) => department.active);
+  const visibleDepartments = showArchived
+    ? departments
+    : departments.filter((department) => department.active);
 
   const openCreate = () => {
     setEditingDepartment(null);
@@ -43,7 +46,7 @@ export function DepartmentsPage() {
       }
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update department.');
+      setActionError(getDbErrorMessage(err, 'Failed to update department.'));
     }
   };
 
@@ -60,7 +63,9 @@ export function DepartmentsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-content-primary">Departments</h1>
-          <p className="mt-1 text-sm text-content-secondary">Manage the department catalogue for your school.</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Manage the department catalogue for your school.
+          </p>
         </div>
         {canManage && (
           <div className="w-full sm:w-auto sm:min-w-[9rem]">

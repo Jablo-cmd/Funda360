@@ -8,6 +8,7 @@ import { subjectService } from '@/features/academic/services/subjectService';
 import { SubjectsTable } from '@/features/academic/components/SubjectsTable';
 import { SubjectFormModal } from '@/features/academic/components/SubjectFormModal';
 import type { Subject } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function SubjectsPage() {
   const { can } = usePermissions();
@@ -25,7 +26,12 @@ export function SubjectsPage() {
     const term = search.trim().toLowerCase();
     return subjects
       .filter((subject) => showArchived || subject.active)
-      .filter((subject) => !term || subject.name.toLowerCase().includes(term) || subject.code?.toLowerCase().includes(term));
+      .filter(
+        (subject) =>
+          !term ||
+          subject.name.toLowerCase().includes(term) ||
+          subject.code?.toLowerCase().includes(term),
+      );
   }, [subjects, search, showArchived]);
 
   const openCreate = () => {
@@ -48,7 +54,7 @@ export function SubjectsPage() {
       }
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update subject.');
+      setActionError(getDbErrorMessage(err, 'Failed to update subject.'));
     }
   };
 
@@ -57,7 +63,9 @@ export function SubjectsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-content-primary">Subjects</h1>
-          <p className="mt-1 text-sm text-content-secondary">Manage the subject catalogue for your school.</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Manage the subject catalogue for your school.
+          </p>
         </div>
         {canManage && (
           <div className="w-full sm:w-auto sm:min-w-[9rem]">

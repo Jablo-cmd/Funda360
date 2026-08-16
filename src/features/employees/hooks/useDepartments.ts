@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { departmentService } from '@/features/employees/services/departmentService';
 import type { Department } from '@/features/employees/types/employee.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseDepartmentsResult {
   departments: Department[];
@@ -24,7 +25,7 @@ export function useDepartments(schoolId: string | undefined): UseDepartmentsResu
     try {
       setDepartments(await departmentService.getDepartments(schoolId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load departments.');
+      setError(getDbErrorMessage(err, 'Failed to load departments.'));
     } finally {
       setIsLoading(false);
     }

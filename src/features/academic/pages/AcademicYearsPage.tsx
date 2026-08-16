@@ -8,6 +8,7 @@ import { academicYearService } from '@/features/academic/services/academicYearSe
 import { AcademicYearsTable } from '@/features/academic/components/AcademicYearsTable';
 import { AcademicYearFormModal } from '@/features/academic/components/AcademicYearFormModal';
 import type { AcademicYear } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function AcademicYearsPage() {
   const { can } = usePermissions();
@@ -41,7 +42,7 @@ export function AcademicYearsPage() {
       await academicYearService.setActiveAcademicYear(year.id);
       await refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to activate academic year.');
+      setActionError(getDbErrorMessage(err, 'Failed to activate academic year.'));
     } finally {
       setActivatingId(null);
     }
@@ -53,7 +54,7 @@ export function AcademicYearsPage() {
       await academicYearService.archiveAcademicYear(year.id);
       await refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to archive academic year.');
+      setActionError(getDbErrorMessage(err, 'Failed to archive academic year.'));
     }
   };
 
@@ -62,7 +63,9 @@ export function AcademicYearsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-content-primary">Academic Years</h1>
-          <p className="mt-1 text-sm text-content-secondary">Only one academic year can be active at a time.</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Only one academic year can be active at a time.
+          </p>
         </div>
         {canManage && (
           <div className="w-full sm:w-auto sm:min-w-[10rem]">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { medicalInformationService } from '@/features/learners/services/medicalInformationService';
 import type { LearnerMedicalInformation } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseMedicalInformationResult {
   medicalInformation: LearnerMedicalInformation | null;
@@ -10,7 +11,9 @@ export interface UseMedicalInformationResult {
 }
 
 export function useMedicalInformation(learnerId: string | undefined): UseMedicalInformationResult {
-  const [medicalInformation, setMedicalInformation] = useState<LearnerMedicalInformation | null>(null);
+  const [medicalInformation, setMedicalInformation] = useState<LearnerMedicalInformation | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +28,7 @@ export function useMedicalInformation(learnerId: string | undefined): UseMedical
     try {
       setMedicalInformation(await medicalInformationService.getMedicalInformation(learnerId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load medical information.');
+      setError(getDbErrorMessage(err, 'Failed to load medical information.'));
     } finally {
       setIsLoading(false);
     }

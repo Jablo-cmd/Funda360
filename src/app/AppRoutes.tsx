@@ -57,6 +57,10 @@ const TermsPage = named(() => import('@/features/academic/pages/TermsPage'), 'Te
 const GradesPage = named(() => import('@/features/academic/pages/GradesPage'), 'GradesPage');
 const ClassesPage = named(() => import('@/features/academic/pages/ClassesPage'), 'ClassesPage');
 const SubjectsPage = named(() => import('@/features/academic/pages/SubjectsPage'), 'SubjectsPage');
+const TeachingAssignmentsPage = named(
+  () => import('@/features/teaching/pages/TeachingAssignmentsPage'),
+  'TeachingAssignmentsPage',
+);
 const LearnersPage = named(() => import('@/features/learners/pages/LearnersPage'), 'LearnersPage');
 const LearnerProfilePage = named(
   () => import('@/features/learners/pages/LearnerProfilePage'),
@@ -122,6 +126,7 @@ export function AppRoutes() {
                 <Route path="/academic/grades" element={<GradesPage />} />
                 <Route path="/academic/classes" element={<ClassesPage />} />
                 <Route path="/academic/subjects" element={<SubjectsPage />} />
+                <Route path="/academic/teaching-assignments" element={<TeachingAssignmentsPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="learner.view" />}>

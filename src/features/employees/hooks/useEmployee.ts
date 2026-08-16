@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { employeeService } from '@/features/employees/services/employeeService';
 import type { Employee } from '@/features/employees/types/employee.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseEmployeeResult {
   employee: Employee | null;
@@ -24,7 +25,7 @@ export function useEmployee(employeeId: string | undefined): UseEmployeeResult {
     try {
       setEmployee(await employeeService.getEmployee(employeeId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load employee.');
+      setError(getDbErrorMessage(err, 'Failed to load employee.'));
     } finally {
       setIsLoading(false);
     }

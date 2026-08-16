@@ -6,6 +6,7 @@ import { EmergencyContactsTable } from '@/features/learners/components/Emergency
 import { EmergencyContactFormModal } from '@/features/learners/components/EmergencyContactFormModal';
 import { RemoveEmergencyContactDialog } from '@/features/learners/components/RemoveEmergencyContactDialog';
 import type { LearnerEmergencyContact } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface LearnerEmergencyContactsSectionProps {
   schoolId: string;
@@ -40,7 +41,7 @@ export function LearnerEmergencyContactsSection({
       await emergencyContactService.restoreEmergencyContact(contact.id);
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to restore emergency contact.');
+      setActionError(getDbErrorMessage(err, 'Failed to restore emergency contact.'));
     }
   };
 

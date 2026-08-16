@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
-import { CalendarIcon, ChalkboardIcon, GraduationCapIcon, LayersIcon, BookIcon } from '@/components/ui/icons';
+import {
+  CalendarIcon,
+  ChalkboardIcon,
+  GraduationCapIcon,
+  LayersIcon,
+  BookIcon,
+  UsersIcon,
+} from '@/components/ui/icons';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import type { ComponentType, SVGProps } from 'react';
 
@@ -17,6 +24,12 @@ const LINKS: AcademicLink[] = [
   { label: 'Grades', description: 'Manage the grade catalogue.', path: '/academic/grades', icon: GraduationCapIcon },
   { label: 'Classes', description: 'Manage class sections and capacity.', path: '/academic/classes', icon: ChalkboardIcon },
   { label: 'Subjects', description: 'Manage the subject catalogue.', path: '/academic/subjects', icon: BookIcon },
+  {
+    label: 'Teaching Assignments',
+    description: 'Assign teachers to classes and subjects.',
+    path: '/academic/teaching-assignments',
+    icon: UsersIcon,
+  },
 ];
 
 export function AcademicOverviewPage() {

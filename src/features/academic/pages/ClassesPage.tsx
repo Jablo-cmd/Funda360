@@ -8,6 +8,7 @@ import { classService } from '@/features/academic/services/classService';
 import { ClassesTable } from '@/features/academic/components/ClassesTable';
 import { ClassFormModal } from '@/features/academic/components/ClassFormModal';
 import type { Class } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function ClassesPage() {
   const { can } = usePermissions();
@@ -43,7 +44,7 @@ export function ClassesPage() {
       }
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update class.');
+      setActionError(getDbErrorMessage(err, 'Failed to update class.'));
     }
   };
 
@@ -52,11 +53,17 @@ export function ClassesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-content-primary">Classes</h1>
-          <p className="mt-1 text-sm text-content-secondary">Manage class sections and their capacity.</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Manage class sections and their capacity.
+          </p>
         </div>
         {canManage && (
           <div className="w-full sm:w-auto sm:min-w-[9rem]">
-            <Button type="button" onClick={openCreate} disabled={grades.filter((g) => g.active).length === 0}>
+            <Button
+              type="button"
+              onClick={openCreate}
+              disabled={grades.filter((g) => g.active).length === 0}
+            >
               Add class
             </Button>
           </div>
@@ -64,7 +71,9 @@ export function ClassesPage() {
       </div>
 
       {canManage && grades.filter((g) => g.active).length === 0 && (
-        <p className="text-sm text-content-tertiary">Add an active grade before creating classes.</p>
+        <p className="text-sm text-content-tertiary">
+          Add an active grade before creating classes.
+        </p>
       )}
 
       <label className="flex w-fit items-center gap-2 text-sm text-content-secondary">

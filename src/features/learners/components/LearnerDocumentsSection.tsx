@@ -5,6 +5,7 @@ import { documentService } from '@/features/learners/services/documentService';
 import { DocumentsTable } from '@/features/learners/components/DocumentsTable';
 import { DocumentFormModal } from '@/features/learners/components/DocumentFormModal';
 import type { LearnerDocument } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface LearnerDocumentsSectionProps {
   schoolId: string;
@@ -12,7 +13,11 @@ export interface LearnerDocumentsSectionProps {
   canManage: boolean;
 }
 
-export function LearnerDocumentsSection({ schoolId, learnerId, canManage }: LearnerDocumentsSectionProps) {
+export function LearnerDocumentsSection({
+  schoolId,
+  learnerId,
+  canManage,
+}: LearnerDocumentsSectionProps) {
   const { documents, isLoading, error, refetch } = useDocuments(learnerId);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -27,7 +32,7 @@ export function LearnerDocumentsSection({ schoolId, learnerId, canManage }: Lear
       }
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update document.');
+      setActionError(getDbErrorMessage(err, 'Failed to update document.'));
     }
   };
 

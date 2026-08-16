@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth/context/authContext';
 import { learnerService } from '@/features/learners/services/learnerService';
 import type { Learner } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseMyLearnersResult {
   data: Learner[];
@@ -26,7 +27,7 @@ export function useMyLearners(): UseMyLearnersResult {
     try {
       setData(await learnerService.getMyLearners());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load your linked learners.');
+      setError(getDbErrorMessage(err, 'Failed to load your linked learners.'));
     } finally {
       setIsLoading(false);
     }

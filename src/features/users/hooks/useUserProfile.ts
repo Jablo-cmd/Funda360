@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { userService } from '@/features/users/services/userService';
 import type { Profile } from '@/types/profile.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseUserProfileResult {
   user: Profile | null;
@@ -25,7 +26,7 @@ export function useUserProfile(userId: string | undefined): UseUserProfileResult
       const result = await userService.getUserById(userId);
       setUser(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load user.');
+      setError(getDbErrorMessage(err, 'Failed to load user.'));
     } finally {
       setIsLoading(false);
     }

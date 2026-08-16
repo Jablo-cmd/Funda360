@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { learnerService } from '@/features/learners/services/learnerService';
 import type { Learner } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseLearnerResult {
   learner: Learner | null;
@@ -24,7 +25,7 @@ export function useLearner(learnerId: string | undefined): UseLearnerResult {
     try {
       setLearner(await learnerService.getLearner(learnerId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load learner.');
+      setError(getDbErrorMessage(err, 'Failed to load learner.'));
     } finally {
       setIsLoading(false);
     }

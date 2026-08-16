@@ -5,6 +5,7 @@ import { academicYearService } from '@/features/academic/services/academicYearSe
 import { AcademicContext } from '@/features/academic/context/academicContext';
 import type { AcademicContextValue } from '@/features/academic/context/academicContext';
 import type { AcademicYear } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 /**
  * Loads off useSchool()'s already-resolved school id rather than deriving
@@ -35,7 +36,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
       const years = await academicYearService.getAcademicYears(school.id);
       setAcademicYears(years);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load academic years.');
+      setError(getDbErrorMessage(err, 'Failed to load academic years.'));
     } finally {
       setIsFetching(false);
     }
@@ -45,7 +46,10 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     void load();
   }, [load]);
 
-  const currentAcademicYear = useMemo(() => academicYears.find((year) => year.isActive) ?? null, [academicYears]);
+  const currentAcademicYear = useMemo(
+    () => academicYears.find((year) => year.isActive) ?? null,
+    [academicYears],
+  );
 
   const value = useMemo<AcademicContextValue>(
     () => ({

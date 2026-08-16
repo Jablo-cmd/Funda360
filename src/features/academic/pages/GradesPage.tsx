@@ -7,6 +7,7 @@ import { gradeService } from '@/features/academic/services/gradeService';
 import { GradesTable } from '@/features/academic/components/GradesTable';
 import { GradeFormModal } from '@/features/academic/components/GradeFormModal';
 import type { Grade } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function GradesPage() {
   const { can } = usePermissions();
@@ -41,7 +42,7 @@ export function GradesPage() {
       }
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update grade.');
+      setActionError(getDbErrorMessage(err, 'Failed to update grade.'));
     }
   };
 
@@ -50,7 +51,9 @@ export function GradesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-content-primary">Grades</h1>
-          <p className="mt-1 text-sm text-content-secondary">Manage the grade catalogue for your school.</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Manage the grade catalogue for your school.
+          </p>
         </div>
         {canManage && (
           <div className="w-full sm:w-auto sm:min-w-[9rem]">

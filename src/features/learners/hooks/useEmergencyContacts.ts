@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { emergencyContactService } from '@/features/learners/services/emergencyContactService';
 import type { LearnerEmergencyContact } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseEmergencyContactsResult {
   emergencyContacts: LearnerEmergencyContact[];
@@ -25,7 +26,7 @@ export function useEmergencyContacts(learnerId: string | undefined): UseEmergenc
     try {
       setEmergencyContacts(await emergencyContactService.getEmergencyContacts(learnerId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load emergency contacts.');
+      setError(getDbErrorMessage(err, 'Failed to load emergency contacts.'));
     } finally {
       setIsLoading(false);
     }

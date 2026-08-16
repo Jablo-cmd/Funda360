@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { employeeReportService } from '@/features/reports/services/employeeReportService';
 import type { EmployeeReportSummary } from '@/features/reports/types/report.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseEmployeeReportResult {
   data: EmployeeReportSummary | null;
@@ -24,7 +25,7 @@ export function useEmployeeReport(schoolId: string | undefined): UseEmployeeRepo
     try {
       setData(await employeeReportService.getEmployeeReport(schoolId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load employee report.');
+      setError(getDbErrorMessage(err, 'Failed to load employee report.'));
     } finally {
       setIsLoading(false);
     }

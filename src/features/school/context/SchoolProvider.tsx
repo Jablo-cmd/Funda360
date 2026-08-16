@@ -4,6 +4,7 @@ import { useTenant } from '@/features/tenant/context/tenantContext';
 import { schoolService } from '@/features/school/services/schoolService';
 import { SchoolContext } from '@/features/school/context/schoolContext';
 import type { SchoolContextValue } from '@/features/school/context/schoolContext';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import type {
   SchoolProfileUpdateInput,
   SchoolSettingsUpdateInput,
@@ -49,7 +50,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         const updated = await schoolService.updateSchool(localSchool.id, updates);
         setLocalSchool(updated);
       } catch (err) {
-        setMutationError(err instanceof Error ? err.message : 'Failed to update school.');
+        setMutationError(getDbErrorMessage(err, 'Failed to update school.'));
         throw err;
       } finally {
         setIsMutating(false);
@@ -67,7 +68,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         const updated = await schoolService.updateSchoolSettings(localSchool.id, updates);
         setLocalSchool(updated);
       } catch (err) {
-        setMutationError(err instanceof Error ? err.message : 'Failed to update school settings.');
+        setMutationError(getDbErrorMessage(err, 'Failed to update school settings.'));
         throw err;
       } finally {
         setIsMutating(false);
@@ -85,7 +86,16 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       updateSchool,
       updateSchoolSettings,
     }),
-    [localSchool, loading, isMutating, mutationError, tenantError, refetch, updateSchool, updateSchoolSettings],
+    [
+      localSchool,
+      loading,
+      isMutating,
+      mutationError,
+      tenantError,
+      refetch,
+      updateSchool,
+      updateSchoolSettings,
+    ],
   );
 
   return <SchoolContext.Provider value={value}>{children}</SchoolContext.Provider>;

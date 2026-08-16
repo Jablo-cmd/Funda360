@@ -9,6 +9,7 @@ import { termService } from '@/features/academic/services/termService';
 import { TermsTable } from '@/features/academic/components/TermsTable';
 import { TermFormModal } from '@/features/academic/components/TermFormModal';
 import type { Term } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function TermsPage() {
   const { can } = usePermissions();
@@ -57,7 +58,7 @@ export function TermsPage() {
       }
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update term.');
+      setActionError(getDbErrorMessage(err, 'Failed to update term.'));
     }
   };
 
@@ -77,7 +78,9 @@ export function TermsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-content-primary">Terms</h1>
-          <p className="mt-1 text-sm text-content-secondary">Manage the terms within an academic year.</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Manage the terms within an academic year.
+          </p>
         </div>
         {canManage && selectedYearId && (
           <div className="w-full sm:w-auto sm:min-w-[9rem]">
@@ -90,7 +93,10 @@ export function TermsPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="sm:w-64">
-          <label htmlFor="terms-year-select" className="mb-1.5 block text-sm font-medium text-content-primary">
+          <label
+            htmlFor="terms-year-select"
+            className="mb-1.5 block text-sm font-medium text-content-primary"
+          >
             Academic year
           </label>
           <select

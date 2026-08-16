@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subjectService } from '@/features/academic/services/subjectService';
 import type { Subject } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseSubjectsResult {
   subjects: Subject[];
@@ -24,7 +25,7 @@ export function useSubjects(schoolId: string | undefined): UseSubjectsResult {
     try {
       setSubjects(await subjectService.getSubjects(schoolId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load subjects.');
+      setError(getDbErrorMessage(err, 'Failed to load subjects.'));
     } finally {
       setIsLoading(false);
     }

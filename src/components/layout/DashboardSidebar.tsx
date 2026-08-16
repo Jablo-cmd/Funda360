@@ -43,7 +43,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     ...(canViewLearners
       ? [{ label: 'Students', path: '/learners', icon: GraduationCapIcon }]
       : [{ label: 'Students', icon: GraduationCapIcon }]),
-    { label: 'Teachers', icon: ChalkboardIcon },
+    ...(canViewAcademic
+      ? [{ label: 'Teachers', path: '/academic/teaching-assignments', icon: ChalkboardIcon }]
+      : [{ label: 'Teachers', icon: ChalkboardIcon }]),
     ...(canViewReports ? [{ label: 'Reports', path: '/reports', icon: ChartIcon }] : [{ label: 'Reports', icon: ChartIcon }]),
     { label: 'Settings', icon: GearIcon },
   ];

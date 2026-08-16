@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { documentService } from '@/features/learners/services/documentService';
 import type { LearnerDocument } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseDocumentsResult {
   documents: LearnerDocument[];
@@ -25,7 +26,7 @@ export function useDocuments(learnerId: string | undefined): UseDocumentsResult 
     try {
       setDocuments(await documentService.getDocuments(learnerId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load documents.');
+      setError(getDbErrorMessage(err, 'Failed to load documents.'));
     } finally {
       setIsLoading(false);
     }

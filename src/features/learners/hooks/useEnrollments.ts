@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { enrollmentService } from '@/features/learners/services/enrollmentService';
 import type { LearnerEnrollment } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseEnrollmentsResult {
   enrollments: LearnerEnrollment[];
@@ -25,7 +26,7 @@ export function useEnrollments(learnerId: string | undefined): UseEnrollmentsRes
     try {
       setEnrollments(await enrollmentService.getEnrollments(learnerId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load enrollment history.');
+      setError(getDbErrorMessage(err, 'Failed to load enrollment history.'));
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { learnerReportService } from '@/features/reports/services/learnerReportService';
 import type { LearnerReportSummary } from '@/features/reports/types/report.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseLearnerReportResult {
   data: LearnerReportSummary | null;
@@ -24,7 +25,7 @@ export function useLearnerReport(schoolId: string | undefined): UseLearnerReport
     try {
       setData(await learnerReportService.getLearnerReport(schoolId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load learner report.');
+      setError(getDbErrorMessage(err, 'Failed to load learner report.'));
     } finally {
       setIsLoading(false);
     }

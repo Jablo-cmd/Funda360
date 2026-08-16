@@ -204,10 +204,45 @@ export function buildMockTermRow(overrides: MockTermOverrides = {}) {
   };
 }
 
+interface MockClassTeacherAssignmentOverrides {
+  id?: string;
+  schoolId?: string;
+  academicYearId?: string;
+  classId?: string;
+  subjectId?: string | null;
+  teacherProfileId?: string;
+  active?: boolean;
+}
+
+export function buildMockClassTeacherAssignmentRow(overrides: MockClassTeacherAssignmentOverrides = {}) {
+  const {
+    id = 'assignment-1',
+    schoolId = MOCK_TENANT_ID,
+    academicYearId = 'year-2026',
+    classId = 'class-8a',
+    subjectId = null,
+    teacherProfileId = 'teacher-1',
+    active = true,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    academic_year_id: academicYearId,
+    class_id: classId,
+    subject_id: subjectId,
+    teacher_profile_id: teacherProfileId,
+    active,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
 /** Mocks a `.from('<table>').select('*').eq(...)` LIST query (GET, no `limit`/`offset` params — see installUsersListMock for that shape) for one of the academic tables. */
 export async function installAcademicListMock(
   page: Page,
-  table: 'academic_years' | 'terms' | 'grades' | 'classes' | 'subjects',
+  table: 'academic_years' | 'terms' | 'grades' | 'classes' | 'subjects' | 'class_teacher_assignments',
   rows: Record<string, unknown>[],
 ) {
   await page.route(`**/rest/v1/${table}*`, async (route: Route) => {

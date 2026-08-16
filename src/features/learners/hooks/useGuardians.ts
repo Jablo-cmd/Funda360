@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { guardianService } from '@/features/learners/services/guardianService';
 import type { LearnerGuardian } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseGuardiansResult {
   guardians: LearnerGuardian[];
@@ -25,7 +26,7 @@ export function useGuardians(learnerId: string | undefined): UseGuardiansResult 
     try {
       setGuardians(await guardianService.getGuardians(learnerId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load guardians.');
+      setError(getDbErrorMessage(err, 'Failed to load guardians.'));
     } finally {
       setIsLoading(false);
     }

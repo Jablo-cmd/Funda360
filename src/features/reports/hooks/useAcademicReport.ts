@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { academicReportService } from '@/features/reports/services/academicReportService';
 import type { AcademicReportSummary } from '@/features/reports/types/report.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseAcademicReportResult {
   data: AcademicReportSummary | null;
@@ -24,7 +25,7 @@ export function useAcademicReport(schoolId: string | undefined): UseAcademicRepo
     try {
       setData(await academicReportService.getAcademicReport(schoolId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load academic report.');
+      setError(getDbErrorMessage(err, 'Failed to load academic report.'));
     } finally {
       setIsLoading(false);
     }

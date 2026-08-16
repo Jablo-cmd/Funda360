@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth/context/authContext';
-import { employeeService } from '@/features/employees/services/employeeService';
-import type { Employee } from '@/features/employees/types/employee.types';
+import { teachingAssignmentService } from '@/features/teaching/services/teachingAssignmentService';
+import type { ClassTeacherAssignment } from '@/features/teaching/types/teaching.types';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 
-export interface UseMyEmployeeResult {
-  data: Employee | null;
+export interface UseMyTeachingAssignmentsResult {
+  data: ClassTeacherAssignment[];
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
-export function useMyEmployee(): UseMyEmployeeResult {
+/** Self-service: "my classes" for the signed-in teacher — same shape as useMyEmployee/useMyLearners. */
+export function useMyTeachingAssignments(): UseMyTeachingAssignmentsResult {
   const { user } = useAuth();
-  const [data, setData] = useState<Employee | null>(null);
+  const [data, setData] = useState<ClassTeacherAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,9 +26,9 @@ export function useMyEmployee(): UseMyEmployeeResult {
     setIsLoading(true);
     setError(null);
     try {
-      setData(await employeeService.getMyEmployee(user.id));
+      setData(await teachingAssignmentService.getMyAssignments(user.id));
     } catch (err) {
-      setError(getDbErrorMessage(err, 'Failed to load your employee record.'));
+      setError(getDbErrorMessage(err, 'Failed to load your teaching assignments.'));
     } finally {
       setIsLoading(false);
     }

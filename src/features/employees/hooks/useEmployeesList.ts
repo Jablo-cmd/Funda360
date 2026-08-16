@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { employeeService } from '@/features/employees/services/employeeService';
 import type { Employee, EmployeesListFilters } from '@/features/employees/types/employee.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 const PAGE_SIZE = 20;
 
@@ -37,7 +38,7 @@ export function useEmployeesList(schoolId: string | undefined): UseEmployeesList
       setEmployees(result.employees);
       setTotalCount(result.totalCount);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load employees.');
+      setError(getDbErrorMessage(err, 'Failed to load employees.'));
     } finally {
       setIsLoading(false);
     }

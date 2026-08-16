@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { gradeService } from '@/features/academic/services/gradeService';
 import type { Grade } from '@/features/academic/types/academic.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface UseGradesResult {
   grades: Grade[];
@@ -24,7 +25,7 @@ export function useGrades(schoolId: string | undefined): UseGradesResult {
     try {
       setGrades(await gradeService.getGrades(schoolId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load grades.');
+      setError(getDbErrorMessage(err, 'Failed to load grades.'));
     } finally {
       setIsLoading(false);
     }

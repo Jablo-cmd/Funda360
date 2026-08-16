@@ -1,19 +1,19 @@
 # ADR-0001: Teaching Assignment as a Cross-Cutting Architectural Domain
 
-**Status:** Proposed
+**Status:** Resolved — implemented in Sprint 4 (2026-08-17)
 **Date:** 2026-08-04
 **Prepared during:** Sprint 2, Milestone 4, Phase 0 dependency analysis
 **Numbering convention established by this record:** `ADR-NNNN`, four digits, sequential, one file per decision under `docs/adr/`. No prior ADR numbering scheme existed in this repository before this one; this document is `ADR-0001` by definition, not by counting a pre-existing series.
 
-> This ADR is not an implementation specification. It records an architectural discovery — what was found, why it matters, and what remains deliberately unresolved — so that future work references one authoritative source instead of rediscovering the same dependency independently, as already happened once during Milestone 4's own Phase 0 review.
+> This ADR is not an implementation specification. It records an architectural discovery — what was found, why it matters, and what remains deliberately unresolved — so that future work references one authoritative source instead of rediscovering the same dependency independently, as already happened once during Milestone 4's own Phase 0 review. **Update, Sprint 4:** the relationship this ADR found missing now exists — `class_teacher_assignments` (migration `20260817090000_teaching_assignments.sql`), linking a teacher profile to a class and, optionally, a specific subject, scoped to an academic year. See `docs/FUNDA360 PROJECT CONTEXT & HANDOVER DOCUMENT.md` §31 for the full writeup. Everything below is preserved unedited as the historical record of the finding that motivated it — the "Deferred Decisions" section in particular records the exact questions Sprint 4 had to answer, and how.
 
 ---
 
 ## Status
 
-**Proposed.**
+**Resolved.** Implemented in Sprint 4 — see the update note above and handover document §31. The original "Proposed" text below is kept as the historical record of what this status meant *at the time this ADR was written*, before implementation.
 
-This status means exactly one thing: an architectural finding has been verified and recorded. It does **not** mean implementation has been approved, scheduled, or scoped. No table, column, RPC, or migration described anywhere in this document exists, and none is proposed by it. A separate, future decision — made by a product owner, then designed by a subsequent architecture pass — is required before this status could change.
+> Original text: This status means exactly one thing: an architectural finding has been verified and recorded. It does **not** mean implementation has been approved, scheduled, or scoped. No table, column, RPC, or migration described anywhere in this document exists, and none is proposed by it. A separate, future decision — made by a product owner, then designed by a subsequent architecture pass — is required before this status could change.
 
 ---
 

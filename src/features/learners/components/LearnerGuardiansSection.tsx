@@ -7,6 +7,7 @@ import { GuardiansTable } from '@/features/learners/components/GuardiansTable';
 import { GuardianFormModal } from '@/features/learners/components/GuardianFormModal';
 import { RemoveGuardianDialog } from '@/features/learners/components/RemoveGuardianDialog';
 import type { LearnerGuardian } from '@/features/learners/types/learner.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface LearnerGuardiansSectionProps {
   schoolId: string;
@@ -14,7 +15,11 @@ export interface LearnerGuardiansSectionProps {
   canManage: boolean;
 }
 
-export function LearnerGuardiansSection({ schoolId, learnerId, canManage }: LearnerGuardiansSectionProps) {
+export function LearnerGuardiansSection({
+  schoolId,
+  learnerId,
+  canManage,
+}: LearnerGuardiansSectionProps) {
   const { guardians, isLoading, error, refetch } = useGuardians(learnerId);
   const [candidatesById, setCandidatesById] = useState<Record<string, GuardianCandidate>>({});
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -22,7 +27,10 @@ export function LearnerGuardiansSection({ schoolId, learnerId, canManage }: Lear
   const [removingGuardian, setRemovingGuardian] = useState<LearnerGuardian | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const guardianProfileIds = useMemo(() => guardians.map((guardian) => guardian.guardianProfileId), [guardians]);
+  const guardianProfileIds = useMemo(
+    () => guardians.map((guardian) => guardian.guardianProfileId),
+    [guardians],
+  );
 
   useEffect(() => {
     const missingIds = guardianProfileIds.filter((id) => !candidatesById[id]);
@@ -53,7 +61,7 @@ export function LearnerGuardiansSection({ schoolId, learnerId, canManage }: Lear
       await guardianService.restoreGuardian(guardian.id);
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to restore guardian.');
+      setActionError(getDbErrorMessage(err, 'Failed to restore guardian.'));
     }
   };
 

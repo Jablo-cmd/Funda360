@@ -8,6 +8,7 @@ import { TenantContext } from '@/features/tenant/context/tenantContext';
 import type { TenantContextValue, TenantLoadStatus } from '@/features/tenant/context/tenantContext';
 import type { School } from '@/types/school.types';
 import type { Tenant } from '@/types/tenant.types';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -45,7 +46,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         setTenant(null);
         setStatus('error');
-        setError(err instanceof Error ? err.message : 'Failed to load tenant.');
+        setError(getDbErrorMessage(err, 'Failed to load tenant.'));
       }
     },
     [isPlatformLevel],
