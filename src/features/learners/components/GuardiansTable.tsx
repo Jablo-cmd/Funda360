@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { LearnerGuardian } from '@/features/learners/types/learner.types';
 import type { GuardianCandidate } from '@/features/learners/services/guardianService';
 
@@ -20,7 +21,7 @@ export function GuardiansTable({ guardians, candidatesById, canManage, onEdit, o
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -95,6 +96,6 @@ export function GuardiansTable({ guardians, candidatesById, canManage, onEdit, o
           })}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

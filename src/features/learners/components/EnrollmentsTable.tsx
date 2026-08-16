@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { LearnerEnrollment } from '@/features/learners/types/learner.types';
 import type { AcademicYear, Grade, Class } from '@/features/academic/types/academic.types';
 
@@ -22,7 +23,7 @@ export function EnrollmentsTable({ enrollments, academicYears, grades, classes }
   const className = (id: string | null) => (id ? (classes.find((cls) => cls.id === id)?.name ?? '—') : '—');
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[600px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -59,6 +60,6 @@ export function EnrollmentsTable({ enrollments, academicYears, grades, classes }
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

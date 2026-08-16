@@ -10,6 +10,7 @@ import { useSubjects } from '@/features/academic/hooks/useSubjects';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { MyClassesSummary } from '@/features/teaching/components/MyClassesSummary';
 import { useSchool } from '@/features/school/hooks/useSchool';
+import { usePermissions } from '@/hooks/usePermissions';
 
 /**
  * Composition page only — layout, rendering order, and conditional
@@ -18,6 +19,7 @@ import { useSchool } from '@/features/school/hooks/useSchool';
  * this page) decides which rows, if any, come back from each hook.
  */
 export function MyProfilePage() {
+  const { can } = usePermissions();
   const employee = useMyEmployee();
   const learners = useMyLearners();
   const myClasses = useMyTeachingAssignments();
@@ -31,7 +33,22 @@ export function MyProfilePage() {
   }
 
   const hasEmployeeRecord = Boolean(employee.data);
-  const hasLearners = learners.data.length > 0;
+  // useMyLearners() issues an unfiltered `select * from learners` and
+  // relies entirely on RLS (learners_select's is_learner_guardian() OR
+  // clause) to scope it to "children I'm a guardian of" — the only way to
+  // scope it that also works for guardians, who can't query
+  // learner_guardians directly to discover their own links (no self-select
+  // policy on that table; see 20260803190000_learner_management.sql). For
+  // any role RLS also grants can_view_learners() to, the same unfiltered
+  // query returns the school's entire roster, which "My Children" would
+  // mislabel as this user's own children. Every role that gets
+  // can_view_learners() at the RLS layer also holds `learner.view` in the
+  // TS permission model (they were designed in sync), and those roles
+  // already have the real Learners directory for this purpose — so gating
+  // on the absence of `learner.view` distinguishes "genuine guardian" from
+  // "staff who happen to see everything" without touching RLS or the
+  // query itself.
+  const hasLearners = !can('learner.view') && learners.data.length > 0;
   const hasMyClasses = myClasses.data.length > 0;
 
   if (!hasEmployeeRecord && !hasLearners && !hasMyClasses) {

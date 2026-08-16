@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { LearnerEmergencyContact } from '@/features/learners/types/learner.types';
 
 export interface EmergencyContactsTableProps {
@@ -18,7 +19,7 @@ export function EmergencyContactsTable({ contacts, canManage, onEdit, onRemove, 
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -86,6 +87,6 @@ export function EmergencyContactsTable({ contacts, canManage, onEdit, onRemove, 
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

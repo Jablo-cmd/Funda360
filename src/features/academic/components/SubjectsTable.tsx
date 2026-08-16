@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { Subject } from '@/features/academic/types/academic.types';
 
 export interface SubjectsTableProps {
@@ -17,7 +18,7 @@ export function SubjectsTable({ subjects, canManage, onEdit, onToggleActive }: S
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[560px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -84,6 +85,6 @@ export function SubjectsTable({ subjects, canManage, onEdit, onToggleActive }: S
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

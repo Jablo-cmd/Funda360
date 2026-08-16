@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import { Link } from 'react-router-dom';
 import { canManageUser } from '@/features/users/utils/userPermissions';
 import type { UserRole } from '@/features/auth/types/auth.types';
@@ -27,7 +28,7 @@ export function UsersTable({ users, actorRole, onEdit, onChangeRole, onDeactivat
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -111,6 +112,6 @@ export function UsersTable({ users, actorRole, onEdit, onChangeRole, onDeactivat
           })}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

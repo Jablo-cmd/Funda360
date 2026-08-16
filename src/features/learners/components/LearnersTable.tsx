@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import { Link } from 'react-router-dom';
 import type { Learner } from '@/features/learners/types/learner.types';
 
@@ -28,7 +29,7 @@ export function LearnersTable({ learners, canViewSensitive }: LearnersTableProps
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -76,6 +77,6 @@ export function LearnersTable({ learners, canViewSensitive }: LearnersTableProps
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

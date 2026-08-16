@@ -137,6 +137,27 @@ test('a user with neither an employee nor a guardian linkage sees the empty stat
   await expect(page.getByText("There's nothing linked to your account yet.")).toBeVisible();
 });
 
+test('a role with learner.view does not see the entire roster mislabeled as "My Children"', async ({ page }) => {
+  // useMyLearners() is an unfiltered query relying on RLS to scope it to
+  // guardians — a role that ALSO gets school-wide learner visibility at
+  // the RLS layer (principal, via can_view_learners()) would otherwise see
+  // every learner in the school rendered under "My Children". Verifies the
+  // page-level fix: that section is suppressed for any role holding
+  // learner.view, since those roles have the real Learners directory for
+  // this purpose.
+  await seedAuthenticatedSession(page, { role: 'principal' });
+  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'principal' }), school: buildMockSchoolRow() });
+  await installEmployeeDetailMock(page, null);
+  await installReportRowsMock(page, 'learners', [
+    buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' }),
+    buildMockLearnerRow({ id: 'learner-2', firstName: 'Sipho' }),
+  ]);
+
+  await page.goto('/my-profile');
+  await expect(page.getByRole('heading', { name: 'My Children' })).toHaveCount(0);
+  await expect(page.getByText("There's nothing linked to your account yet.")).toBeVisible();
+});
+
 test('any authenticated role can reach /my-profile without a permission redirect', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'auditor' });
   await installDataMocks(page, { profile: buildMockProfileRow({ role: 'auditor' }), school: buildMockSchoolRow() });

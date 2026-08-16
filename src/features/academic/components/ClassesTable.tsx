@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { Class, Grade } from '@/features/academic/types/academic.types';
 
 export interface ClassesTableProps {
@@ -20,7 +21,7 @@ export function ClassesTable({ classes, grades, canManage, onEdit, onToggleActiv
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -88,6 +89,6 @@ export function ClassesTable({ classes, grades, canManage, onEdit, onToggleActiv
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

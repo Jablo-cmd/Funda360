@@ -48,9 +48,7 @@ test('signs in successfully, reaches the protected home, and signs out', async (
   await expect(page).toHaveURL('http://localhost:5173/dashboard');
   await expect(page.getByRole('heading', { name: 'Welcome back, Ada' })).toBeVisible();
   await expect(page.getByText('Ada Principal').first()).toBeVisible();
-  await expect(page.getByText('principal', { exact: true })).toBeVisible();
-  await expect(page.getByText('Riverside Secondary School').first()).toBeVisible();
-  await expect(page.getByText('ready', { exact: true })).toBeVisible();
+  await expect(page.getByText('principal at Riverside Secondary School')).toBeVisible();
 
   await page.getByRole('button', { name: /Ada Principal/ }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();

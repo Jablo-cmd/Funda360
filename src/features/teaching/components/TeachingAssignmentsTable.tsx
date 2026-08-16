@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { ClassTeacherAssignment } from '@/features/teaching/types/teaching.types';
 import type { TeacherCandidate } from '@/features/teaching/services/teachingAssignmentService';
 import type { Class, Subject, AcademicYear } from '@/features/academic/types/academic.types';
@@ -32,7 +33,7 @@ export function TeachingAssignmentsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -107,6 +108,6 @@ export function TeachingAssignmentsTable({
           })}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

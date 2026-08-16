@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { Department } from '@/features/employees/types/employee.types';
 
 export interface DepartmentsTableProps {
@@ -17,7 +18,7 @@ export function DepartmentsTable({ departments, canManage, onEdit, onToggleActiv
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[560px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -81,6 +82,6 @@ export function DepartmentsTable({ departments, canManage, onEdit, onToggleActiv
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

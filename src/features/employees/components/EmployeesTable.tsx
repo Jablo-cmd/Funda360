@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import { Link } from 'react-router-dom';
 import type { Employee, EmploymentStatus, Department } from '@/features/employees/types/employee.types';
 
@@ -37,7 +38,7 @@ export function EmployeesTable({
     departments.find((department) => department.id === departmentId)?.name ?? '—';
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -121,6 +122,6 @@ export function EmployeesTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

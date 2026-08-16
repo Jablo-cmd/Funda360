@@ -1,3 +1,4 @@
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { LearnerDocument } from '@/features/learners/types/learner.types';
 
 export interface DocumentsTableProps {
@@ -27,7 +28,7 @@ export function DocumentsTable({ documents, canManage, onToggleActive }: Documen
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+    <TableScrollContainer>
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
@@ -99,6 +100,6 @@ export function DocumentsTable({ documents, canManage, onToggleActive }: Documen
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }
