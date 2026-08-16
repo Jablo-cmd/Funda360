@@ -590,5 +590,30 @@ This section originally asked "what should Sprint 4 be" with nothing yet started
 
 **Deferred, not done in Sprint 4:** actually building attendance/gradebook/timetabling/a rich teacher portal on top of this foundation (that was never Sprint 4's scope — see Objective above); multiplicity/co-teaching UI polish; a "bulk assign" workflow; historical-assignment browsing UI (the data supports it — distinct rows per academic year — but no dedicated "past assignments" view was built, since no one asked for it yet).
 
+## 32. Sprint 5 — E2E Wired into CI (2026-08-17)
+
+**Scope selection process, recorded because it matters**: no authoritative document in this repository defines a Sprint 5 product scope. `docs/FUNDA360 PRODUCT REQUIREMENTS DOCUMENT (PRD)` was checked directly and found to be an **unfilled prompt template** ("You are a Senior Product Manager... produce the official PRD...") rather than actual product content — no roadmap, no MVP/version priorities exist inside it. `docs/FUNDA360 IMPLEMENTATION & ROLLOUT STRATEGY (IRS)` is a generic go-to-market/deployment-phase document (pilot schools, training, hypercare), not an engineering feature roadmap. §30's candidate list (attendance/gradebook/timetabling/teacher-portal, E2E-in-CI, `profiles.role` drift tooling, role-assignment UI coverage) remained exactly that — candidates, none product-selected. Rather than invent business rules for a product module no spec defines (attendance workflows, grading scales, etc.), the product owner was asked directly which candidate to pursue and chose **E2E in CI** — the one purely-technical candidate with no business logic to invent.
+
+**What shipped:** `.github/workflows/ci.yml` gained a third job, `e2e`, running the full Playwright suite on every PR and push to `main`:
+- Installs Playwright's Chromium binary plus its OS-level dependencies (`npx playwright install --with-deps chromium` — necessary on a bare `ubuntu-latest` runner, not just the browser itself).
+- Sets `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` to plain placeholder values directly in the job's `env:` block — **not** repository secrets, and deliberately so: §28.6's discovery (the suite is fully network-mocked and the dev server only checks these vars are *present*, never validates them) means a real Supabase project was never a requirement here, so adding secrets for it would have been exactly the unnecessary-secret pattern the project's standing rules warn against.
+- Uploads `test-results/` (per-test failure traces, since `playwright.config.ts` uses the `list` reporter with no HTML report generated) as a build artifact on failure only, for debugging without needing to reproduce locally.
+- Removed the stale comment block explaining why e2e wasn't in CI (the reason no longer applies).
+
+**Not changed:** `playwright.config.ts` (already had `retries: process.env.CI ? 1 : 0` and `reuseExistingServer: !process.env.CI` — both already correct for CI use, needed no edits). No new dependency added — `@playwright/test` was already a devDependency. No application source file touched.
+
+**Verification results:**
+
+| Check | Result |
+|---|---|
+| TypeScript | clean |
+| ESLint | clean |
+| Vitest | 45/45 (unchanged — this sprint touched no application logic) |
+| Vite build | clean, unaffected (CI-only change) |
+| Playwright (local, simulating the exact CI job: same two placeholder env vars, same `npx playwright test` command) | **83/83 passed**, clean run with no concurrent load. A prior run alongside typecheck/lint/vitest/build executing simultaneously showed 5 failures from resource contention on this machine — re-verified empirically, not assumed: those exact 5 tests were rerun with `--workers=1` (42/42 passed) and the full suite was rerun once more with nothing else running concurrently (83/83 passed). None of the 5 touched any file this sprint changed. |
+| RLS suite | untouched, not re-run (no relevant change) |
+
+**Deferred, not done in Sprint 5:** the other three candidates from §30 (attendance/gradebook/timetabling/teacher-portal, `profiles.role` drift tooling, broader role-assignment UI) remain exactly that — candidates, still not product-selected, still not started.
+
 ---
 *End of document. Regenerate or amend this file (rather than relying on conversation memory) whenever a milestone completes or a significant architectural decision is made — see rule #18 for why this matters more than it might seem.*

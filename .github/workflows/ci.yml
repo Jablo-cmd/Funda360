@@ -55,12 +55,46 @@ jobs:
       - name: Run RLS regression suite
         run: supabase/rls-tests/run.sh
 
-  # E2E (Playwright) is intentionally NOT run in CI yet: it needs a live,
-  # seeded Supabase project (see supabase/seed.sql and playwright.config.ts,
-  # which points at http://localhost:5173 with the app's own dev server).
-  # Wiring that up needs a disposable/test Supabase project and its
-  # credentials as repository secrets — deliberately not added here per the
-  # "don't add secrets unnecessarily" / "don't depend on production
-  # credentials" constraints. Tracked as a follow-up, not a blocker: the
-  # e2e specs under e2e/ already exist and are ready to run once such a
-  # project is provisioned.
+  e2e:
+    name: Playwright end-to-end suite
+    runs-on: ubuntu-latest
+    env:
+      # The e2e suite is fully network-mocked (e2e/utils/mockAuth.ts,
+      # mockData.ts intercept every Supabase call) and never reaches a real
+      # project. The dev server only needs these two variables to be
+      # *present* to boot — src/lib/supabase.ts checks they're non-empty,
+      # it never validates them — so plain placeholders are correct here,
+      # not a secret. See .env.example and the handover document's e2e
+      # discovery note for the same finding this job relies on.
+      VITE_SUPABASE_URL: http://localhost:54321
+      VITE_SUPABASE_ANON_KEY: ci-dummy-anon-key-not-a-real-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --with-deps also installs the OS-level libraries headless Chromium
+      # needs on a bare Ubuntu runner (not just the browser binary itself).
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e suite
+        run: npx playwright test
+
+      # playwright.config.ts uses the 'list' reporter (console only, no HTML
+      # report generated) and `trace: 'retain-on-failure'`, so the useful
+      # artifact on failure is the per-test trace under test-results/, not
+      # a playwright-report/ directory (which this config never produces).
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
