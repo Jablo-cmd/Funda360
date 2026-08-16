@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { classService } from '@/features/academic/services/classService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { classSchema, classDefaultValues, type ClassFormValues } from '@/features/academic/schemas/classSchema';
 import type { Class, Grade } from '@/features/academic/types/academic.types';
 
@@ -53,7 +54,7 @@ export function ClassFormModal({ isOpen, onClose, schoolId, grades, classItem, o
       onSaved();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save class.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save class.'));
     }
   };
 

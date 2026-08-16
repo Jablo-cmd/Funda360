@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { medicalInformationService } from '@/features/learners/services/medicalInformationService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import {
   medicalInformationSchema,
   medicalInformationDefaultValues,
@@ -83,7 +84,7 @@ export function MedicalInformationCard({
         : await medicalInformationService.createMedicalInformation(schoolId, learnerId, payload);
       onSaved(saved);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save medical information.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save medical information.'));
     }
   };
 

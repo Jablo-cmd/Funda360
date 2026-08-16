@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { enrollmentService } from '@/features/learners/services/enrollmentService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import type { LearnerEnrollment } from '@/features/learners/types/learner.types';
 import type { AcademicYear, Grade, Class } from '@/features/academic/types/academic.types';
 
@@ -54,7 +55,7 @@ export function PromoteLearnerModal({
       onPromoted(enrollment);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to promote learner.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to promote learner.'));
     } finally {
       setIsSubmitting(false);
     }

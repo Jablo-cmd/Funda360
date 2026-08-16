@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { documentService } from '@/features/learners/services/documentService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { documentSchema, documentDefaultValues, type DocumentFormValues } from '@/features/learners/schemas/documentSchema';
 import type { LearnerDocument } from '@/features/learners/types/learner.types';
 
@@ -44,7 +45,7 @@ export function DocumentFormModal({ isOpen, onClose, schoolId, learnerId, onSave
       onSaved(saved);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save document.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save document.'));
     }
   };
 

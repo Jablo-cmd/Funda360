@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { userService } from '@/features/users/services/userService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { canAssignRole } from '@/features/users/utils/userPermissions';
 import { ASSIGNABLE_ROLES, ASSIGNABLE_ROLE_LABELS } from '@/features/users/types/user.types';
 import type { AssignableRole } from '@/features/users/types/user.types';
@@ -42,7 +43,7 @@ export function ChangeRoleModal({ isOpen, onClose, user, actorRole, onRoleChange
       onRoleChanged();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to update role.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to update role.'));
     } finally {
       setIsSubmitting(false);
     }

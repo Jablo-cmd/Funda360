@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { userService } from '@/features/users/services/userService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { editUserSchema, type EditUserFormValues } from '@/features/users/schemas/editUserSchema';
 import type { Profile } from '@/types/profile.types';
 
@@ -50,7 +51,7 @@ export function EditUserModal({ isOpen, onClose, user, onUpdated }: EditUserModa
       onUpdated();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to update user.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to update user.'));
     }
   };
 

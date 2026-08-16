@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { departmentService } from '@/features/employees/services/departmentService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import {
   departmentSchema,
   departmentDefaultValues,
@@ -61,7 +62,7 @@ export function DepartmentFormModal({ isOpen, onClose, schoolId, department, onS
       onSaved();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save department.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save department.'));
     }
   };
 

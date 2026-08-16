@@ -42,6 +42,7 @@ export function toLearnerGuardian(row: LearnerGuardianRow): LearnerGuardian {
     relationshipType: row.relationship_type,
     isPrimary: row.is_primary,
     custodyNotes: row.custody_notes,
+    active: row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -94,10 +95,42 @@ async function updateGuardian(id: string, updates: UpdateLearnerGuardianInput): 
   return toLearnerGuardian(data);
 }
 
+/**
+ * Never hard-deleted (no DELETE RLS policy exists for this table) —
+ * archiving sets active: false, which also immediately revokes the
+ * guardian's RLS-derived read access (is_learner_guardian() only
+ * recognises active links). Also clears is_primary so a later guardian can
+ * be marked primary without colliding with the one-primary-per-learner
+ * partial unique index.
+ */
+async function archiveGuardian(id: string): Promise<LearnerGuardian> {
+  const { data, error } = await supabase
+    .from('learner_guardians')
+    .update({ active: false, is_primary: false })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return toLearnerGuardian(data);
+}
+
+async function restoreGuardian(id: string): Promise<LearnerGuardian> {
+  const { data, error } = await supabase
+    .from('learner_guardians')
+    .update({ active: true })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return toLearnerGuardian(data);
+}
+
 export const guardianService = {
   getGuardians,
   createGuardian,
   updateGuardian,
+  archiveGuardian,
+  restoreGuardian,
   searchGuardianCandidates,
   getGuardianCandidatesByIds,
 };

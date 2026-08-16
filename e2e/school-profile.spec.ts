@@ -27,7 +27,9 @@ test('school details load correctly into the form', async ({ page }) => {
   await expect(page.getByLabel('Email')).toHaveValue('info@riverside.funda360.dev');
   await expect(page.getByLabel('Phone')).toHaveValue('+27 11 555 0100');
   await expect(page.getByLabel('Website')).toHaveValue('https://riverside.funda360.dev');
-  await expect(page.getByLabel('Physical address')).toHaveValue('12 River Road, Johannesburg, 2001');
+  await expect(page.getByLabel('Physical address')).toHaveValue(
+    '12 River Road, Johannesburg, 2001',
+  );
   await expect(page.getByLabel('Postal address')).toHaveValue('PO Box 456, Johannesburg, 2000');
   await expect(page.getByLabel('Principal name')).toHaveValue('Thabo Nkosi');
   await expect(page.getByText('Active')).toBeVisible();
@@ -81,10 +83,16 @@ test('a role without school.manage permission sees a clear error on save', async
   await page.getByLabel('Principal name').fill('Should not persist');
   await page.getByRole('button', { name: 'Save changes' }).click();
 
-  await expect(page.getByRole('alert')).toHaveText('Failed to update school profile.');
+  // getDbErrorMessage (src/lib/dbErrors.ts) maps SQLSTATE 42501 to safe
+  // copy instead of surfacing the raw RLS policy text from the mock above.
+  await expect(page.getByRole('alert')).toHaveText(
+    "You don't have permission to perform this action.",
+  );
 });
 
-test('unauthenticated visitors are redirected away from the school profile page', async ({ page }) => {
+test('unauthenticated visitors are redirected away from the school profile page', async ({
+  page,
+}) => {
   await page.goto('/school/profile');
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();

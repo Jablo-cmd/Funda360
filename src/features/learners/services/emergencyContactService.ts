@@ -15,6 +15,7 @@ export function toLearnerEmergencyContact(row: LearnerEmergencyContactRow): Lear
     relationship: row.relationship,
     phone: row.phone,
     alternatePhone: row.alternate_phone,
+    active: row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -60,8 +61,33 @@ async function updateEmergencyContact(id: string, updates: UpdateLearnerEmergenc
   return toLearnerEmergencyContact(data);
 }
 
+/** Never hard-deleted (no DELETE RLS policy exists for this table) — archiving sets active: false, same pattern as documentService. */
+async function archiveEmergencyContact(id: string): Promise<LearnerEmergencyContact> {
+  const { data, error } = await supabase
+    .from('learner_emergency_contacts')
+    .update({ active: false })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return toLearnerEmergencyContact(data);
+}
+
+async function restoreEmergencyContact(id: string): Promise<LearnerEmergencyContact> {
+  const { data, error } = await supabase
+    .from('learner_emergency_contacts')
+    .update({ active: true })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return toLearnerEmergencyContact(data);
+}
+
 export const emergencyContactService = {
   getEmergencyContacts,
   createEmergencyContact,
   updateEmergencyContact,
+  archiveEmergencyContact,
+  restoreEmergencyContact,
 };

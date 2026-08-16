@@ -5,6 +5,7 @@ import { guardianService } from '@/features/learners/services/guardianService';
 import type { GuardianCandidate } from '@/features/learners/services/guardianService';
 import { GuardiansTable } from '@/features/learners/components/GuardiansTable';
 import { GuardianFormModal } from '@/features/learners/components/GuardianFormModal';
+import { RemoveGuardianDialog } from '@/features/learners/components/RemoveGuardianDialog';
 import type { LearnerGuardian } from '@/features/learners/types/learner.types';
 
 export interface LearnerGuardiansSectionProps {
@@ -18,6 +19,8 @@ export function LearnerGuardiansSection({ schoolId, learnerId, canManage }: Lear
   const [candidatesById, setCandidatesById] = useState<Record<string, GuardianCandidate>>({});
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGuardian, setEditingGuardian] = useState<LearnerGuardian | null>(null);
+  const [removingGuardian, setRemovingGuardian] = useState<LearnerGuardian | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const guardianProfileIds = useMemo(() => guardians.map((guardian) => guardian.guardianProfileId), [guardians]);
 
@@ -44,6 +47,16 @@ export function LearnerGuardiansSection({ schoolId, learnerId, canManage }: Lear
     setIsFormOpen(true);
   };
 
+  const handleRestore = async (guardian: LearnerGuardian) => {
+    setActionError(null);
+    try {
+      await guardianService.restoreGuardian(guardian.id);
+      await refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to restore guardian.');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {canManage && (
@@ -56,12 +69,12 @@ export function LearnerGuardiansSection({ schoolId, learnerId, canManage }: Lear
         </div>
       )}
 
-      {error && (
+      {(error ?? actionError) && (
         <div
           role="alert"
           className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
         >
-          {error}
+          {error ?? actionError}
         </div>
       )}
 
@@ -78,6 +91,8 @@ export function LearnerGuardiansSection({ schoolId, learnerId, canManage }: Lear
           candidatesById={candidatesById}
           canManage={canManage}
           onEdit={openEdit}
+          onRemove={setRemovingGuardian}
+          onRestore={(guardian) => void handleRestore(guardian)}
         />
       )}
 
@@ -92,6 +107,16 @@ export function LearnerGuardiansSection({ schoolId, learnerId, canManage }: Lear
           void refetch();
         }}
       />
+
+      {removingGuardian && (
+        <RemoveGuardianDialog
+          isOpen={removingGuardian !== null}
+          onClose={() => setRemovingGuardian(null)}
+          guardian={removingGuardian}
+          candidate={candidatesById[removingGuardian.guardianProfileId]}
+          onRemoved={() => void refetch()}
+        />
+      )}
     </div>
   );
 }

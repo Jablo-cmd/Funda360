@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { employeeService } from '@/features/employees/services/employeeService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { PROVISIONABLE_ROLES, PROVISIONABLE_ROLE_LABELS } from '@/features/employees/types/employee.types';
 import type { Employee, ProvisionLoginResult } from '@/features/employees/types/employee.types';
 import {
@@ -59,7 +60,7 @@ export function ProvisionLoginModal({ isOpen, onClose, employee, onProvisioned }
       const provisioned = await employeeService.provisionLogin(employee.id, values.role, values.phone?.trim() || null);
       setResult(provisioned);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to provision login.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to provision login.'));
     }
   };
 

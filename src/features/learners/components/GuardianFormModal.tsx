@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { guardianService } from '@/features/learners/services/guardianService';
 import type { GuardianCandidate } from '@/features/learners/services/guardianService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { guardianSchema, guardianDefaultValues, type GuardianFormValues } from '@/features/learners/schemas/guardianSchema';
 import type { LearnerGuardian } from '@/features/learners/types/learner.types';
 
@@ -85,7 +86,7 @@ export function GuardianFormModal({ isOpen, onClose, schoolId, learnerId, guardi
       }
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save guardian.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save guardian.'));
     }
   };
 

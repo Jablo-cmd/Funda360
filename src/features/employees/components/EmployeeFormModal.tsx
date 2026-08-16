@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { employeeService } from '@/features/employees/services/employeeService';
 import type { EmployeeCandidate } from '@/features/employees/services/employeeService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import {
   employeeSchema,
   employeeDefaultValues,
@@ -114,7 +115,7 @@ export function EmployeeFormModal({ isOpen, onClose, schoolId, employee, departm
       onSaved(saved);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save employee.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save employee.'));
     }
   };
 

@@ -6,6 +6,7 @@ import { TextField } from '@/components/ui/TextField';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
 import { BuildingIcon } from '@/components/ui/icons';
 import { useSchool } from '@/features/school/hooks/useSchool';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { getSchoolStatusLabel } from '@/features/school/utils/schoolStatusLabel';
 import {
   schoolProfileSchema,
@@ -78,7 +79,7 @@ export function SchoolProfileForm() {
       });
       setSubmitSuccess(true);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to update school profile.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to update school profile.'));
     }
   };
 

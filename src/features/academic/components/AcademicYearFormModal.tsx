@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { academicYearService } from '@/features/academic/services/academicYearService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import {
   academicYearSchema,
   academicYearDefaultValues,
@@ -56,7 +57,7 @@ export function AcademicYearFormModal({ isOpen, onClose, schoolId, year, onSaved
       onSaved();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save academic year.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save academic year.'));
     }
   };
 

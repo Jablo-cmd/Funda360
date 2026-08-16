@@ -1,18 +1,38 @@
--- Development seed data — LOCAL DEV ONLY.
+-- ============================================================================
+--  LOCAL DEVELOPMENT SEED DATA ONLY — NEVER RUN AGAINST A HOSTED PROJECT
+-- ============================================================================
 --
 -- Run automatically by `supabase db reset` against your local Docker
--- Postgres (started with `supabase start`). Do NOT run this against a
--- hosted/production project — it creates real auth.users rows with a
--- shared, publicly-documented password.
+-- Postgres (started with `supabase start`). This file creates real
+-- auth.users rows protected only by a shared, publicly-documented password
+-- printed right here in this repository — that is fine for a throwaway
+-- local container and NOT fine for anything reachable outside your machine.
+--
+-- The password below is deliberately spelled out with a "LOCALDEV" marker
+-- (not a normal-looking password) specifically so it is unmistakable as a
+-- placeholder if it is ever pasted somewhere else, and so a secret scanner
+-- or reviewer immediately recognises it as intentional seed data, not a
+-- leaked real credential.
 --
 -- Login credentials (all three accounts share this password):
---   Password: Funda360!Dev2026
+--   Password: Funda360!LOCALDEV-ONLY-2026
 --
 --   Role              Email                              School
 --   ----------------  ---------------------------------  -----------------------
 --   Super Admin       super.admin@funda360.dev            (none — platform-level)
 --   Principal         principal@riverside.funda360.dev     Riverside Secondary School
 --   Teacher           teacher@riverside.funda360.dev       Riverside Secondary School
+
+do $$
+begin
+  raise notice '============================================================';
+  raise notice ' FUNDA360 LOCAL DEV SEED — DO NOT USE AGAINST A REAL PROJECT';
+  raise notice ' Seeded accounts share the password: Funda360!LOCALDEV-ONLY-2026';
+  raise notice ' If you are seeing this against a hosted Supabase project,';
+  raise notice ' stop now and investigate — this file must never run there.';
+  raise notice '============================================================';
+end;
+$$;
 
 create extension if not exists pgcrypto;
 
@@ -79,7 +99,7 @@ insert into auth.users (
 )
 select
   '00000000-0000-0000-0000-000000000000', id, 'authenticated', 'authenticated', email,
-  crypt('Funda360!Dev2026', gen_salt('bf')), now(),
+  crypt('Funda360!LOCALDEV-ONLY-2026', gen_salt('bf')), now(),
   app_metadata, jsonb_build_object('first_name', first_name, 'last_name', last_name),
   now(), now(), '', '', '', ''
 from seed_users

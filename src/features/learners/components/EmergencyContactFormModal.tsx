@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { emergencyContactService } from '@/features/learners/services/emergencyContactService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import {
   emergencyContactSchema,
   emergencyContactDefaultValues,
@@ -72,7 +73,7 @@ export function EmergencyContactFormModal({
       onSaved(saved);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save emergency contact.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save emergency contact.'));
     }
   };
 

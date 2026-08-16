@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { learnerService } from '@/features/learners/services/learnerService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { learnerSchema, learnerDefaultValues, type LearnerFormValues } from '@/features/learners/schemas/learnerSchema';
 import type { Learner } from '@/features/learners/types/learner.types';
 
@@ -81,7 +82,7 @@ export function LearnerFormModal({ isOpen, onClose, schoolId, learner, onSaved }
       onSaved(saved);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save learner.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save learner.'));
     }
   };
 

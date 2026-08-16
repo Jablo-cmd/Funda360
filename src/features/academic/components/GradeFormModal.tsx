@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { gradeService } from '@/features/academic/services/gradeService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { gradeSchema, gradeDefaultValues, type GradeFormValues } from '@/features/academic/schemas/gradeSchema';
 import type { Grade } from '@/features/academic/types/academic.types';
 
@@ -59,7 +60,7 @@ export function GradeFormModal({ isOpen, onClose, schoolId, grade, onSaved }: Gr
       onSaved();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save grade.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save grade.'));
     }
   };
 

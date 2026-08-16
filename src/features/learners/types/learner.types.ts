@@ -61,6 +61,7 @@ export interface LearnerGuardian {
   relationshipType: GuardianRelationshipType;
   isPrimary: boolean;
   custodyNotes: string | null;
+  active: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -73,6 +74,7 @@ export interface LearnerEmergencyContact {
   relationship: string | null;
   phone: string;
   alternatePhone: string | null;
+  active: boolean;
   createdAt: string;
   updatedAt: string;
 }

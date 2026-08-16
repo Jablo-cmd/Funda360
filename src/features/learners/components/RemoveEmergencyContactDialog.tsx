@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { userService } from '@/features/users/services/userService';
+import { emergencyContactService } from '@/features/learners/services/emergencyContactService';
 import { getDbErrorMessage } from '@/lib/dbErrors';
-import type { Profile } from '@/types/profile.types';
+import type { LearnerEmergencyContact } from '@/features/learners/types/learner.types';
 
-export interface DeactivateUserDialogProps {
+export interface RemoveEmergencyContactDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  user: Profile;
-  onDeactivated: () => void;
+  contact: LearnerEmergencyContact;
+  onRemoved: (contact: LearnerEmergencyContact) => void;
 }
 
-export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: DeactivateUserDialogProps) {
+export function RemoveEmergencyContactDialog({ isOpen, onClose, contact, onRemoved }: RemoveEmergencyContactDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -20,11 +20,11 @@ export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: D
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      await userService.deactivateUser(user.id);
-      onDeactivated();
+      const updated = await emergencyContactService.archiveEmergencyContact(contact.id);
+      onRemoved(updated);
       onClose();
     } catch (error) {
-      setSubmitError(getDbErrorMessage(error, 'Failed to deactivate user.'));
+      setSubmitError(getDbErrorMessage(error, 'Failed to remove emergency contact.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -34,7 +34,7 @@ export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: D
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Deactivate user"
+      title="Remove emergency contact"
       footer={
         <div className="flex justify-end gap-3">
           <div className="w-28">
@@ -42,15 +42,15 @@ export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: D
               Cancel
             </Button>
           </div>
-          <div className="w-40">
+          <div className="w-32">
             <Button type="button" onClick={() => void handleConfirm()} isLoading={isSubmitting}>
-              {isSubmitting ? 'Deactivating…' : 'Deactivate'}
+              {isSubmitting ? 'Removing…' : 'Remove'}
             </Button>
           </div>
         </div>
       }
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {submitError && (
           <div
             role="alert"
@@ -60,10 +60,8 @@ export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: D
           </div>
         )}
         <p className="text-sm text-content-secondary">
-          <span className="font-medium text-content-primary">
-            {user.firstName} {user.lastName}
-          </span>{' '}
-          will no longer be able to sign in until reactivated. This does not delete their account.
+          <span className="font-medium text-content-primary">{contact.name}</span> will be removed from this
+          learner's emergency contacts. This can be undone from this list at any time.
         </p>
       </div>
     </Modal>

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useEmergencyContacts } from '@/features/learners/hooks/useEmergencyContacts';
+import { emergencyContactService } from '@/features/learners/services/emergencyContactService';
 import { EmergencyContactsTable } from '@/features/learners/components/EmergencyContactsTable';
 import { EmergencyContactFormModal } from '@/features/learners/components/EmergencyContactFormModal';
+import { RemoveEmergencyContactDialog } from '@/features/learners/components/RemoveEmergencyContactDialog';
 import type { LearnerEmergencyContact } from '@/features/learners/types/learner.types';
 
 export interface LearnerEmergencyContactsSectionProps {
@@ -19,6 +21,8 @@ export function LearnerEmergencyContactsSection({
   const { emergencyContacts, isLoading, error, refetch } = useEmergencyContacts(learnerId);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<LearnerEmergencyContact | null>(null);
+  const [removingContact, setRemovingContact] = useState<LearnerEmergencyContact | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const openCreate = () => {
     setEditingContact(null);
@@ -28,6 +32,16 @@ export function LearnerEmergencyContactsSection({
   const openEdit = (contact: LearnerEmergencyContact) => {
     setEditingContact(contact);
     setIsFormOpen(true);
+  };
+
+  const handleRestore = async (contact: LearnerEmergencyContact) => {
+    setActionError(null);
+    try {
+      await emergencyContactService.restoreEmergencyContact(contact.id);
+      await refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to restore emergency contact.');
+    }
   };
 
   return (
@@ -42,12 +56,12 @@ export function LearnerEmergencyContactsSection({
         </div>
       )}
 
-      {error && (
+      {(error ?? actionError) && (
         <div
           role="alert"
           className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
         >
-          {error}
+          {error ?? actionError}
         </div>
       )}
 
@@ -59,7 +73,13 @@ export function LearnerEmergencyContactsSection({
           />
         </div>
       ) : (
-        <EmergencyContactsTable contacts={emergencyContacts} canManage={canManage} onEdit={openEdit} />
+        <EmergencyContactsTable
+          contacts={emergencyContacts}
+          canManage={canManage}
+          onEdit={openEdit}
+          onRemove={setRemovingContact}
+          onRestore={(contact) => void handleRestore(contact)}
+        />
       )}
 
       <EmergencyContactFormModal
@@ -70,6 +90,15 @@ export function LearnerEmergencyContactsSection({
         contact={editingContact}
         onSaved={() => void refetch()}
       />
+
+      {removingContact && (
+        <RemoveEmergencyContactDialog
+          isOpen={removingContact !== null}
+          onClose={() => setRemovingContact(null)}
+          contact={removingContact}
+          onRemoved={() => void refetch()}
+        />
+      )}
     </div>
   );
 }

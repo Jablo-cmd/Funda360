@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { userService } from '@/features/users/services/userService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { canAssignRole } from '@/features/users/utils/userPermissions';
 import { ASSIGNABLE_ROLES, ASSIGNABLE_ROLE_LABELS } from '@/features/users/types/user.types';
 import type { CreateUserResult } from '@/features/users/types/user.types';
@@ -58,7 +59,7 @@ export function CreateUserModal({ isOpen, onClose, actorRole, onCreated }: Creat
       setResult(created);
       onCreated();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to create user.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to create user.'));
     }
   };
 

@@ -480,6 +480,7 @@ export type LearnerGuardianRow = {
   relationship_type: GuardianRelationshipType;
   is_primary: boolean;
   custody_notes: string | null;
+  active: boolean;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
@@ -494,6 +495,7 @@ export type LearnerGuardianInsert = {
   relationship_type: GuardianRelationshipType;
   is_primary?: boolean;
   custody_notes?: string | null;
+  active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -508,6 +510,7 @@ export type LearnerGuardianUpdate = {
   relationship_type?: GuardianRelationshipType;
   is_primary?: boolean;
   custody_notes?: string | null;
+  active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -522,6 +525,7 @@ export type LearnerEmergencyContactRow = {
   relationship: string | null;
   phone: string;
   alternate_phone: string | null;
+  active: boolean;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
@@ -536,6 +540,7 @@ export type LearnerEmergencyContactInsert = {
   relationship?: string | null;
   phone: string;
   alternate_phone?: string | null;
+  active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -550,6 +555,7 @@ export type LearnerEmergencyContactUpdate = {
   relationship?: string | null;
   phone?: string;
   alternate_phone?: string | null;
+  active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;

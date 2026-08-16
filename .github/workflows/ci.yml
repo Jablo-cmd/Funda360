@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same branch/PR so pushes don't queue behind
+# stale ones.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck, lint, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Production build
+        # No Supabase credentials required: this is a static build (tsc +
+        # vite build) — the app only reads VITE_SUPABASE_URL/ANON_KEY at
+        # browser runtime (src/lib/supabase.ts), not at build time.
+        run: npm run build
+
+  rls-tests:
+    name: RLS / trigger / SECURITY DEFINER regression suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # supabase/rls-tests/run.sh spins up its own disposable
+      # postgres:16-alpine container with a fixed local-only harness
+      # password (see the script) — no repository secrets are used or
+      # required for this job.
+      - name: Run RLS regression suite
+        run: supabase/rls-tests/run.sh
+
+  # E2E (Playwright) is intentionally NOT run in CI yet: it needs a live,
+  # seeded Supabase project (see supabase/seed.sql and playwright.config.ts,
+  # which points at http://localhost:5173 with the app's own dev server).
+  # Wiring that up needs a disposable/test Supabase project and its
+  # credentials as repository secrets — deliberately not added here per the
+  # "don't add secrets unnecessarily" / "don't depend on production
+  # credentials" constraints. Tracked as a follow-up, not a blocker: the
+  # e2e specs under e2e/ already exist and are ready to run once such a
+  # project is provisioned.

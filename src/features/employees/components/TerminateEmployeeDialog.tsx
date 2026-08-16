@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { employeeService } from '@/features/employees/services/employeeService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import type { Employee } from '@/features/employees/types/employee.types';
 
 export interface TerminateEmployeeDialogProps {
@@ -27,7 +28,7 @@ export function TerminateEmployeeDialog({ isOpen, onClose, employee, onTerminate
       onTerminated(updated);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to terminate employee.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to terminate employee.'));
     } finally {
       setIsSubmitting(false);
     }

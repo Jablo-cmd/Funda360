@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { termService } from '@/features/academic/services/termService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { termSchema, termDefaultValues, type TermFormValues } from '@/features/academic/schemas/termSchema';
 import type { Term } from '@/features/academic/types/academic.types';
 
@@ -49,7 +50,7 @@ export function TermFormModal({ isOpen, onClose, schoolId, academicYearId, term,
       onSaved();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save term.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save term.'));
     }
   };
 

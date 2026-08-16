@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { subjectService } from '@/features/academic/services/subjectService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import { subjectSchema, subjectDefaultValues, type SubjectFormValues } from '@/features/academic/schemas/subjectSchema';
 import type { Subject } from '@/features/academic/types/academic.types';
 
@@ -53,7 +54,7 @@ export function SubjectFormModal({ isOpen, onClose, schoolId, subject, onSaved }
       onSaved();
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save subject.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save subject.'));
     }
   };
 

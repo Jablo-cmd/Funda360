@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { learnerService } from '@/features/learners/services/learnerService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import type { Learner, LearnerStatus } from '@/features/learners/types/learner.types';
 
 export interface ChangeLearnerStatusDialogProps {
@@ -38,7 +39,7 @@ export function ChangeLearnerStatusDialog({ isOpen, onClose, learner, onChanged 
       onChanged(updated);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to change status.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to change status.'));
     } finally {
       setIsSubmitting(false);
     }

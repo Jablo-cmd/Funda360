@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { userService } from '@/features/users/services/userService';
+import { guardianService } from '@/features/learners/services/guardianService';
+import type { GuardianCandidate } from '@/features/learners/services/guardianService';
 import { getDbErrorMessage } from '@/lib/dbErrors';
-import type { Profile } from '@/types/profile.types';
+import type { LearnerGuardian } from '@/features/learners/types/learner.types';
 
-export interface DeactivateUserDialogProps {
+export interface RemoveGuardianDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  user: Profile;
-  onDeactivated: () => void;
+  guardian: LearnerGuardian;
+  candidate: GuardianCandidate | undefined;
+  onRemoved: (guardian: LearnerGuardian) => void;
 }
 
-export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: DeactivateUserDialogProps) {
+export function RemoveGuardianDialog({ isOpen, onClose, guardian, candidate, onRemoved }: RemoveGuardianDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -20,21 +22,23 @@ export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: D
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      await userService.deactivateUser(user.id);
-      onDeactivated();
+      const updated = await guardianService.archiveGuardian(guardian.id);
+      onRemoved(updated);
       onClose();
     } catch (error) {
-      setSubmitError(getDbErrorMessage(error, 'Failed to deactivate user.'));
+      setSubmitError(getDbErrorMessage(error, 'Failed to remove guardian.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const name = candidate ? `${candidate.firstName} ${candidate.lastName}` : 'This guardian';
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Deactivate user"
+      title="Remove guardian"
       footer={
         <div className="flex justify-end gap-3">
           <div className="w-28">
@@ -42,15 +46,15 @@ export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: D
               Cancel
             </Button>
           </div>
-          <div className="w-40">
+          <div className="w-32">
             <Button type="button" onClick={() => void handleConfirm()} isLoading={isSubmitting}>
-              {isSubmitting ? 'Deactivating…' : 'Deactivate'}
+              {isSubmitting ? 'Removing…' : 'Remove'}
             </Button>
           </div>
         </div>
       }
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {submitError && (
           <div
             role="alert"
@@ -60,10 +64,9 @@ export function DeactivateUserDialog({ isOpen, onClose, user, onDeactivated }: D
           </div>
         )}
         <p className="text-sm text-content-secondary">
-          <span className="font-medium text-content-primary">
-            {user.firstName} {user.lastName}
-          </span>{' '}
-          will no longer be able to sign in until reactivated. This does not delete their account.
+          <span className="font-medium text-content-primary">{name}</span> will lose access to this learner's
+          record, medical information and emergency contacts immediately. This does not delete their account and
+          can be undone from this list at any time.
         </p>
       </div>
     </Modal>

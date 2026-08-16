@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { enrollmentService } from '@/features/learners/services/enrollmentService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import {
   enrollmentSchema,
   enrollmentDefaultValues,
@@ -79,7 +80,7 @@ export function EnrollmentFormModal({
       onSaved(saved);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save enrollment.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to save enrollment.'));
     }
   };
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { employeeService } from '@/features/employees/services/employeeService';
+import { getDbErrorMessage } from '@/lib/dbErrors';
 import type { Employee } from '@/features/employees/types/employee.types';
 
 export interface ReactivateEmployeeDialogProps {
@@ -23,7 +24,7 @@ export function ReactivateEmployeeDialog({ isOpen, onClose, employee, onReactiva
       onReactivated(updated);
       onClose();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to reactivate employee.');
+      setSubmitError(getDbErrorMessage(error, 'Failed to reactivate employee.'));
     } finally {
       setIsSubmitting(false);
     }
