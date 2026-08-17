@@ -20,6 +20,7 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/academic/classes', { title: 'Classes', section: 'Academics' }],
   ['/academic/subjects', { title: 'Subjects', section: 'Academics' }],
   ['/academic/teaching-assignments', { title: 'Teaching Assignments', section: 'Academics' }],
+  ['/academic/assessments', { title: 'Assessments', section: 'Academics' }],
   ['/academic', { title: 'Academic Overview', section: 'Academics' }],
   ['/learners', { title: 'Learners', section: 'People' }],
   ['/employees/departments', { title: 'Departments', section: 'People' }],
@@ -28,6 +29,7 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/reports/learners', { title: 'Learner Report', section: 'Operations' }],
   ['/reports/employees', { title: 'Employee Report', section: 'Operations' }],
   ['/reports/academic', { title: 'Academic Report', section: 'Operations' }],
+  ['/reports/assessments', { title: 'Assessment Report', section: 'Operations' }],
   ['/reports', { title: 'Reports', section: 'Operations' }],
 ];
 

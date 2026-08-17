@@ -41,3 +41,35 @@ export interface AcademicReportSummary {
   subjects: AcademicEntityCount;
   terms: AcademicEntityCount;
 }
+
+export interface AssessmentResultReportRow {
+  learnerId: string;
+  learnerName: string;
+  classId: string;
+  className: string;
+  subjectId: string;
+  subjectName: string;
+  assessmentId: string;
+  assessmentTitle: string;
+  mark: number;
+  maxMark: number;
+  percentage: number;
+  termId: string;
+  termName: string;
+  academicYearId: string;
+  academicYearName: string;
+}
+
+export interface AssessmentClassPerformanceRow {
+  assessmentId: string;
+  classId: string;
+  className: string;
+  subjectId: string;
+  subjectName: string;
+  assessmentTitle: string;
+  numberAssessed: number;
+  averagePercentage: number | null;
+  highestMark: number | null;
+  lowestMark: number | null;
+  maxMark: number;
+}

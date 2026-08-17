@@ -95,6 +95,15 @@ const AcademicReportPage = named(
   'AcademicReportPage',
 );
 const AttendancePage = named(() => import('@/features/attendance/pages/AttendancePage'), 'AttendancePage');
+const AssessmentsPage = named(() => import('@/features/assessments/pages/AssessmentsPage'), 'AssessmentsPage');
+const AssessmentDetailPage = named(
+  () => import('@/features/assessments/pages/AssessmentDetailPage'),
+  'AssessmentDetailPage',
+);
+const AssessmentReportPage = named(
+  () => import('@/features/reports/pages/AssessmentReportPage'),
+  'AssessmentReportPage',
+);
 
 export function AppRoutes() {
   return (
@@ -130,6 +139,11 @@ export function AppRoutes() {
                 <Route path="/academic/teaching-assignments" element={<TeachingAssignmentsPage />} />
               </Route>
 
+              <Route element={<RequirePermission permission="assessment.view" />}>
+                <Route path="/academic/assessments" element={<AssessmentsPage />} />
+                <Route path="/academic/assessments/:id" element={<AssessmentDetailPage />} />
+              </Route>
+
               <Route element={<RequirePermission permission="learner.view" />}>
                 <Route path="/learners" element={<LearnersPage />} />
                 <Route path="/learners/:id" element={<LearnerProfilePage />} />
@@ -150,6 +164,7 @@ export function AppRoutes() {
                 <Route path="/reports/learners" element={<LearnerReportPage />} />
                 <Route path="/reports/employees" element={<EmployeeReportPage />} />
                 <Route path="/reports/academic" element={<AcademicReportPage />} />
+                <Route path="/reports/assessments" element={<AssessmentReportPage />} />
               </Route>
             </Route>
           </Route>

@@ -34,6 +34,7 @@ export type BoardingType = 'day_scholar' | 'boarder';
 export type LearnerEnrollmentStatus = 'enrolled' | 'promoted' | 'repeated' | 'transferred_out' | 'withdrawn';
 export type GuardianRelationshipType = 'mother' | 'father' | 'legal_guardian' | 'grandparent' | 'sibling' | 'other';
 export type AttendanceStatus = 'present' | 'absent' | 'late';
+export type AssessmentType = 'test' | 'assignment' | 'examination' | 'project' | 'quiz';
 export type LearnerDocumentType =
   | 'birth_certificate'
   | 'id_copy'
@@ -413,6 +414,96 @@ export type AttendanceRecordUpdate = {
   attendance_date?: string;
   status?: AttendanceStatus;
   notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AssessmentRow = {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  term_id: string;
+  class_id: string;
+  subject_id: string;
+  title: string;
+  assessment_type: AssessmentType;
+  assessment_date: string;
+  max_mark: number;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AssessmentInsert = {
+  id?: string;
+  school_id: string;
+  academic_year_id: string;
+  term_id: string;
+  class_id: string;
+  subject_id: string;
+  title: string;
+  assessment_type: AssessmentType;
+  assessment_date: string;
+  max_mark: number;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AssessmentUpdate = {
+  id?: string;
+  school_id?: string;
+  academic_year_id?: string;
+  term_id?: string;
+  class_id?: string;
+  subject_id?: string;
+  title?: string;
+  assessment_type?: AssessmentType;
+  assessment_date?: string;
+  max_mark?: number;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AssessmentResultRow = {
+  id: string;
+  school_id: string;
+  assessment_id: string;
+  learner_id: string;
+  mark: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AssessmentResultInsert = {
+  id?: string;
+  school_id: string;
+  assessment_id: string;
+  learner_id: string;
+  mark: number;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AssessmentResultUpdate = {
+  id?: string;
+  school_id?: string;
+  assessment_id?: string;
+  learner_id?: string;
+  mark?: number;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -906,6 +997,16 @@ export type Database = {
         Row: SubjectRow;
         Insert: SubjectInsert;
         Update: SubjectUpdate;
+      };
+      assessments: {
+        Row: AssessmentRow;
+        Insert: AssessmentInsert;
+        Update: AssessmentUpdate;
+      };
+      assessment_results: {
+        Row: AssessmentResultRow;
+        Insert: AssessmentResultInsert;
+        Update: AssessmentResultUpdate;
       };
       class_teacher_assignments: {
         Row: ClassTeacherAssignmentRow;

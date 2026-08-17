@@ -7,8 +7,10 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useLearnersList } from '@/features/learners/hooks/useLearnersList';
 import { useEmployeesList } from '@/features/employees/hooks/useEmployeesList';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
+import { useClasses } from '@/features/academic/hooks/useClasses';
 import { useUsersList } from '@/features/users/hooks/useUsersList';
 import { useAttendanceSummary } from '@/features/attendance/hooks/useAttendanceSummary';
+import { useAssessments } from '@/features/assessments/hooks/useAssessments';
 import { BriefcaseIcon, BuildingIcon, ChartIcon, CheckIcon, GraduationCapIcon } from '@/components/ui/icons';
 
 /** Zero-pads to a fixed instrument-display width, then groups thousands — e.g. 1284 -> "01,284". */
@@ -107,12 +109,15 @@ export function DashboardPage() {
   const canViewUsers = can('profile.view_any');
   const canViewReports = can('reports.view');
   const canViewAttendance = can('attendance.view');
+  const canViewAssessments = can('assessment.view');
 
   const learners = useLearnersList(canViewLearners ? school?.id : undefined);
   const employees = useEmployeesList(canViewEmployees ? school?.id : undefined);
   const { currentAcademicYear, loading: academicLoading, error: academicError } = useAcademic();
   const users = useUsersList();
   const attendance = useAttendanceSummary(canViewAttendance ? school?.id : undefined, todayIsoDate());
+  const recentAssessments = useAssessments(canViewAssessments ? school?.id : undefined, { limit: 3 });
+  const { classes: assessmentClasses } = useClasses(canViewAssessments ? school?.id : undefined);
 
   const hasStats = canViewLearners || canViewEmployees || canViewAcademic || canViewUsers;
 
@@ -125,6 +130,9 @@ export function DashboardPage() {
       : []),
     ...(canViewAttendance
       ? [{ label: 'Attendance', description: 'Take or review a class register.', to: '/attendance', icon: CheckIcon }]
+      : []),
+    ...(canViewAssessments
+      ? [{ label: 'Assessments', description: 'Create assessments and enter marks.', to: '/academic/assessments', icon: ChartIcon }]
       : []),
     ...(canViewReports
       ? [{ label: 'Reports', description: 'Learner, employee and academic reports.', to: '/reports', icon: ChartIcon }]
@@ -239,8 +247,43 @@ export function DashboardPage() {
           </div>
         </InfoPanel>
 
-        <InfoPanel title="Recent Activity">
-          <NotYetAvailable message="Activity history is not yet available in this workspace." />
+        <InfoPanel title={canViewAssessments ? 'Recent Assessments' : 'Recent Activity'}>
+          {!canViewAssessments ? (
+            <NotYetAvailable message="Activity history is not yet available in this workspace." />
+          ) : recentAssessments.isLoading ? (
+            <div className="flex h-full min-h-[5.5rem] items-center justify-center">
+              <span
+                aria-hidden="true"
+                className="h-6 w-6 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
+              />
+              <span className="sr-only">Loading recent assessments…</span>
+            </div>
+          ) : recentAssessments.assessments.length === 0 ? (
+            <NotYetAvailable message="No assessments have been created yet." />
+          ) : (
+            <div className="flex flex-col divide-y divide-border">
+              {recentAssessments.assessments.map((assessment) => (
+                <Link
+                  key={assessment.id}
+                  to={`/academic/assessments/${assessment.id}`}
+                  className="flex items-center justify-between gap-3 py-2.5 transition-colors first:pt-0 last:pb-0 hover:text-brand-600 dark:hover:text-brand-300"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-content-primary">{assessment.title}</span>
+                    <span className="block truncate text-xs text-content-tertiary">
+                      {assessmentClasses.find((c) => c.id === assessment.classId)?.name ?? 'Class'}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-mono text-xs text-content-tertiary">
+                    {new Date(`${assessment.assessmentDate}T00:00:00`).toLocaleDateString('en-ZA', {
+                      day: '2-digit',
+                      month: 'short',
+                    })}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
         </InfoPanel>
 
         <InfoPanel title="Quick Actions">

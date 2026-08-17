@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { GraduationCapIcon, BriefcaseIcon, LayersIcon } from '@/components/ui/icons';
+import { GraduationCapIcon, BriefcaseIcon, LayersIcon, ChartIcon } from '@/components/ui/icons';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { ComponentType, SVGProps } from 'react';
 import type { Permission } from '@/features/rbac/types/permission.types';
@@ -33,6 +33,13 @@ const LINKS: ReportLink[] = [
     path: '/reports/academic',
     icon: LayersIcon,
     permission: 'academic.view',
+  },
+  {
+    label: 'Assessments',
+    description: 'Class performance summaries and individual assessment results.',
+    path: '/reports/assessments',
+    icon: ChartIcon,
+    permission: 'assessment.view',
   },
 ];
 

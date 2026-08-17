@@ -829,3 +829,138 @@ export async function installAttendanceUpsertMock(page: Page, records: ReturnTyp
     await fulfillJson(route, records);
   });
 }
+
+interface MockAssessmentOverrides {
+  id?: string;
+  schoolId?: string;
+  academicYearId?: string;
+  termId?: string;
+  classId?: string;
+  subjectId?: string;
+  title?: string;
+  assessmentType?: 'test' | 'assignment' | 'examination' | 'project' | 'quiz';
+  assessmentDate?: string;
+  maxMark?: number;
+  active?: boolean;
+}
+
+export function buildMockAssessmentRow(overrides: MockAssessmentOverrides = {}) {
+  const {
+    id = 'assessment-1',
+    schoolId = MOCK_TENANT_ID,
+    academicYearId = 'year-2026',
+    termId = 'term-1',
+    classId = 'class-8a',
+    subjectId = 'subject-math',
+    title = 'Test 1',
+    assessmentType = 'test',
+    assessmentDate = '2026-08-17',
+    maxMark = 50,
+    active = true,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    academic_year_id: academicYearId,
+    term_id: termId,
+    class_id: classId,
+    subject_id: subjectId,
+    title,
+    assessment_type: assessmentType,
+    assessment_date: assessmentDate,
+    max_mark: maxMark,
+    active,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-08-17T00:00:00Z',
+    updated_at: '2026-08-17T00:00:00Z',
+  };
+}
+
+/** Mocks the `assessments` LIST query (GET, `school_id=eq.` filter — assessmentService.getAssessments) — distinct from the single-assessment lookup below, which filters by `id` instead. */
+export async function installAssessmentsListMock(page: Page, assessments: ReturnType<typeof buildMockAssessmentRow>[]) {
+  await page.route('**/rest/v1/assessments*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() !== 'GET' || !url.searchParams.has('school_id')) return route.fallback();
+    await fulfillJson(route, assessments);
+  });
+}
+
+/** Mocks the single-assessment `.eq('id', ...).maybeSingle()` fetch (GET, `id=eq.` filter, no `school_id` param) assessmentService.getAssessment issues. */
+export async function installAssessmentDetailMock(page: Page, assessment: ReturnType<typeof buildMockAssessmentRow> | null) {
+  await page.route('**/rest/v1/assessments*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() !== 'GET' || !url.searchParams.get('id')?.startsWith('eq.')) return route.fallback();
+    await fulfillJson(route, assessment);
+  });
+}
+
+/** Mocks the assessment archive/restore `.update({ active }).eq('id', ...)` call (PATCH). */
+export async function installAssessmentUpdateMock(page: Page, assessment: ReturnType<typeof buildMockAssessmentRow>) {
+  await page.route('**/rest/v1/assessments*', async (route: Route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    await fulfillJson(route, assessment);
+  });
+}
+
+/** Mocks the assessment creation POST — returns the same row the caller submitted (as buildMockAssessmentRow would), so the modal's onSaved callback resolves. */
+export async function installAssessmentCreateMock(page: Page, created: ReturnType<typeof buildMockAssessmentRow>) {
+  await page.route('**/rest/v1/assessments*', async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    await fulfillJson(route, created);
+  });
+}
+
+/** Mocks the `.in('id', [...])` batch lookup (GET, `id=in.` filter) assessmentService.getResultsForLearner and the Assessment Report service issue to resolve assessment context for a set of result rows. */
+export async function installAssessmentsByIdsMock(page: Page, assessments: ReturnType<typeof buildMockAssessmentRow>[]) {
+  await page.route('**/rest/v1/assessments*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() !== 'GET' || !url.searchParams.get('id')?.startsWith('in.')) return route.fallback();
+    await fulfillJson(route, assessments);
+  });
+}
+
+interface MockAssessmentResultOverrides {
+  id?: string;
+  schoolId?: string;
+  assessmentId?: string;
+  learnerId?: string;
+  mark?: number;
+}
+
+export function buildMockAssessmentResultRow(overrides: MockAssessmentResultOverrides = {}) {
+  const {
+    id = 'result-1',
+    schoolId = MOCK_TENANT_ID,
+    assessmentId = 'assessment-1',
+    learnerId = 'learner-1',
+    mark = 42,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    assessment_id: assessmentId,
+    learner_id: learnerId,
+    mark,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-08-17T00:00:00Z',
+    updated_at: '2026-08-17T00:00:00Z',
+  };
+}
+
+/** Mocks the `assessment_results` GET queries (by assessment_id for mark entry/class results, or by learner_id for the Learner Profile results tab — same unpaginated shape). */
+export async function installAssessmentResultsMock(page: Page, results: ReturnType<typeof buildMockAssessmentResultRow>[]) {
+  await page.route('**/rest/v1/assessment_results*', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, results);
+  });
+}
+
+/** Mocks `assessmentService.saveResults`' upsert (POST). */
+export async function installAssessmentResultsUpsertMock(page: Page, results: ReturnType<typeof buildMockAssessmentResultRow>[]) {
+  await page.route('**/rest/v1/assessment_results*', async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    await fulfillJson(route, results);
+  });
+}

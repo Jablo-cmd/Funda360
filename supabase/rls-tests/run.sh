@@ -73,6 +73,7 @@ psql_exec < "$SCRIPT_DIR/06_employee_provisioning_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/07_guardian_emergency_contact_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/08_teaching_assignment_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/09_attendance_fixtures.sql"
+psql_exec < "$SCRIPT_DIR/10_assessment_fixtures.sql"
 
 echo "==> running regression tests"
 for test_file in "$SCRIPT_DIR"/tests/*.test.sql; do

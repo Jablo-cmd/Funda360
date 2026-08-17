@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
@@ -14,8 +14,12 @@ import { LearnerGuardiansSection } from '@/features/learners/components/LearnerG
 import { LearnerEmergencyContactsSection } from '@/features/learners/components/LearnerEmergencyContactsSection';
 import { LearnerMedicalSection } from '@/features/learners/components/LearnerMedicalSection';
 import { LearnerDocumentsSection } from '@/features/learners/components/LearnerDocumentsSection';
+import { LearnerAssessmentResultsSection } from '@/features/assessments/components/LearnerAssessmentResultsSection';
+import { useAcademic } from '@/features/academic/hooks/useAcademic';
+import { useSubjects } from '@/features/academic/hooks/useSubjects';
+import { useTerms } from '@/features/academic/hooks/useTerms';
 
-type TabKey = 'overview' | 'enrollment' | 'guardians' | 'emergency' | 'medical' | 'documents';
+type TabKey = 'overview' | 'enrollment' | 'guardians' | 'emergency' | 'medical' | 'documents' | 'results';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
@@ -24,6 +28,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'emergency', label: 'Emergency contacts' },
   { key: 'medical', label: 'Medical' },
   { key: 'documents', label: 'Documents' },
+  { key: 'results', label: 'Academic results' },
 ];
 
 export function LearnerProfilePage() {
@@ -34,8 +39,18 @@ export function LearnerProfilePage() {
   const canViewSensitive = can('learner.view_sensitive');
   const canViewMedical = can('learner.view_medical');
   const canManageMedical = can('learner.manage_medical');
+  const canViewResults = can('assessment.view');
   const { school } = useSchool();
   const { learner, isLoading, error, refetch } = useLearner(id);
+  const { academicYears } = useAcademic();
+  const { subjects } = useSubjects(school?.id);
+  const { terms } = useTerms(academicYears.find((year) => year.isActive)?.id);
+
+  const subjectsById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects]);
+  const termsById = useMemo(() => Object.fromEntries(terms.map((t) => [t.id, t])), [terms]);
+  const academicYearsById = useMemo(() => Object.fromEntries(academicYears.map((y) => [y.id, y])), [academicYears]);
+
+  const visibleTabs = TABS.filter((tab) => tab.key !== 'results' || canViewResults);
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -111,7 +126,7 @@ export function LearnerProfilePage() {
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-border">
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
@@ -148,6 +163,14 @@ export function LearnerProfilePage() {
       )}
       {activeTab === 'documents' && (
         <LearnerDocumentsSection schoolId={school.id} learnerId={learner.id} canManage={canManage} />
+      )}
+      {activeTab === 'results' && canViewResults && (
+        <LearnerAssessmentResultsSection
+          learnerId={learner.id}
+          subjectsById={subjectsById}
+          termsById={termsById}
+          academicYearsById={academicYearsById}
+        />
       )}
 
       <LearnerFormModal
