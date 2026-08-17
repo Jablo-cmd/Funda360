@@ -23,18 +23,28 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 2. Teacher is blocked from the learner directory entirely (dependency
--- gap — no teaching-assignment data model exists yet, see architecture doc §9).
+-- 2. A teacher with no class relationship at all is blocked from the
+-- learner directory entirely. Uses teacher A2 (12121212, added by
+-- 09_attendance_fixtures.sql), deliberately unassigned to any class —
+-- NOT teacher A1 (11111111), who 09_attendance_fixtures.sql assigns to
+-- class cccc1111...0001, and who is therefore now expected to see exactly
+-- that class's one enrolled learner (see attendance.test.sql tests 8-10,
+-- which prove that narrow exception exists and goes no further than this).
+-- Originally this dependency gap had no exception at all (see the sprint
+-- this comment used to cite); Teaching Assignments + Attendance later
+-- added a deliberate, narrowly class-scoped one, so this test was updated
+-- to keep verifying the case it actually means to: zero relationship,
+-- zero visibility.
 do $$
 declare
   v_count int;
 begin
   perform set_config('request.jwt.claims',
-    test_util.jwt_claims('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
+    test_util.jwt_claims('12121212-1212-1212-1212-121212121212', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
   execute 'set local role authenticated';
 
   select count(*) into v_count from public.learners where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  call test_util.record('teacher has no learner directory access', v_count = 0, 'rows visible: ' || v_count);
+  call test_util.record('a teacher with no class relationship has no learner directory access', v_count = 0, 'rows visible: ' || v_count);
 
   execute 'reset role';
 end;

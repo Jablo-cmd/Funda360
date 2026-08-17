@@ -138,7 +138,12 @@ $$;
 -- ---------------------------------------------------------------------------
 -- 6. Teacher (academic.view, school-wide) can see assignments across the
 -- whole school, not just their own — same visibility model as the rest of
--- the academic structure.
+-- the academic structure. Counts specifically the two ids this test file
+-- itself created (tests 3+4), not "every row in the school" — 09_attendance
+-- _fixtures.sql (loaded before any test file runs) also inserts a
+-- class_teacher_assignments row for School A, and a blanket school-wide
+-- count would go stale every time some other domain's fixtures add one,
+-- same reasoning as scoping counts by id anywhere else in this suite.
 do $$
 declare
   v_count int;
@@ -147,7 +152,9 @@ begin
     test_util.jwt_claims('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
   execute 'set local role authenticated';
 
-  select count(*) into v_count from public.class_teacher_assignments where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  select count(*) into v_count from public.class_teacher_assignments
+    where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      and id in ('a5519000-0000-0000-0000-000000000001', 'a5519000-0000-0000-0000-000000000002');
   call test_util.record('teacher can view school-wide teaching assignments', v_count = 2, 'rows visible: ' || v_count);
 
   execute 'reset role';
