@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
@@ -59,31 +62,22 @@ export function AcademicYearsPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-content-primary">Academic Years</h1>
-          <p className="mt-1 text-sm text-content-secondary">
-            Only one academic year can be active at a time.
-          </p>
-        </div>
-        {canManage && (
-          <div className="w-full sm:w-auto sm:min-w-[10rem]">
-            <Button type="button" onClick={openCreate}>
-              Add academic year
-            </Button>
-          </div>
-        )}
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Academic Years"
+        description="Only one academic year can be active at a time."
+        action={
+          canManage && (
+            <div className="w-full sm:w-auto sm:min-w-[10rem]">
+              <Button type="button" onClick={openCreate}>
+                Add academic year
+              </Button>
+            </div>
+          )
+        }
+      />
 
-      {(error ?? actionError) && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          {error ?? actionError}
-        </div>
-      )}
+      <ErrorAlert message={error ?? actionError} />
 
       <AcademicYearsTable
         years={academicYears}
@@ -101,6 +95,6 @@ export function AcademicYearsPage() {
         year={editingYear}
         onSaved={() => void refresh()}
       />
-    </div>
+    </PageContainer>
   );
 }

@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { GraduationCapIcon, BriefcaseIcon, LayersIcon, ChartIcon } from '@/components/ui/icons';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { ComponentType, SVGProps } from 'react';
 import type { Permission } from '@/features/rbac/types/permission.types';
@@ -48,11 +50,8 @@ export function ReportsOverviewPage() {
   const visibleLinks = LINKS.filter((link) => can(link.permission));
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div>
-        <h1 className="text-2xl font-bold text-content-primary">Reports</h1>
-        <p className="mt-1 text-sm text-content-secondary">Summary reports across your school&apos;s data.</p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Reports" description="Summary reports across your school's data." />
 
       {visibleLinks.length === 0 ? (
         <div className="rounded-card border border-border bg-surface-raised px-4 py-10 text-center text-sm text-content-tertiary">
@@ -75,6 +74,6 @@ export function ReportsOverviewPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

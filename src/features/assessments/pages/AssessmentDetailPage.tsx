@@ -3,6 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
 import { FullScreenNotice } from '@/components/ui/FullScreenNotice';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useClasses } from '@/features/academic/hooks/useClasses';
@@ -150,7 +153,7 @@ export function AssessmentDetailPage() {
   const term = terms.find((t) => t.id === assessment.termId);
 
   return (
-    <div className="flex flex-col gap-5 px-4 py-6 sm:px-6">
+    <PageContainer>
       <button
         type="button"
         onClick={() => navigate('/academic/assessments')}
@@ -180,23 +183,10 @@ export function AssessmentDetailPage() {
         )}
       </div>
 
-      {(rosterError ?? saveError) && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          {rosterError ?? saveError}
-        </div>
-      )}
+      <ErrorAlert message={rosterError ?? saveError} />
 
       {isRosterLoading ? (
-        <div className="flex justify-center py-16">
-          <span
-            aria-hidden="true"
-            className="h-8 w-8 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
-          />
-          <span className="sr-only">Loading roster…</span>
-        </div>
+        <LoadingBlock label="Loading roster…" />
       ) : (
         <>
           {stats && <AssessmentSummaryPanel stats={stats} maxMark={assessment.maxMark} />}
@@ -221,6 +211,6 @@ export function AssessmentDetailPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

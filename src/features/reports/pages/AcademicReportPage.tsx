@@ -4,6 +4,10 @@ import { useAcademicReport } from '@/features/reports/hooks/useAcademicReport';
 import { SummaryCard } from '@/features/reports/components/SummaryCard';
 import { SummaryBar } from '@/features/reports/components/SummaryBar';
 import { ExportCsvButton } from '@/features/reports/components/ExportCsvButton';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import type { AcademicReportSummary } from '@/features/reports/types/report.types';
 
 interface EntityRow {
@@ -30,14 +34,9 @@ export function AcademicReportPage() {
 
   if (!canView) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          You don&apos;t have permission to view this report.
-        </div>
-      </div>
+      <PageContainer>
+        <ErrorAlert message="You don't have permission to view this report." />
+      </PageContainer>
     );
   }
 
@@ -45,45 +44,30 @@ export function AcademicReportPage() {
   const hasData = entityRows.some((row) => row.total > 0);
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-content-primary">Academic report</h1>
-          <p className="mt-1 text-sm text-content-secondary">
-            Active vs. archived counts for years, grades, classes, subjects and terms.
-          </p>
-        </div>
-        {data && (
-          <ExportCsvButton
-            rows={entityRows}
-            columns={[
-              { key: 'entity', header: 'Entity' },
-              { key: 'active', header: 'Active' },
-              { key: 'archived', header: 'Archived' },
-              { key: 'total', header: 'Total' },
-            ]}
-            filename="academic-report.csv"
-          />
-        )}
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Academic report"
+        description="Active vs. archived counts for years, grades, classes, subjects and terms."
+        action={
+          data && (
+            <ExportCsvButton
+              rows={entityRows}
+              columns={[
+                { key: 'entity', header: 'Entity' },
+                { key: 'active', header: 'Active' },
+                { key: 'archived', header: 'Archived' },
+                { key: 'total', header: 'Total' },
+              ]}
+              filename="academic-report.csv"
+            />
+          )
+        }
+      />
 
-      {error && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          {error}
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <span
-            aria-hidden="true"
-            className="h-8 w-8 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
-          />
-          <span className="sr-only">Loading academic report…</span>
-        </div>
+        <LoadingBlock label="Loading academic report…" />
       ) : data && hasData ? (
         <>
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -102,6 +86,6 @@ export function AcademicReportPage() {
           No data yet for this school.
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

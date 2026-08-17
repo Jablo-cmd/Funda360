@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
@@ -71,20 +75,20 @@ export function AssessmentsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-content-primary">Assessments</h1>
-          <p className="mt-0.5 text-sm text-content-secondary">Tests, assignments and exams across your classes.</p>
-        </div>
-        {(canManageAny || availableClasses.length > 0) && (
-          <div className="w-full sm:w-auto sm:min-w-[10rem]">
-            <Button type="button" onClick={() => setIsFormOpen(true)}>
-              Create assessment
-            </Button>
-          </div>
-        )}
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Assessments"
+        description="Tests, assignments and exams across your classes."
+        action={
+          (canManageAny || availableClasses.length > 0) && (
+            <div className="w-full sm:w-auto sm:min-w-[10rem]">
+              <Button type="button" onClick={() => setIsFormOpen(true)}>
+                Create assessment
+              </Button>
+            </div>
+          )
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 rounded-card border border-border bg-surface-raised p-4 sm:grid-cols-4">
         <div>
@@ -164,23 +168,10 @@ export function AssessmentsPage() {
         </div>
       </div>
 
-      {error && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          {error}
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <span
-            aria-hidden="true"
-            className="h-8 w-8 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
-          />
-          <span className="sr-only">Loading assessments…</span>
-        </div>
+        <LoadingBlock label="Loading assessments…" />
       ) : (
         <AssessmentsTable
           assessments={assessments}
@@ -207,6 +198,6 @@ export function AssessmentsPage() {
           onSaved={handleCreated}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

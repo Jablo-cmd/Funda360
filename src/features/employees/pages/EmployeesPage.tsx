@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useEmployeesList } from '@/features/employees/hooks/useEmployeesList';
@@ -27,48 +31,35 @@ export function EmployeesPage() {
   const [reactivatingEmployee, setReactivatingEmployee] = useState<Employee | null>(null);
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-content-primary">Employees</h1>
-          <p className="mt-1 text-sm text-content-secondary">Manage the staff directory for your school.</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/employees/departments"
-            className="focus-ring flex h-11 items-center rounded-lg px-3.5 text-sm font-medium text-content-secondary hover:bg-surface-sunken hover:text-content-primary"
-          >
-            Manage departments
-          </Link>
-          {canManage && (
-            <div className="w-full sm:w-auto sm:min-w-[9rem]">
-              <Button type="button" onClick={() => setIsCreateOpen(true)}>
-                Add employee
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Employees"
+        description="Manage the staff directory for your school."
+        action={
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/employees/departments"
+              className="focus-ring flex h-11 items-center rounded-lg px-3.5 text-sm font-medium text-content-secondary hover:bg-surface-sunken hover:text-content-primary"
+            >
+              Manage departments
+            </Link>
+            {canManage && (
+              <div className="w-full sm:w-auto sm:min-w-[9rem]">
+                <Button type="button" onClick={() => setIsCreateOpen(true)}>
+                  Add employee
+                </Button>
+              </div>
+            )}
+          </div>
+        }
+      />
 
       <EmployeesFiltersBar filters={filters} departments={departments} onChange={setFilters} />
 
-      {error && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          {error}
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <span
-            aria-hidden="true"
-            className="h-8 w-8 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
-          />
-          <span className="sr-only">Loading employees…</span>
-        </div>
+        <LoadingBlock label="Loading employees…" />
       ) : (
         <>
           <EmployeesTable
@@ -119,6 +110,6 @@ export function EmployeesPage() {
           onReactivated={() => void refetch()}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -4,6 +4,10 @@ import { useLearnerReport } from '@/features/reports/hooks/useLearnerReport';
 import { SummaryCard } from '@/features/reports/components/SummaryCard';
 import { SummaryBar } from '@/features/reports/components/SummaryBar';
 import { ExportCsvButton } from '@/features/reports/components/ExportCsvButton';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingBlock } from '@/components/ui/LoadingBlock';
 
 export function LearnerReportPage() {
   const { can } = usePermissions();
@@ -13,53 +17,35 @@ export function LearnerReportPage() {
 
   if (!canView) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          You don&apos;t have permission to view this report.
-        </div>
-      </div>
+      <PageContainer>
+        <ErrorAlert message="You don't have permission to view this report." />
+      </PageContainer>
     );
   }
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-content-primary">Learner report</h1>
-          <p className="mt-1 text-sm text-content-secondary">Enrollment counts broken down by status.</p>
-        </div>
-        {data && (
-          <ExportCsvButton
-            rows={data.byStatus}
-            columns={[
-              { key: 'status', header: 'Status' },
-              { key: 'count', header: 'Count' },
-            ]}
-            filename="learner-report.csv"
-          />
-        )}
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Learner report"
+        description="Enrollment counts broken down by status."
+        action={
+          data && (
+            <ExportCsvButton
+              rows={data.byStatus}
+              columns={[
+                { key: 'status', header: 'Status' },
+                { key: 'count', header: 'Count' },
+              ]}
+              filename="learner-report.csv"
+            />
+          )
+        }
+      />
 
-      {error && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          {error}
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <span
-            aria-hidden="true"
-            className="h-8 w-8 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
-          />
-          <span className="sr-only">Loading learner report…</span>
-        </div>
+        <LoadingBlock label="Loading learner report…" />
       ) : data && data.totalLearners > 0 ? (
         <>
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -78,6 +64,6 @@ export function LearnerReportPage() {
           No data yet for this school.
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

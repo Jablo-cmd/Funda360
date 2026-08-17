@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { SearchIcon } from '@/components/ui/icons';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useSubjects } from '@/features/academic/hooks/useSubjects';
@@ -59,22 +63,20 @@ export function SubjectsPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-content-primary">Subjects</h1>
-          <p className="mt-1 text-sm text-content-secondary">
-            Manage the subject catalogue for your school.
-          </p>
-        </div>
-        {canManage && (
-          <div className="w-full sm:w-auto sm:min-w-[9rem]">
-            <Button type="button" onClick={openCreate}>
-              Add subject
-            </Button>
-          </div>
-        )}
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Subjects"
+        description="Manage the subject catalogue for your school."
+        action={
+          canManage && (
+            <div className="w-full sm:w-auto sm:min-w-[9rem]">
+              <Button type="button" onClick={openCreate}>
+                Add subject
+              </Button>
+            </div>
+          )
+        }
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -99,23 +101,10 @@ export function SubjectsPage() {
         </label>
       </div>
 
-      {(error ?? actionError) && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          {error ?? actionError}
-        </div>
-      )}
+      <ErrorAlert message={error ?? actionError} />
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <span
-            aria-hidden="true"
-            className="h-8 w-8 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
-          />
-          <span className="sr-only">Loading subjects…</span>
-        </div>
+        <LoadingBlock label="Loading subjects…" />
       ) : (
         <SubjectsTable
           subjects={visibleSubjects}
@@ -134,6 +123,6 @@ export function SubjectsPage() {
           onSaved={() => void refetch()}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
