@@ -12,6 +12,8 @@ export type Permission =
   | 'profile.manage_any'
   | 'academic.view'
   | 'academic.manage'
+  | 'attendance.view'
+  | 'attendance.manage'
   | 'learner.view'
   | 'learner.manage'
   | 'learner.view_sensitive'

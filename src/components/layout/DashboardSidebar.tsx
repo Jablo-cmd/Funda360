@@ -43,6 +43,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const canViewAcademic = hasPermission(role, 'academic.view');
   const canViewLearners = hasPermission(role, 'learner.view');
   const canViewReports = hasPermission(role, 'reports.view');
+  const canViewAttendance = hasPermission(role, 'attendance.view');
 
   const sections: NavSection[] = [
     {
@@ -88,7 +89,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
     {
       label: 'Operations',
       items: [
-        { label: 'Attendance', icon: CheckIcon },
+        canViewAttendance
+          ? { label: 'Attendance', path: '/attendance', icon: CheckIcon }
+          : { label: 'Attendance', icon: CheckIcon },
         canViewReports
           ? { label: 'Reports', path: '/reports', icon: ChartIcon }
           : { label: 'Reports', icon: ChartIcon },

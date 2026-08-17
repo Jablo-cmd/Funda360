@@ -33,6 +33,7 @@ export type LearnerStatus =
 export type BoardingType = 'day_scholar' | 'boarder';
 export type LearnerEnrollmentStatus = 'enrolled' | 'promoted' | 'repeated' | 'transferred_out' | 'withdrawn';
 export type GuardianRelationshipType = 'mother' | 'father' | 'legal_guardian' | 'grandparent' | 'sibling' | 'other';
+export type AttendanceStatus = 'present' | 'absent' | 'late';
 export type LearnerDocumentType =
   | 'birth_certificate'
   | 'id_copy'
@@ -367,6 +368,51 @@ export type ClassTeacherAssignmentUpdate = {
   subject_id?: string | null;
   teacher_profile_id?: string;
   active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AttendanceRecordRow = {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  class_id: string;
+  learner_id: string;
+  attendance_date: string;
+  status: AttendanceStatus;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AttendanceRecordInsert = {
+  id?: string;
+  school_id: string;
+  academic_year_id: string;
+  class_id: string;
+  learner_id: string;
+  attendance_date: string;
+  status: AttendanceStatus;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AttendanceRecordUpdate = {
+  id?: string;
+  school_id?: string;
+  academic_year_id?: string;
+  class_id?: string;
+  learner_id?: string;
+  attendance_date?: string;
+  status?: AttendanceStatus;
+  notes?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -865,6 +911,11 @@ export type Database = {
         Row: ClassTeacherAssignmentRow;
         Insert: ClassTeacherAssignmentInsert;
         Update: ClassTeacherAssignmentUpdate;
+      };
+      attendance_records: {
+        Row: AttendanceRecordRow;
+        Insert: AttendanceRecordInsert;
+        Update: AttendanceRecordUpdate;
       };
       learners: {
         Row: LearnerRow;

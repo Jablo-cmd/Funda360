@@ -24,6 +24,7 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/learners', { title: 'Learners', section: 'People' }],
   ['/employees/departments', { title: 'Departments', section: 'People' }],
   ['/employees', { title: 'Employees', section: 'People' }],
+  ['/attendance', { title: 'Attendance', section: 'Operations' }],
   ['/reports/learners', { title: 'Learner Report', section: 'Operations' }],
   ['/reports/employees', { title: 'Employee Report', section: 'Operations' }],
   ['/reports/academic', { title: 'Academic Report', section: 'Operations' }],

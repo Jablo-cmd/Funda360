@@ -8,11 +8,16 @@ import { useLearnersList } from '@/features/learners/hooks/useLearnersList';
 import { useEmployeesList } from '@/features/employees/hooks/useEmployeesList';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { useUsersList } from '@/features/users/hooks/useUsersList';
-import { BriefcaseIcon, BuildingIcon, ChartIcon, GraduationCapIcon } from '@/components/ui/icons';
+import { useAttendanceSummary } from '@/features/attendance/hooks/useAttendanceSummary';
+import { BriefcaseIcon, BuildingIcon, ChartIcon, CheckIcon, GraduationCapIcon } from '@/components/ui/icons';
 
 /** Zero-pads to a fixed instrument-display width, then groups thousands — e.g. 1284 -> "01,284". */
 function formatStat(n: number): string {
   return Math.max(0, Math.round(n)).toString().padStart(5, '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 interface StatPanelProps {
@@ -101,11 +106,13 @@ export function DashboardPage() {
   const canViewAcademic = can('academic.view');
   const canViewUsers = can('profile.view_any');
   const canViewReports = can('reports.view');
+  const canViewAttendance = can('attendance.view');
 
   const learners = useLearnersList(canViewLearners ? school?.id : undefined);
   const employees = useEmployeesList(canViewEmployees ? school?.id : undefined);
   const { currentAcademicYear, loading: academicLoading, error: academicError } = useAcademic();
   const users = useUsersList();
+  const attendance = useAttendanceSummary(canViewAttendance ? school?.id : undefined, todayIsoDate());
 
   const hasStats = canViewLearners || canViewEmployees || canViewAcademic || canViewUsers;
 
@@ -115,6 +122,9 @@ export function DashboardPage() {
       : []),
     ...(canViewEmployees
       ? [{ label: 'Employees', description: 'View and manage staff records.', to: '/employees', icon: BriefcaseIcon }]
+      : []),
+    ...(canViewAttendance
+      ? [{ label: 'Attendance', description: 'Take or review a class register.', to: '/attendance', icon: CheckIcon }]
       : []),
     ...(canViewReports
       ? [{ label: 'Reports', description: 'Learner, employee and academic reports.', to: '/reports', icon: ChartIcon }]
@@ -182,13 +192,47 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <InfoPanel title="Attendance Overview">
-          <NotYetAvailable message="Attendance tracking is not yet available in this workspace." />
+          {!canViewAttendance ? (
+            <NotYetAvailable message="You don't have access to attendance records." />
+          ) : attendance.isLoading ? (
+            <div className="flex h-full min-h-[5.5rem] items-center justify-center">
+              <span
+                aria-hidden="true"
+                className="h-6 w-6 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
+              />
+              <span className="sr-only">Loading today's attendance…</span>
+            </div>
+          ) : attendance.counts && attendance.counts.present + attendance.counts.absent + attendance.counts.late > 0 ? (
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <span className="font-mono text-2xl font-semibold text-success-500">
+                  {formatStat(attendance.counts.present)}
+                </span>
+                <span className="mt-1 block text-[11px] uppercase tracking-wide text-content-tertiary">Present</span>
+              </div>
+              <div>
+                <span className="font-mono text-2xl font-semibold text-danger-600">
+                  {formatStat(attendance.counts.absent)}
+                </span>
+                <span className="mt-1 block text-[11px] uppercase tracking-wide text-content-tertiary">Absent</span>
+              </div>
+              <div>
+                <span className="font-mono text-2xl font-semibold text-warning-600 dark:text-warning-500">
+                  {formatStat(attendance.counts.late)}
+                </span>
+                <span className="mt-1 block text-[11px] uppercase tracking-wide text-content-tertiary">Late</span>
+              </div>
+            </div>
+          ) : (
+            <NotYetAvailable message="No attendance recorded for today yet." />
+          )}
         </InfoPanel>
 
         <InfoPanel title="System Status">
           <div>
             <StatusRow label="Authentication" status="online" />
             {canViewAcademic && <StatusRow label="Academic Services" status={academicError ? 'degraded' : 'online'} />}
+            {canViewAttendance && <StatusRow label="Attendance Records" status={attendance.error ? 'degraded' : 'online'} />}
             {canViewLearners && <StatusRow label="Learner Registry" status={learners.error ? 'degraded' : 'online'} />}
             {canViewEmployees && <StatusRow label="Employee Registry" status={employees.error ? 'degraded' : 'online'} />}
             {canViewUsers && <StatusRow label="User Directory" status={users.error ? 'degraded' : 'online'} />}

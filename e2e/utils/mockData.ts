@@ -763,6 +763,8 @@ export async function installEmployeeRpcMock(
  * Reports feature issues against `learners` or `employees` (GET, no
  * `limit`/`offset` params — unlike the paginated list queries those same
  * tables also serve, see installLearnersListMock/installEmployeesListMock).
+ * Also matches attendanceService.getClassRoster's `.in('id', [...])` lookup
+ * against `learners` — same unpaginated shape.
  */
 export async function installReportRowsMock(
   page: Page,
@@ -773,5 +775,57 @@ export async function installReportRowsMock(
     const url = new URL(route.request().url());
     if (url.searchParams.has('limit') || url.searchParams.has('offset')) return route.fallback();
     await fulfillJson(route, rows);
+  });
+}
+
+interface MockAttendanceRecordOverrides {
+  id?: string;
+  schoolId?: string;
+  academicYearId?: string;
+  classId?: string;
+  learnerId?: string;
+  attendanceDate?: string;
+  status?: 'present' | 'absent' | 'late';
+}
+
+export function buildMockAttendanceRecordRow(overrides: MockAttendanceRecordOverrides = {}) {
+  const {
+    id = 'attendance-1',
+    schoolId = MOCK_TENANT_ID,
+    academicYearId = 'year-2026',
+    classId = 'class-8a',
+    learnerId = 'learner-1',
+    attendanceDate = '2026-08-17',
+    status = 'present',
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    academic_year_id: academicYearId,
+    class_id: classId,
+    learner_id: learnerId,
+    attendance_date: attendanceDate,
+    status,
+    notes: null,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-08-17T00:00:00Z',
+    updated_at: '2026-08-17T00:00:00Z',
+  };
+}
+
+/** Mocks the `attendance_records` GET queries (both the class/date register lookup and the school-wide daily summary — same unpaginated shape, only the applied filters differ). */
+export async function installAttendanceRecordsMock(page: Page, records: ReturnType<typeof buildMockAttendanceRecordRow>[]) {
+  await page.route('**/rest/v1/attendance_records*', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, records);
+  });
+}
+
+/** Mocks the `attendanceService.saveAttendance` upsert (POST). */
+export async function installAttendanceUpsertMock(page: Page, records: ReturnType<typeof buildMockAttendanceRecordRow>[]) {
+  await page.route('**/rest/v1/attendance_records*', async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    await fulfillJson(route, records);
   });
 }
