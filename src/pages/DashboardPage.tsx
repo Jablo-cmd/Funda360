@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { ComponentType, ReactNode, SVGProps } from 'react';
 import { useProfile } from '@/features/profile/context/profileContext';
@@ -8,10 +9,19 @@ import { useLearnersList } from '@/features/learners/hooks/useLearnersList';
 import { useEmployeesList } from '@/features/employees/hooks/useEmployeesList';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { useClasses } from '@/features/academic/hooks/useClasses';
+import { useSubjects } from '@/features/academic/hooks/useSubjects';
 import { useUsersList } from '@/features/users/hooks/useUsersList';
 import { useAttendanceSummary } from '@/features/attendance/hooks/useAttendanceSummary';
 import { useAssessments } from '@/features/assessments/hooks/useAssessments';
-import { BriefcaseIcon, BuildingIcon, ChartIcon, CheckIcon, GraduationCapIcon } from '@/components/ui/icons';
+import { useMyTeachingAssignments } from '@/features/teaching/hooks/useMyTeachingAssignments';
+import {
+  BriefcaseIcon,
+  BuildingIcon,
+  ChalkboardIcon,
+  ChartIcon,
+  CheckIcon,
+  GraduationCapIcon,
+} from '@/components/ui/icons';
 
 /** Zero-pads to a fixed instrument-display width, then groups thousands — e.g. 1284 -> "01,284". */
 function formatStat(n: number): string {
@@ -113,15 +123,30 @@ export function DashboardPage() {
 
   const learners = useLearnersList(canViewLearners ? school?.id : undefined);
   const employees = useEmployeesList(canViewEmployees ? school?.id : undefined);
-  const { currentAcademicYear, loading: academicLoading, error: academicError } = useAcademic();
+  const { error: academicError } = useAcademic();
   const users = useUsersList();
   const attendance = useAttendanceSummary(canViewAttendance ? school?.id : undefined, todayIsoDate());
   const recentAssessments = useAssessments(canViewAssessments ? school?.id : undefined, { limit: 3 });
-  const { classes: assessmentClasses } = useClasses(canViewAssessments ? school?.id : undefined);
+  const { classes, isLoading: classesLoading } = useClasses(
+    canViewAcademic || canViewAssessments ? school?.id : undefined,
+  );
+  const activeClassCount = classes.filter((c) => c.active).length;
+  const todaysAttendanceTotal = attendance.counts
+    ? attendance.counts.present + attendance.counts.absent + attendance.counts.late
+    : 0;
 
-  const hasStats = canViewLearners || canViewEmployees || canViewAcademic || canViewUsers;
+  const myAssignments = useMyTeachingAssignments();
+  const { subjects } = useSubjects(school?.id);
+  const subjectsById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects]);
+  const classesById = useMemo(() => Object.fromEntries(classes.map((c) => [c.id, c])), [classes]);
+  const myActiveAssignments = myAssignments.data.filter((a) => a.active);
+
+  const hasStats = canViewLearners || canViewEmployees || canViewAcademic || canViewAttendance;
 
   const quickActions: QuickAction[] = [
+    ...(myActiveAssignments.length > 0
+      ? [{ label: 'My Classes', description: 'Mark attendance and enter marks for your classes.', to: '/my-profile', icon: ChalkboardIcon }]
+      : []),
     ...(canViewLearners
       ? [{ label: 'Learners', description: 'View and manage the learner roster.', to: '/learners', icon: GraduationCapIcon }]
       : []),
@@ -178,24 +203,56 @@ export function DashboardPage() {
             )}
             {canViewAcademic && (
               <StatPanel
-                label="Academic Year"
-                value={currentAcademicYear?.name ?? '—'}
-                caption={currentAcademicYear ? 'Currently active' : 'None set as active'}
-                to="/academic"
-                isLoading={academicLoading}
+                label="Classes"
+                value={formatStat(activeClassCount)}
+                caption="Active this year"
+                to="/academic/classes"
+                isLoading={classesLoading}
               />
             )}
-            {canViewUsers && (
+            {canViewAttendance && (
               <StatPanel
-                label="System Users"
-                value={formatStat(users.totalCount)}
-                caption="Registered accounts"
-                to="/users"
-                isLoading={users.isLoading}
+                label="Today's Attendance"
+                value={formatStat(todaysAttendanceTotal)}
+                caption="Registers taken today"
+                to="/attendance"
+                isLoading={attendance.isLoading}
               />
             )}
           </dl>
         </div>
+      )}
+
+      {myActiveAssignments.length > 0 && (
+        <InfoPanel title="My Classes">
+          <div className="flex flex-col divide-y divide-border">
+            {myActiveAssignments.map((assignment) => {
+              const cls = classesById[assignment.classId];
+              const subject = assignment.subjectId ? subjectsById[assignment.subjectId] : undefined;
+              return (
+                <Link
+                  key={assignment.id}
+                  to={
+                    canViewAssessments
+                      ? `/academic/assessments?classId=${assignment.classId}`
+                      : `/attendance`
+                  }
+                  className="flex items-center justify-between gap-3 py-2.5 transition-colors first:pt-0 last:pb-0 hover:text-brand-600 dark:hover:text-brand-300"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-content-primary">
+                      {cls?.name ?? 'Class'}
+                    </span>
+                    <span className="block truncate text-xs text-content-tertiary">
+                      {assignment.subjectId ? (subject?.name ?? 'Subject') : 'Class teacher'}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-content-tertiary">→</span>
+                </Link>
+              );
+            })}
+          </div>
+        </InfoPanel>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -271,7 +328,7 @@ export function DashboardPage() {
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-content-primary">{assessment.title}</span>
                     <span className="block truncate text-xs text-content-tertiary">
-                      {assessmentClasses.find((c) => c.id === assessment.classId)?.name ?? 'Class'}
+                      {classesById[assessment.classId]?.name ?? 'Class'}
                     </span>
                   </span>
                   <span className="shrink-0 font-mono text-xs text-content-tertiary">

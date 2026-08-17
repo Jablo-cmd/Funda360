@@ -18,6 +18,9 @@ import { LearnerAssessmentResultsSection } from '@/features/assessments/componen
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { useSubjects } from '@/features/academic/hooks/useSubjects';
 import { useTerms } from '@/features/academic/hooks/useTerms';
+import { useGrades } from '@/features/academic/hooks/useGrades';
+import { useClasses } from '@/features/academic/hooks/useClasses';
+import { useEnrollments } from '@/features/learners/hooks/useEnrollments';
 
 type TabKey = 'overview' | 'enrollment' | 'guardians' | 'emergency' | 'medical' | 'documents' | 'results';
 
@@ -42,13 +45,22 @@ export function LearnerProfilePage() {
   const canViewResults = can('assessment.view');
   const { school } = useSchool();
   const { learner, isLoading, error, refetch } = useLearner(id);
-  const { academicYears } = useAcademic();
+  const { academicYears, currentAcademicYear } = useAcademic();
   const { subjects } = useSubjects(school?.id);
   const { terms } = useTerms(academicYears.find((year) => year.isActive)?.id);
+  const { grades } = useGrades(school?.id);
+  const { classes } = useClasses(school?.id);
+  const { enrollments } = useEnrollments(id);
 
   const subjectsById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects]);
   const termsById = useMemo(() => Object.fromEntries(terms.map((t) => [t.id, t])), [terms]);
   const academicYearsById = useMemo(() => Object.fromEntries(academicYears.map((y) => [y.id, y])), [academicYears]);
+
+  const currentEnrollment = enrollments.find(
+    (e) => e.academicYearId === currentAcademicYear?.id && e.enrollmentStatus === 'enrolled',
+  );
+  const currentGrade = currentEnrollment ? grades.find((g) => g.id === currentEnrollment.gradeId) : undefined;
+  const currentClass = currentEnrollment?.classId ? classes.find((c) => c.id === currentEnrollment.classId) : undefined;
 
   const visibleTabs = TABS.filter((tab) => tab.key !== 'results' || canViewResults);
 
@@ -102,6 +114,12 @@ export function LearnerProfilePage() {
               <p className="text-sm text-content-secondary">
                 {learner.learnerNumber} · {learner.admissionNumber}
               </p>
+              {(currentGrade ?? currentClass) && (
+                <p className="mt-0.5 text-sm text-content-tertiary">
+                  {currentGrade ? currentGrade.name : 'Grade —'}
+                  {currentClass ? ` · ${currentClass.name}` : ''}
+                </p>
+              )}
             </div>
           </div>
           <span className="inline-flex w-fit items-center rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium capitalize text-brand-700 dark:bg-brand-500/15 dark:text-brand-200">

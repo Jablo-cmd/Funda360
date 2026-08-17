@@ -128,7 +128,7 @@ test('principal can add an enrollment and promote a learner', async ({ page }) =
 
   await page.goto('/learners/learner-1');
   await page.getByRole('button', { name: 'Enrollment' }).click();
-  await expect(page.getByText('2026 Academic Year')).toBeVisible();
+  await expect(page.getByRole('cell', { name: '2026 Academic Year' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Add enrollment' }).click();
   await page.getByLabel('Enrollment date').fill('2026-01-20');

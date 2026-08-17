@@ -193,7 +193,7 @@ test('teacher has read-only access to academic pages', async ({ page }) => {
   await installAcademicListMock(page, 'grades', [buildMockGradeRow()]);
 
   await page.goto('/academic/years');
-  await expect(page.getByText('2026 Academic Year')).toBeVisible();
+  await expect(page.getByRole('cell', { name: '2026 Academic Year' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add academic year' })).toHaveCount(0);
 
   await page.goto('/academic/grades');
@@ -228,6 +228,6 @@ test('tenant isolation: the academic years list only ever reflects the caller\'s
   });
 
   await page.goto('/academic/years');
-  await expect(page.getByText('2026 Academic Year')).toBeVisible();
+  await expect(page.getByRole('cell', { name: '2026 Academic Year' })).toBeVisible();
   await expect(page.getByText(/other-school/)).toHaveCount(0);
 });

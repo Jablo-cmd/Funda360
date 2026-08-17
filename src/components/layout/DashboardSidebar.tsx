@@ -22,6 +22,8 @@ interface NavItem {
   label: string;
   path?: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
+  /** Exact-match only — for an item whose path is itself a prefix of sibling items' paths (e.g. /academic vs /academic/years), so it doesn't show active on every sub-page. */
+  end?: boolean;
 }
 
 interface NavSection {
@@ -67,6 +69,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       label: 'Academics',
       items: [
         canViewAcademic
+          ? { label: 'Academic Overview', path: '/academic', icon: LayersIcon, end: true }
+          : { label: 'Academic Overview', icon: LayersIcon },
+        canViewAcademic
           ? { label: 'Academic Years', path: '/academic/years', icon: CalendarIcon }
           : { label: 'Academic Years', icon: CalendarIcon },
         canViewAcademic
@@ -87,7 +92,6 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewAssessments
           ? { label: 'Assessments', path: '/academic/assessments', icon: ChartIcon }
           : { label: 'Assessments', icon: ChartIcon },
-        { label: 'My Classes', path: '/my-profile', icon: ChalkboardIcon },
       ],
     },
     {
@@ -96,6 +100,12 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewAttendance
           ? { label: 'Attendance', path: '/attendance', icon: CheckIcon }
           : { label: 'Attendance', icon: CheckIcon },
+        { label: 'My Classes', path: '/my-profile', icon: ChalkboardIcon },
+      ],
+    },
+    {
+      label: 'Reporting',
+      items: [
         canViewReports
           ? { label: 'Reports', path: '/reports', icon: ChartIcon }
           : { label: 'Reports', icon: ChartIcon },
@@ -132,11 +142,12 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
               {section.label}
             </p>
             <div className="flex flex-col gap-0.5">
-              {section.items.map(({ label, path, icon: Icon }) =>
+              {section.items.map(({ label, path, icon: Icon, end }) =>
                 path ? (
                   <NavLink
                     key={label}
                     to={path}
+                    end={end}
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(

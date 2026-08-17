@@ -1,21 +1,28 @@
 import { Link } from 'react-router-dom';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   CalendarIcon,
   ChalkboardIcon,
+  ChartIcon,
   GraduationCapIcon,
   LayersIcon,
   BookIcon,
   UsersIcon,
 } from '@/components/ui/icons';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { ComponentType, SVGProps } from 'react';
+import type { Permission } from '@/features/rbac/types/permission.types';
 
 interface AcademicLink {
   label: string;
   description: string;
   path: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
+  /** Omit for items already covered by this page's own academic.view route gate; set only for a sibling domain (like Assessments) gated by a separate permission. */
+  permission?: Permission;
 }
 
 const LINKS: AcademicLink[] = [
@@ -30,23 +37,30 @@ const LINKS: AcademicLink[] = [
     path: '/academic/teaching-assignments',
     icon: UsersIcon,
   },
+  {
+    label: 'Assessments',
+    description: 'Create assessments and enter marks.',
+    path: '/academic/assessments',
+    icon: ChartIcon,
+    permission: 'assessment.view',
+  },
 ];
 
 export function AcademicOverviewPage() {
   const { currentAcademicYear, loading } = useAcademic();
+  const { can } = usePermissions();
+  const visibleLinks = LINKS.filter((link) => !link.permission || can(link.permission));
 
   if (loading) {
     return <FullScreenSpinner label="Loading academic structure…" />;
   }
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div>
-        <h1 className="text-2xl font-bold text-content-primary">Academic Structure</h1>
-        <p className="mt-1 text-sm text-content-secondary">
-          Define your school&apos;s academic years, terms, grades, classes and subjects.
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Academic Structure"
+        description="Define your school's academic years, terms, grades, classes and subjects."
+      />
 
       <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card sm:p-6 dark:shadow-card-dark">
         <h2 className="text-base font-semibold text-content-primary">Current academic year</h2>
@@ -66,7 +80,7 @@ export function AcademicOverviewPage() {
       </section>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {LINKS.map(({ label, description, path, icon: Icon }) => (
+        {visibleLinks.map(({ label, description, path, icon: Icon }) => (
           <Link
             key={path}
             to={path}
@@ -80,6 +94,6 @@ export function AcademicOverviewPage() {
           </Link>
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 }

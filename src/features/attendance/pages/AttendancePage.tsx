@@ -8,6 +8,11 @@ import { useAttendanceRoster } from '@/features/attendance/hooks/useAttendanceRo
 import { attendanceService } from '@/features/attendance/services/attendanceService';
 import type { AttendanceStatus } from '@/features/attendance/types/attendance.types';
 import { Button } from '@/components/ui/Button';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingBlock } from '@/components/ui/LoadingBlock';
+import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import { cn } from '@/lib/cn';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 
@@ -101,12 +106,17 @@ export function AttendancePage() {
     }
   };
 
+  const selectedClassName = availableClasses.find((c) => c.id === classId)?.name;
+  const formattedDate = new Date(`${date}T00:00:00`).toLocaleDateString('en-ZA', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
   return (
-    <div className="flex flex-col gap-5 px-4 py-6 sm:px-6">
-      <div>
-        <h1 className="text-xl font-semibold text-content-primary">Attendance</h1>
-        <p className="mt-0.5 text-sm text-content-secondary">Take or review the daily register for a class.</p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Attendance" description="Take or review the daily register for a class." />
 
       <div className="flex flex-col gap-3 rounded-card border border-border bg-surface-raised p-4 sm:flex-row sm:items-end sm:gap-4">
         <div className="flex-1">
@@ -151,78 +161,111 @@ export function AttendancePage() {
         <p className="text-sm text-content-tertiary">Set an active academic year before taking attendance.</p>
       )}
 
-      {(error ?? saveError) && (
-        <div
-          role="alert"
-          className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600"
-        >
-          {error ?? saveError}
-        </div>
-      )}
+      <ErrorAlert message={error ?? saveError} />
 
       {classId && currentAcademicYear && (
-        <div className="rounded-card border border-border bg-surface-raised">
+        <div className="flex flex-col gap-3">
+          {!isLoading && roster.length > 0 && (
+            <p className="text-sm text-content-secondary">
+              <span className="font-medium text-content-primary">{selectedClassName ?? 'Class'}</span>
+              {' · '}
+              {formattedDate}
+              {' · '}
+              {roster.length} {roster.length === 1 ? 'learner' : 'learners'}
+            </p>
+          )}
+
           {isLoading ? (
-            <div className="flex justify-center py-16">
-              <span
-                aria-hidden="true"
-                className="h-8 w-8 animate-spin-smooth rounded-full border-2 border-brand-600 border-t-transparent"
-              />
-              <span className="sr-only">Loading register…</span>
+            <div className="rounded-card border border-border bg-surface-raised">
+              <LoadingBlock label="Loading register…" />
             </div>
           ) : roster.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-content-tertiary">No learners enrolled in this class yet.</p>
+            <p className="rounded-card border border-border bg-surface-raised px-4 py-10 text-center text-sm text-content-tertiary">
+              No learners enrolled in this class yet.
+            </p>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
-                      <th scope="col" className="px-4 py-3 font-medium">
-                        Learner
-                      </th>
-                      <th scope="col" className="px-4 py-3 font-medium">
-                        Learner #
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-right font-medium">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {roster.map((learner) => (
-                      <tr key={learner.id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-3 font-medium text-content-primary">
-                          {learner.firstName} {learner.lastName}
-                        </td>
-                        <td className="px-4 py-3 text-content-secondary">{learner.learnerNumber}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-1.5">
-                            {STATUS_OPTIONS.map((option) => (
-                              <button
-                                key={option.value}
-                                type="button"
-                                disabled={!canRecordForClass}
-                                data-active={statuses[learner.id] === option.value}
-                                onClick={() => setStatuses((prev) => ({ ...prev, [learner.id]: option.value }))}
-                                className={cn(
-                                  'focus-ring rounded-md border border-border-strong px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-                                  STATUS_BUTTON_CLASSES[option.value],
-                                )}
-                              >
-                                {option.label}
-                              </button>
-                            ))}
-                          </div>
-                        </td>
+              {/* Desktop / tablet: table */}
+              <div className="hidden md:block">
+                <TableScrollContainer>
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
+                        <th scope="col" className="px-4 py-3 font-medium">
+                          Learner
+                        </th>
+                        <th scope="col" className="px-4 py-3 font-medium">
+                          Learner #
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-right font-medium">
+                          Status
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {roster.map((learner) => (
+                        <tr key={learner.id} className="border-b border-border last:border-0">
+                          <td className="px-4 py-3 font-medium text-content-primary">
+                            {learner.firstName} {learner.lastName}
+                          </td>
+                          <td className="px-4 py-3 text-content-secondary">{learner.learnerNumber}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1.5">
+                              {STATUS_OPTIONS.map((option) => (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  disabled={!canRecordForClass}
+                                  data-active={statuses[learner.id] === option.value}
+                                  onClick={() => setStatuses((prev) => ({ ...prev, [learner.id]: option.value }))}
+                                  className={cn(
+                                    'focus-ring rounded-md border border-border-strong px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                                    STATUS_BUTTON_CLASSES[option.value],
+                                  )}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableScrollContainer>
+              </div>
+
+              {/* Mobile: one card per learner, full-width status buttons */}
+              <div className="flex flex-col gap-2 md:hidden">
+                {roster.map((learner) => (
+                  <div key={learner.id} className="rounded-card border border-border bg-surface-raised p-3.5">
+                    <p className="text-sm font-medium text-content-primary">
+                      {learner.firstName} {learner.lastName}
+                    </p>
+                    <p className="text-xs text-content-tertiary">{learner.learnerNumber}</p>
+                    <div className="mt-2.5 flex gap-1.5">
+                      {STATUS_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          disabled={!canRecordForClass}
+                          data-active={statuses[learner.id] === option.value}
+                          onClick={() => setStatuses((prev) => ({ ...prev, [learner.id]: option.value }))}
+                          className={cn(
+                            'focus-ring flex-1 rounded-md border border-border-strong px-2.5 py-2 text-xs font-medium text-content-secondary transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                            STATUS_BUTTON_CLASSES[option.value],
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {canRecordForClass && (
-                <div className="flex items-center justify-end gap-3 border-t border-border px-4 py-3">
+                <div className="flex items-center justify-end gap-3 rounded-card border border-border bg-surface-raised px-4 py-3">
                   {saved && <span className="text-sm text-success-500">Register saved.</span>}
                   <div className="w-full sm:w-auto sm:min-w-[9rem]">
                     <Button type="button" onClick={() => void handleSave()} isLoading={isSaving}>
@@ -235,6 +278,6 @@ export function AttendancePage() {
           )}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

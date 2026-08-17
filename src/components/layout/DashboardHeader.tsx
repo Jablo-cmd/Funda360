@@ -4,6 +4,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { MenuIcon } from '@/components/ui/icons';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { useSchool } from '@/features/school/hooks/useSchool';
+import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { getPageTitle } from '@/lib/pageTitles';
 
 export interface DashboardHeaderProps {
@@ -18,6 +19,7 @@ export interface DashboardHeaderProps {
  */
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   const { school } = useSchool();
+  const { currentAcademicYear } = useAcademic();
   const { pathname } = useLocation();
   const { title, section } = getPageTitle(pathname);
 
@@ -46,8 +48,13 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <span className="hidden max-w-[14rem] truncate text-right text-sm font-medium text-content-secondary sm:block">
-          {school?.name ?? 'No school selected'}
+        <span className="hidden max-w-[16rem] truncate text-right sm:block">
+          <span className="block text-sm font-medium text-content-secondary">{school?.name ?? 'No school selected'}</span>
+          {currentAcademicYear && (
+            <span className="block font-mono text-[11px] uppercase tracking-wide text-content-tertiary">
+              {currentAcademicYear.name}
+            </span>
+          )}
         </span>
         <div className="hidden h-9 w-px bg-border sm:block" />
         <ThemeToggle />

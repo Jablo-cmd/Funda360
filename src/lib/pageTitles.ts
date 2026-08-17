@@ -26,11 +26,11 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/employees/departments', { title: 'Departments', section: 'People' }],
   ['/employees', { title: 'Employees', section: 'People' }],
   ['/attendance', { title: 'Attendance', section: 'Operations' }],
-  ['/reports/learners', { title: 'Learner Report', section: 'Operations' }],
-  ['/reports/employees', { title: 'Employee Report', section: 'Operations' }],
-  ['/reports/academic', { title: 'Academic Report', section: 'Operations' }],
-  ['/reports/assessments', { title: 'Assessment Report', section: 'Operations' }],
-  ['/reports', { title: 'Reports', section: 'Operations' }],
+  ['/reports/learners', { title: 'Learner Report', section: 'Reporting' }],
+  ['/reports/employees', { title: 'Employee Report', section: 'Reporting' }],
+  ['/reports/academic', { title: 'Academic Report', section: 'Reporting' }],
+  ['/reports/assessments', { title: 'Assessment Report', section: 'Reporting' }],
+  ['/reports', { title: 'Reports', section: 'Reporting' }],
 ];
 
 const DEFAULT_ENTRY: PageTitleEntry = { title: 'Funda360', section: 'Overview' };

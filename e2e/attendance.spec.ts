@@ -47,8 +47,9 @@ test('a teacher can view and mark attendance for their assigned class', async ({
 
   await page.goto('/attendance');
   await expect(page.getByRole('heading', { name: 'Attendance' })).toBeVisible();
-  await expect(page.getByText('Naledi Dube')).toBeVisible();
-  await expect(page.getByText('Sipho Khumalo')).toBeVisible();
+  const table = page.getByRole('table');
+  await expect(table.getByText('Naledi Dube')).toBeVisible();
+  await expect(table.getByText('Sipho Khumalo')).toBeVisible();
 
   const naledisRow = page.locator('tr', { hasText: 'Naledi Dube' });
   await naledisRow.getByRole('button', { name: 'Absent' }).click();
@@ -72,7 +73,7 @@ test('a principal can record attendance for any class, not just their own', asyn
 
   await page.goto('/attendance');
   await expect(page.getByLabel('Class')).toBeVisible();
-  await expect(page.getByText('Naledi Dube')).toBeVisible();
+  await expect(page.getByRole('table').getByText('Naledi Dube')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save register' })).toBeVisible();
 });
 
