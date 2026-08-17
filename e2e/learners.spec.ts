@@ -167,7 +167,7 @@ test('a role without learner.view is blocked from the learners section', async (
 
   await page.goto('/learners');
   await expect(page).toHaveURL('http://localhost:5173/dashboard');
-  await expect(page.getByRole('link', { name: 'Students' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Learners' })).toHaveCount(0);
 });
 
 test('tenant isolation: the learners list only ever reflects the caller\'s own tenant scope', async ({ page }) => {

@@ -42,5 +42,7 @@ test('a platform-level role with no tenant reaches the protected home directly',
   await page.goto('/');
   await expect(page).toHaveURL('http://localhost:5173/dashboard');
   await expect(page.getByRole('heading', { name: 'Welcome back, Lerato' })).toBeVisible();
-  await expect(page.getByText('super administrator', { exact: true })).toBeVisible();
+  // Scoped to main: the sidebar's account identity block also renders the
+  // role text ("super administrator"), so an unscoped query is ambiguous.
+  await expect(page.getByRole('main').getByText('super administrator', { exact: true })).toBeVisible();
 });

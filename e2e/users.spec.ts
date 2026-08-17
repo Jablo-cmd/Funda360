@@ -19,10 +19,13 @@ test('admin can view the users directory', async ({ page }) => {
   ]);
 
   await page.goto('/users');
-  await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Ada Principal' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Zola Teacher' })).toBeVisible();
-  await expect(page.getByText('Showing 1–2 of 2')).toBeVisible();
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: 'Users' })).toBeVisible();
+  // Scoped to main: the signed-in principal's own name also appears in the
+  // sidebar's account identity link.
+  await expect(main.getByRole('link', { name: 'Ada Principal' })).toBeVisible();
+  await expect(main.getByRole('link', { name: 'Zola Teacher' })).toBeVisible();
+  await expect(main.getByText('Showing 1–2 of 2')).toBeVisible();
 });
 
 test('admin can create a user and sees a one-time temporary password', async ({ page }) => {

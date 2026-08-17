@@ -16,7 +16,7 @@ export function Logo({ variant = 'default', showWordmark = true, className }: Lo
   return (
     <div className={cn('flex items-center gap-2.5', className)}>
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <rect width="32" height="32" rx="9" className="fill-brand-600" />
+        <rect width="32" height="32" rx="6" className="fill-brand-600" />
         <path
           d="M9 21.5V11.8c0-.66.54-1.2 1.2-1.2h8.6"
           stroke="white"

@@ -8,35 +8,86 @@ import { useLearnersList } from '@/features/learners/hooks/useLearnersList';
 import { useEmployeesList } from '@/features/employees/hooks/useEmployeesList';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { useUsersList } from '@/features/users/hooks/useUsersList';
-import { BriefcaseIcon, BuildingIcon, GraduationCapIcon, LayersIcon, UsersIcon } from '@/components/ui/icons';
+import { BriefcaseIcon, BuildingIcon, ChartIcon, GraduationCapIcon } from '@/components/ui/icons';
 
-interface StatCardProps {
+/** Zero-pads to a fixed instrument-display width, then groups thousands — e.g. 1284 -> "01,284". */
+function formatStat(n: number): string {
+  return Math.max(0, Math.round(n)).toString().padStart(5, '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+interface StatPanelProps {
   label: string;
   value: ReactNode;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  caption: string;
   to: string;
   isLoading?: boolean;
 }
 
-function StatCard({ label, value, icon: Icon, to, isLoading }: StatCardProps) {
+function StatPanel({ label, value, caption, to, isLoading }: StatPanelProps) {
   return (
     <Link
       to={to}
-      className="focus-ring flex items-center gap-3 rounded-card border border-border bg-surface-raised p-4 shadow-card transition-colors hover:border-brand-300 dark:shadow-card-dark dark:hover:border-brand-700"
+      className="focus-ring flex flex-col gap-1.5 rounded-card border border-border bg-surface-raised px-4 py-3.5 transition-colors hover:border-brand-400 dark:hover:border-brand-500"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
-        <Icon className="h-5 w-5" />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-xs font-medium uppercase tracking-wide text-content-tertiary">{label}</span>
-        {isLoading ? (
-          <span className="mt-1.5 block h-5 w-12 animate-pulse rounded bg-surface-sunken" aria-hidden="true" />
-        ) : (
-          <span className="block truncate text-xl font-bold text-content-primary">{value}</span>
-        )}
-      </span>
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-content-tertiary">{label}</span>
+      {isLoading ? (
+        <span className="block h-7 w-20 animate-pulse rounded bg-surface-sunken" aria-hidden="true" />
+      ) : (
+        <span className="font-mono text-2xl font-semibold leading-none text-content-primary">{value}</span>
+      )}
+      <span className="text-xs text-content-tertiary">{caption}</span>
     </Link>
   );
+}
+
+interface StatusRowProps {
+  label: string;
+  status: 'online' | 'degraded';
+}
+
+function StatusRow({ label, status }: StatusRowProps) {
+  return (
+    <div className="flex items-center justify-between border-b border-border py-2 text-sm last:border-0">
+      <span className="text-content-secondary">{label}</span>
+      <span
+        className={
+          status === 'online'
+            ? 'flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-success-500'
+            : 'flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-warning-600 dark:text-warning-500'
+        }
+      >
+        <span
+          aria-hidden="true"
+          className={status === 'online' ? 'h-1.5 w-1.5 rounded-full bg-success-500' : 'h-1.5 w-1.5 rounded-full bg-warning-500'}
+        />
+        {status === 'online' ? 'Online' : 'Degraded'}
+      </span>
+    </div>
+  );
+}
+
+function InfoPanel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-card border border-border bg-surface-raised p-4">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-content-tertiary">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function NotYetAvailable({ message }: { message: string }) {
+  return (
+    <p className="flex h-full min-h-[5.5rem] items-center justify-center text-center text-xs text-content-tertiary">
+      {message}
+    </p>
+  );
+}
+
+interface QuickAction {
+  label: string;
+  description: string;
+  to: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
 }
 
 export function DashboardPage() {
@@ -53,98 +104,120 @@ export function DashboardPage() {
 
   const learners = useLearnersList(canViewLearners ? school?.id : undefined);
   const employees = useEmployeesList(canViewEmployees ? school?.id : undefined);
-  const { currentAcademicYear, loading: academicLoading } = useAcademic();
+  const { currentAcademicYear, loading: academicLoading, error: academicError } = useAcademic();
   const users = useUsersList();
 
   const hasStats = canViewLearners || canViewEmployees || canViewAcademic || canViewUsers;
 
+  const quickActions: QuickAction[] = [
+    ...(canViewLearners
+      ? [{ label: 'Learners', description: 'View and manage the learner roster.', to: '/learners', icon: GraduationCapIcon }]
+      : []),
+    ...(canViewEmployees
+      ? [{ label: 'Employees', description: 'View and manage staff records.', to: '/employees', icon: BriefcaseIcon }]
+      : []),
+    ...(canViewReports
+      ? [{ label: 'Reports', description: 'Learner, employee and academic reports.', to: '/reports', icon: ChartIcon }]
+      : []),
+    { label: 'School Profile', description: 'Contact details, address and branding.', to: '/school/profile', icon: BuildingIcon },
+  ];
+
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <div className="flex flex-col gap-5 px-4 py-6 sm:px-6">
       <div>
-        <h1 className="text-2xl font-bold text-content-primary">
+        <h1 className="text-xl font-semibold text-content-primary">
           Welcome back{profile?.firstName ? `, ${profile.firstName}` : ''}
         </h1>
-        <p className="mt-1 text-sm text-content-secondary">
+        <p className="mt-0.5 text-sm text-content-secondary">
           {profile?.role ? profile.role.replace(/_/g, ' ') : 'No role assigned'}
           {tenant?.school.name ? ` at ${tenant.school.name}` : ''}
         </p>
       </div>
 
       {hasStats && (
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {canViewLearners && (
-            <StatCard
-              label="Students"
-              value={learners.totalCount}
-              icon={GraduationCapIcon}
-              to="/learners"
-              isLoading={learners.isLoading}
-            />
-          )}
-          {canViewEmployees && (
-            <StatCard
-              label="Employees"
-              value={employees.totalCount}
-              icon={BriefcaseIcon}
-              to="/employees"
-              isLoading={employees.isLoading}
-            />
-          )}
-          {canViewAcademic && (
-            <StatCard
-              label="Academic year"
-              value={currentAcademicYear?.name ?? 'Not set'}
-              icon={LayersIcon}
-              to="/academic"
-              isLoading={academicLoading}
-            />
-          )}
-          {canViewUsers && (
-            <StatCard
-              label="Users"
-              value={users.totalCount}
-              icon={UsersIcon}
-              to="/users"
-              isLoading={users.isLoading}
-            />
-          )}
-        </dl>
+        <div>
+          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-content-tertiary">
+            Executive Summary
+          </h2>
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {canViewLearners && (
+              <StatPanel
+                label="Active Learners"
+                value={formatStat(learners.totalCount)}
+                caption="Current enrolment"
+                to="/learners"
+                isLoading={learners.isLoading}
+              />
+            )}
+            {canViewEmployees && (
+              <StatPanel
+                label="Active Employees"
+                value={formatStat(employees.totalCount)}
+                caption="Current staff complement"
+                to="/employees"
+                isLoading={employees.isLoading}
+              />
+            )}
+            {canViewAcademic && (
+              <StatPanel
+                label="Academic Year"
+                value={currentAcademicYear?.name ?? '—'}
+                caption={currentAcademicYear ? 'Currently active' : 'None set as active'}
+                to="/academic"
+                isLoading={academicLoading}
+              />
+            )}
+            {canViewUsers && (
+              <StatPanel
+                label="System Users"
+                value={formatStat(users.totalCount)}
+                caption="Registered accounts"
+                to="/users"
+                isLoading={users.isLoading}
+              />
+            )}
+          </dl>
+        </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {tenant?.school && (
-          <Link
-            to="/school/profile"
-            className="focus-ring flex items-center gap-4 rounded-card border border-border bg-surface-raised p-4 shadow-card transition-colors hover:border-brand-300 dark:shadow-card-dark dark:hover:border-brand-700"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
-              <BuildingIcon className="h-5 w-5" />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold text-content-primary">Manage your school profile</span>
-              <span className="block text-sm text-content-secondary">
-                Update contact details, address, branding and administration info.
-              </span>
-            </span>
-          </Link>
-        )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <InfoPanel title="Attendance Overview">
+          <NotYetAvailable message="Attendance tracking is not yet available in this workspace." />
+        </InfoPanel>
 
-        {canViewReports && (
-          <Link
-            to="/reports"
-            className="focus-ring flex items-center gap-4 rounded-card border border-border bg-surface-raised p-4 shadow-card transition-colors hover:border-brand-300 dark:shadow-card-dark dark:hover:border-brand-700"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
-              <LayersIcon className="h-5 w-5" />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold text-content-primary">View reports</span>
-              <span className="block text-sm text-content-secondary">
-                Learner, employee and academic reports for your school.
-              </span>
-            </span>
-          </Link>
-        )}
+        <InfoPanel title="System Status">
+          <div>
+            <StatusRow label="Authentication" status="online" />
+            {canViewAcademic && <StatusRow label="Academic Services" status={academicError ? 'degraded' : 'online'} />}
+            {canViewLearners && <StatusRow label="Learner Registry" status={learners.error ? 'degraded' : 'online'} />}
+            {canViewEmployees && <StatusRow label="Employee Registry" status={employees.error ? 'degraded' : 'online'} />}
+            {canViewUsers && <StatusRow label="User Directory" status={users.error ? 'degraded' : 'online'} />}
+          </div>
+        </InfoPanel>
+
+        <InfoPanel title="Recent Activity">
+          <NotYetAvailable message="Activity history is not yet available in this workspace." />
+        </InfoPanel>
+
+        <InfoPanel title="Quick Actions">
+          <div className="flex flex-col divide-y divide-border">
+            {quickActions.map(({ label, description, to, icon: Icon }) => (
+              <Link
+                key={label}
+                to={to}
+                className="focus-ring flex items-center gap-3 py-2.5 transition-colors first:pt-0 last:pb-0 hover:text-brand-600 dark:hover:text-brand-300"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-content-primary">{label}</span>
+                  <span className="block truncate text-xs text-content-tertiary">{description}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </InfoPanel>
       </div>
     </div>
   );

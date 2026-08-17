@@ -41,11 +41,21 @@ export default {
         success: {
           500: 'rgb(var(--success-500) / <alpha-value>)',
         },
+        warning: {
+          50: 'rgb(var(--warning-50) / <alpha-value>)',
+          500: 'rgb(var(--warning-500) / <alpha-value>)',
+          600: 'rgb(var(--warning-600) / <alpha-value>)',
+        },
+        sidebar: {
+          DEFAULT: 'rgb(var(--sidebar) / <alpha-value>)',
+          raised: 'rgb(var(--sidebar-raised) / <alpha-value>)',
+          active: 'rgb(var(--sidebar-active) / <alpha-value>)',
+          border: 'rgb(var(--sidebar-border) / <alpha-value>)',
+        },
       },
       fontFamily: {
         sans: [
-          'Inter var',
-          'Inter',
+          'Inter Variable',
           'ui-sans-serif',
           'system-ui',
           '-apple-system',
@@ -55,13 +65,21 @@ export default {
           'Arial',
           'sans-serif',
         ],
+        mono: [
+          'IBM Plex Mono',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Consolas',
+          'monospace',
+        ],
       },
       borderRadius: {
-        card: '0.75rem',
+        card: '0.375rem',
       },
       boxShadow: {
-        card: '0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06)',
-        'card-dark': '0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.4)',
+        card: '0 1px 2px 0 rgb(11 31 58 / 0.05), 0 1px 3px 0 rgb(11 31 58 / 0.04)',
+        'card-dark': '0 1px 2px 0 rgb(0 0 0 / 0.35), 0 1px 3px 0 rgb(0 0 0 / 0.4)',
       },
       keyframes: {
         'spin-smooth': {

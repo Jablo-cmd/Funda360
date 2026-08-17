@@ -1,33 +1,45 @@
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /**
  * Funda360 Design System — Design Tokens
- * Values are R G B triplets (no `rgb()` wrapper) so Tailwind can apply
- * alpha-value opacity modifiers, e.g. bg-brand-600/50.
+ * Executive navy + white institutional palette. Values are R G B triplets
+ * (no `rgb()` wrapper) so Tailwind can apply alpha-value opacity modifiers,
+ * e.g. bg-brand-600/50.
+ *
+ * The brand ramp is deliberately re-defined per theme (light vs. dark)
+ * rather than shared, the same way surface/border/content already are: a
+ * dark, desaturated navy that reads clearly on white loses almost all
+ * contrast on a near-black surface, so dark mode uses a brightened navy
+ * ramp calibrated for legibility against dark surfaces ("Executive Night
+ * Mode"), not a literal inversion of the light-mode values.
  */
 :root {
-  --brand-50: 238 242 255;
-  --brand-100: 224 231 255;
-  --brand-200: 199 210 254;
-  --brand-300: 165 180 252;
-  --brand-400: 129 140 248;
-  --brand-500: 99 102 241;
-  --brand-600: 79 70 229;
-  --brand-700: 67 56 202;
-  --brand-800: 55 48 163;
-  --brand-900: 49 46 129;
+  --brand-50: 240 244 249;
+  --brand-100: 219 228 238;
+  --brand-200: 186 202 221;
+  --brand-300: 143 167 196;
+  --brand-400: 94 128 163;
+  --brand-500: 23 69 116;
+  --brand-600: 18 52 91;
+  --brand-700: 15 43 75;
+  --brand-800: 12 35 61;
+  --brand-900: 11 31 58;
 
   --surface: 255 255 255;
   --surface-raised: 255 255 255;
-  --surface-sunken: 248 250 252;
+  --surface-sunken: 238 241 244;
 
-  --border: 226 232 240;
-  --border-strong: 203 213 225;
+  --border: 216 222 230;
+  --border-strong: 178 187 199;
 
-  --content-primary: 15 23 42;
-  --content-secondary: 71 85 105;
+  --content-primary: 23 32 51;
+  --content-secondary: 100 116 139;
   --content-tertiary: 148 163 184;
   --content-inverse: 255 255 255;
 
@@ -35,20 +47,46 @@
   --danger-500: 239 68 68;
   --danger-600: 220 38 38;
 
-  --success-500: 34 197 94;
+  --success-500: 34 150 94;
+
+  --warning-50: 255 251 235;
+  --warning-500: 245 158 11;
+  --warning-600: 180 83 9;
+
+  /*
+   * The sidebar/drawer is a fixed brand surface — deep navy in both themes,
+   * deliberately NOT overridden under :root.dark — the same way a brand
+   * mark doesn't invert. --sidebar-active is the highlighted/hover row
+   * background inside it.
+   */
+  --sidebar: 11 31 58;
+  --sidebar-raised: 18 41 71;
+  --sidebar-active: 23 69 116;
+  --sidebar-border: 30 56 91;
 
   color-scheme: light;
 }
 
 :root.dark {
-  --surface: 15 23 42;
-  --surface-raised: 30 41 59;
-  --surface-sunken: 2 6 23;
+  --brand-50: 224 234 244;
+  --brand-100: 199 218 236;
+  --brand-200: 165 195 224;
+  --brand-300: 132 172 209;
+  --brand-400: 99 148 194;
+  --brand-500: 74 128 179;
+  --brand-600: 56 108 158;
+  --brand-700: 43 87 130;
+  --brand-800: 32 66 101;
+  --brand-900: 22 46 74;
 
-  --border: 51 65 85;
-  --border-strong: 71 85 105;
+  --surface: 10 16 28;
+  --surface-raised: 17 27 45;
+  --surface-sunken: 6 10 20;
 
-  --content-primary: 241 245 249;
+  --border: 34 48 68;
+  --border-strong: 51 70 97;
+
+  --content-primary: 236 240 245;
   --content-secondary: 148 163 184;
   --content-tertiary: 100 116 139;
   --content-inverse: 15 23 42;
@@ -58,6 +96,10 @@
   --danger-600: 239 68 68;
 
   --success-500: 74 222 128;
+
+  --warning-50: 69 38 5;
+  --warning-500: 251 191 36;
+  --warning-600: 245 158 11;
 
   color-scheme: dark;
 }

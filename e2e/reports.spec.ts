@@ -78,9 +78,11 @@ test('academic report renders active vs. archived counts', async ({ page }) => {
   await installAcademicListMock(page, 'terms', [buildMockTermRow()]);
 
   await page.goto('/reports/academic');
-  await expect(page.getByRole('heading', { name: 'Academic report' })).toBeVisible();
-  await expect(page.getByText('2026 Academic Year')).toBeVisible();
-  await expect(page.getByText('Grades', { exact: true })).toBeVisible();
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: 'Academic report' })).toBeVisible();
+  await expect(main.getByText('2026 Academic Year')).toBeVisible();
+  // Scoped to main: the sidebar also has a "Grades" nav link.
+  await expect(main.getByText('Grades', { exact: true })).toBeVisible();
 });
 
 test('reports.view is required to access any report route', async ({ page }) => {

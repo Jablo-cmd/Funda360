@@ -22,9 +22,11 @@ test('principal can view the academic overview with the current academic year', 
   });
 
   await page.goto('/academic');
-  await expect(page.getByRole('heading', { name: 'Academic Structure' })).toBeVisible();
-  await expect(page.getByText('2026 Academic Year')).toBeVisible();
-  await expect(page.getByRole('link', { name: /Academic Years/ })).toBeVisible();
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: 'Academic Structure' })).toBeVisible();
+  await expect(main.getByText('2026 Academic Year')).toBeVisible();
+  // Scoped to main: the sidebar also has an "Academic Years" nav link.
+  await expect(main.getByRole('link', { name: /Academic Years/ })).toBeVisible();
 });
 
 test('principal can create an academic year', async ({ page }) => {
