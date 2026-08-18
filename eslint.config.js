@@ -8,7 +8,7 @@ import tsParser from '@typescript-eslint/parser';
 import prettierConfig from 'eslint-config-prettier';
 
 export default [
-  { ignores: ['dist', 'node_modules'] },
+  { ignores: ['dist', 'node_modules', 'supabase/.temp', 'supabase/.branches'] },
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
