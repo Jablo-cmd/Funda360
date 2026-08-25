@@ -102,6 +102,12 @@ openai_api_key = "env(OPENAI_API_KEY)"
 
 # Email testing server. Emails sent with the local dev setup are not actually sent - rather, they
 # are monitored, and you can view the emails that would have been sent from the web interface.
+#
+# This capture only happens when [auth.email.smtp] below is disabled.
+# With it enabled (the current state, for testing the real HostAfrica
+# relay), GoTrue sends directly to that real SMTP server instead —
+# Mailpit keeps running but sees nothing from Auth. Toggle
+# auth.email.smtp.enabled = false to route Auth emails back through here.
 [local_smtp]
 enabled = true
 # Port to use for the email testing server web interface.
@@ -155,12 +161,40 @@ max_indexes = 5
 [auth]
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
-# in emails.
-site_url = "http://127.0.0.1:3000"
+# in emails. Set to this project's actual Vite dev origin (vite.config.ts's
+# server.port = 5173; matches playwright.config.ts's baseURL) rather than
+# the generic Supabase CLI scaffold default (127.0.0.1:3000, which nothing
+# in this project runs) — site_url is also the fallback destination for
+# any redirect_to that isn't explicitly in additional_redirect_urls below,
+# so leaving it pointed at a port nothing serves meant that fallback case
+# silently led to a dead address instead of the real app root.
+site_url = "http://localhost:5173"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
-# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# A list of *exact* URLs that auth providers are permitted to redirect to
+# post authentication. Confirmed empirically (real /auth/v1/recover calls,
+# not just reading docs): a redirect_to matching site_url's own origin is
+# allowed for any path, but a redirect_to on a *different* origin is only
+# honoured if that exact URL appears in this list — an unlisted path
+# elsewhere silently falls back to the bare site_url rather than erroring.
+# Since site_url above is now this project's real dev origin
+# (http://localhost:5173), guardian activation and staff password-reset
+# already work at that origin without needing an entry here — the two
+# localhost:5173 lines are kept anyway as explicit, self-documenting
+# allow-list entries rather than relying on that origin-match leniency,
+# which is undocumented CLI behaviour, not a guaranteed contract. The
+# 127.0.0.1:3000 entries are the original Supabase CLI scaffold defaults
+# (from when site_url pointed at the generic 3000 default instead of this
+# project's real 5173 dev port) — harmless to leave (loopback-only,
+# nothing sensitive), kept for anyone whose local tooling still expects
+# port 3000.
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://127.0.0.1:3000/activate-account",
+  "http://127.0.0.1:3000/reset-password",
+  "http://localhost:5173/activate-account",
+  "http://localhost:5173/reset-password",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -233,20 +267,55 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# Production SMTP — Funda360 sends through the existing HostAfrica Auris
+# Nexus mailbox (no dedicated Funda360 mailbox was purchased;
+# onboarding@aurisnexus.co.za is an alias of that mailbox, not a separate
+# SMTP account per HostAfrica's own confirmation). host/port below are
+# HostAfrica-confirmed real values (smtp.hmailplus.com:587, STARTTLS —
+# GoTrue negotiates STARTTLS automatically for port 587; there is no
+# separate encryption/TLS field in this schema, confirmed by the parse
+# error a made-up one would throw, same as the `port` type issue below).
+#
+# `user`/`pass` stay env-substituted and MUST NEVER be literal values here
+# — `user` is the real mailbox address (not the alias) and `pass` is its
+# password. Neither has ever been entered into this repository, any
+# config file, or this chat — see the "Final SMTP Configuration & Guardian
+# Invitation Email Test" report for exactly how to supply them locally
+# (a process environment variable you set yourself, never a file).
+#
+# `port` must stay a literal TOML integer, never `env(...)` — confirmed
+# directly: `supabase start` throws ProjectConfigParseError otherwise.
+#
+# `enabled = true` was verified safe for local dev even with `user`/`pass`
+# unset (`supabase start` + `/auth/v1/health` both succeed — an unset
+# env() var only matters once an email send is actually attempted, not at
+# container startup). This does mean any LOCAL manual test of
+# password-reset/invitation email against this local stack will now
+# attempt a real SMTP relay through smtp.hmailplus.com instead of being
+# captured by Mailpit, unless you also set the two env vars below locally
+# — see the report for the tradeoff and how to flip this back to `false`
+# if you'd rather keep local dev fully decoupled from real email.
+[auth.email.smtp]
+enabled = true
+host = "smtp.hmailplus.com"
+port = 587
+user = "env(FUNDA360_SMTP_USER)"
+pass = "env(FUNDA360_SMTP_PASSWORD)"
+admin_email = "onboarding@aurisnexus.co.za"
+sender_name = "Funda360"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
+
+# Funda360 branding for the recovery email — shared by staff "forgot
+# password" and guardian account activation, since both flows send this
+# same Supabase email type (resetPasswordForEmail) with different
+# redirectTo destinations. See supabase/migrations/20260827090000_guardian_invitations.sql.
+[auth.email.template.recovery]
+subject = "Continue to your Funda360 account"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

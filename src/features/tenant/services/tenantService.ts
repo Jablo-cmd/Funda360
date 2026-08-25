@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import type { SchoolRow } from '@/lib/database.types';
-import type { School } from '@/types/school.types';
+import type { SchoolInsert, SchoolRow } from '@/lib/database.types';
+import type { School, SchoolStatus, SchoolType } from '@/types/school.types';
 
 /** Exported so schoolService (features/school) can reuse it instead of re-declaring its own mapper. */
 export function toSchool(row: SchoolRow): School {
@@ -41,12 +41,41 @@ async function getSchoolById(id: string): Promise<School | null> {
  * platform admin gets every school. The client never decides this itself.
  */
 async function listAvailableSchools(): Promise<School[]> {
-  const { data, error } = await supabase.from('schools').select('*').order('name', { ascending: true });
+  const { data, error } = await supabase
+    .from('schools')
+    .select('*')
+    .order('name', { ascending: true });
   if (error) throw error;
   return data.map(toSchool);
+}
+
+export interface CreateSchoolInput {
+  name: string;
+  schoolType: SchoolType;
+  status: SchoolStatus;
+  province?: string | null;
+}
+
+/**
+ * Onboards a brand-new school (tenant root). RLS restricts this INSERT to
+ * platform admins (see the schools_insert_by_platform_admin policy) — a
+ * tenant-scoped role never has a reason to create a *new* school, since it
+ * already belongs to one.
+ */
+async function createSchool(input: CreateSchoolInput): Promise<School> {
+  const payload: SchoolInsert = {
+    name: input.name,
+    school_type: input.schoolType,
+    status: input.status,
+    province: input.province ?? null,
+  };
+  const { data, error } = await supabase.from('schools').insert(payload).select('*').single();
+  if (error) throw error;
+  return toSchool(data);
 }
 
 export const tenantService = {
   getSchoolById,
   listAvailableSchools,
+  createSchool,
 };

@@ -58,6 +58,9 @@ psql_exec < "$SCRIPT_DIR/00_auth_stub.sql"
 echo "==> applying test-recording helper"
 psql_exec < "$SCRIPT_DIR/01_test_util.sql"
 
+echo "==> applying storage schema stub"
+psql_exec < "$SCRIPT_DIR/00b_storage_stub.sql"
+
 echo "==> applying migrations (supabase/migrations/*.sql, filename order)"
 for migration in "$MIGRATIONS_DIR"/*.sql; do
   echo "    - $(basename "$migration")"
@@ -74,6 +77,10 @@ psql_exec < "$SCRIPT_DIR/07_guardian_emergency_contact_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/08_teaching_assignment_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/09_attendance_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/10_assessment_fixtures.sql"
+psql_exec < "$SCRIPT_DIR/11_fees_behaviour_fixtures.sql"
+psql_exec < "$SCRIPT_DIR/12_guardian_management_fixtures.sql"
+psql_exec < "$SCRIPT_DIR/13_parent_portal_fixtures.sql"
+psql_exec < "$SCRIPT_DIR/14_guardian_invitations_fixtures.sql"
 
 echo "==> running regression tests"
 for test_file in "$SCRIPT_DIR"/tests/*.test.sql; do

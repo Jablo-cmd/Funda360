@@ -11,8 +11,6 @@ export const documentSchema = z.object({
     z.literal('report_card'),
     z.literal('other'),
   ]),
-  fileUrl: z.string().trim().min(1, 'File URL is required'),
-  fileName: z.string().trim().optional(),
   notes: z.string().trim().optional(),
 });
 
@@ -20,7 +18,5 @@ export type DocumentFormValues = z.infer<typeof documentSchema>;
 
 export const documentDefaultValues: DocumentFormValues = {
   documentType: 'other',
-  fileUrl: '',
-  fileName: '',
   notes: '',
 };

@@ -15,6 +15,7 @@ import {
   installLearnerChildListMock,
   installLearnerDetailMock,
   installLearnerMedicalInformationMock,
+  installEmployeeDetailMock,
   installReportRowsMock,
   installAssessmentsListMock,
   installAssessmentDetailMock,
@@ -146,6 +147,16 @@ test('My Classes links to the assessments for an assigned class', async ({ page 
   ]);
   await installLearnerDetailMock(page, null);
   await installReportRowsMock(page, 'learners', []);
+  // MyProfilePage also calls useMyEmployee() unconditionally regardless of
+  // role — every other spec that visits /my-profile mocks this
+  // (my-profile.spec.ts, teaching-assignments.spec.ts's own My Profile
+  // test); this one didn't, so the request fell through installDataMocks'
+  // catch-all route.continue() and reached a real local Supabase instance
+  // (Docker, port 54321) with a fabricated session token instead of a
+  // Playwright-mocked response. That real, variable-latency round trip —
+  // not app or Vite behavior — was the actual cause of this test's
+  // intermittent failure under parallel load (see investigation report).
+  await installEmployeeDetailMock(page, null);
 
   await page.goto('/my-profile');
   await expect(page.getByRole('heading', { name: 'My Classes' })).toBeVisible();

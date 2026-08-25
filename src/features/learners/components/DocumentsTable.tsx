@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
+import { documentService } from '@/features/learners/services/documentService';
 import type { LearnerDocument } from '@/features/learners/types/learner.types';
 
 export interface DocumentsTableProps {
@@ -17,6 +19,38 @@ const DOCUMENT_TYPE_LABELS: Record<LearnerDocument['documentType'], string> = {
   report_card: 'Report card',
   other: 'Other',
 };
+
+function DocumentLink({ document }: { document: LearnerDocument }) {
+  const [isResolving, setIsResolving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleOpen = async () => {
+    setError(null);
+    setIsResolving(true);
+    try {
+      const signedUrl = await documentService.getSignedDownloadUrl(document);
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+    } catch {
+      setError("Couldn't open this file — try again.");
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => void handleOpen()}
+        disabled={isResolving}
+        className="focus-ring rounded text-brand-600 hover:underline disabled:opacity-60 dark:text-brand-400"
+      >
+        {isResolving ? 'Opening…' : (document.fileName ?? 'View file')}
+      </button>
+      {error && <p className="mt-0.5 text-xs text-danger-600">{error}</p>}
+    </div>
+  );
+}
 
 export function DocumentsTable({ documents, canManage, onToggleActive }: DocumentsTableProps) {
   if (documents.length === 0) {
@@ -58,14 +92,7 @@ export function DocumentsTable({ documents, canManage, onToggleActive }: Documen
                 {DOCUMENT_TYPE_LABELS[document.documentType]}
               </td>
               <td className="px-4 py-3 text-content-secondary">
-                <a
-                  href={document.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="focus-ring rounded text-brand-600 hover:underline dark:text-brand-400"
-                >
-                  {document.fileName ?? document.fileUrl}
-                </a>
+                <DocumentLink document={document} />
               </td>
               <td className="px-4 py-3 text-content-secondary">{document.uploadedAt}</td>
               <td className="px-4 py-3">

@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { seedAuthenticatedSession } from './utils/mockAuth';
-import { buildMockProfileRow, buildMockSchoolRow, installDataMocks } from './utils/mockData';
+import {
+  buildMockProfileRow,
+  buildMockSchoolRow,
+  installDataMocks,
+  installStorageUploadMock,
+} from './utils/mockData';
 
 test('admin can access the school profile page from the sidebar', async ({ page }) => {
   await seedAuthenticatedSession(page);
@@ -88,6 +93,70 @@ test('a role without school.manage permission sees a clear error on save', async
   await expect(page.getByRole('alert')).toHaveText(
     "You don't have permission to perform this action.",
   );
+});
+
+test('principal can upload a school logo', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+  await installStorageUploadMock(page, 'school-logos');
+
+  let patchedLogoUrl: unknown;
+  await page.route('**/rest/v1/schools*', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    const body = route.request().postDataJSON() as { logo_url?: string };
+    patchedLogoUrl = body.logo_url;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...buildMockSchoolRow(), logo_url: patchedLogoUrl }),
+    });
+  });
+
+  await page.goto('/school/profile');
+  await page.getByLabel('Logo').setInputFiles({
+    name: 'logo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('mock png bytes'),
+  });
+
+  await expect(page.getByText('Uploading…')).toHaveCount(0);
+  expect(patchedLogoUrl).toBe(`${buildMockSchoolRow().id}/logo`);
+});
+
+test('an unsupported logo file type is rejected before any upload request is made', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+
+  let uploadAttempted = false;
+  await page.route('**/storage/v1/object/school-logos/**', async (route) => {
+    uploadAttempted = true;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+
+  await page.goto('/school/profile');
+  await page.getByLabel('Logo').setInputFiles({
+    name: 'logo.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from('<svg></svg>'),
+  });
+
+  await expect(page.getByText(/file type isn't supported/i)).toBeVisible();
+  expect(uploadAttempted).toBe(false);
+});
+
+test('a failed logo upload shows a friendly error', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+  await installStorageUploadMock(page, 'school-logos', 500);
+
+  await page.goto('/school/profile');
+  await page.getByLabel('Logo').setInputFiles({
+    name: 'logo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('mock png bytes'),
+  });
+
+  await expect(page.getByText('Failed to upload logo.')).toBeVisible();
 });
 
 test('unauthenticated visitors are redirected away from the school profile page', async ({

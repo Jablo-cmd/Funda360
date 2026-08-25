@@ -4,7 +4,7 @@
  * cross-feature src/types/ barrel.
  */
 
-export type AttendanceStatus = 'present' | 'absent' | 'late';
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
 export interface AttendanceRecord {
   id: string;
@@ -35,4 +35,5 @@ export interface AttendanceStatusCounts {
   present: number;
   absent: number;
   late: number;
+  excused: number;
 }

@@ -33,7 +33,8 @@ export type LearnerStatus =
 export type BoardingType = 'day_scholar' | 'boarder';
 export type LearnerEnrollmentStatus = 'enrolled' | 'promoted' | 'repeated' | 'transferred_out' | 'withdrawn';
 export type GuardianRelationshipType = 'mother' | 'father' | 'legal_guardian' | 'grandparent' | 'sibling' | 'other';
-export type AttendanceStatus = 'present' | 'absent' | 'late';
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type AssessmentType = 'test' | 'assignment' | 'examination' | 'project' | 'quiz';
 export type LearnerDocumentType =
   | 'birth_certificate'
@@ -44,6 +45,10 @@ export type LearnerDocumentType =
   | 'medical_certificate'
   | 'report_card'
   | 'other';
+export type FeeCategory = 'tuition' | 'transport' | 'boarding' | 'uniform' | 'activity' | 'other';
+export type FeePaymentMethod = 'cash' | 'eft' | 'card' | 'debit_order' | 'cheque' | 'other';
+export type BehaviourIncidentType = 'positive' | 'negative';
+export type BehaviourSeverity = 'low' | 'medium' | 'high';
 
 export type SchoolRow = {
   id: string;
@@ -375,6 +380,63 @@ export type ClassTeacherAssignmentUpdate = {
   updated_at?: string;
 };
 
+export type TimetableEntryRow = {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  term_id: string | null;
+  class_id: string;
+  subject_id: string;
+  teacher_profile_id: string;
+  day_of_week: DayOfWeek;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TimetableEntryInsert = {
+  id?: string;
+  school_id: string;
+  academic_year_id: string;
+  term_id?: string | null;
+  class_id: string;
+  subject_id: string;
+  teacher_profile_id: string;
+  day_of_week: DayOfWeek;
+  start_time: string;
+  end_time: string;
+  room?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TimetableEntryUpdate = {
+  id?: string;
+  school_id?: string;
+  academic_year_id?: string;
+  term_id?: string | null;
+  class_id?: string;
+  subject_id?: string;
+  teacher_profile_id?: string;
+  day_of_week?: DayOfWeek;
+  start_time?: string;
+  end_time?: string;
+  room?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type AttendanceRecordRow = {
   id: string;
   school_id: string;
@@ -504,6 +566,222 @@ export type AssessmentResultUpdate = {
   assessment_id?: string;
   learner_id?: string;
   mark?: number;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type FeeStructureRow = {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  grade_id: string | null;
+  name: string;
+  category: FeeCategory;
+  amount: number;
+  description: string | null;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FeeStructureInsert = {
+  id?: string;
+  school_id: string;
+  academic_year_id: string;
+  grade_id?: string | null;
+  name: string;
+  category?: FeeCategory;
+  amount: number;
+  description?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type FeeStructureUpdate = {
+  id?: string;
+  school_id?: string;
+  academic_year_id?: string;
+  grade_id?: string | null;
+  name?: string;
+  category?: FeeCategory;
+  amount?: number;
+  description?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerFeeChargeRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  fee_structure_id: string | null;
+  description: string;
+  category: FeeCategory;
+  amount: number;
+  due_date: string | null;
+  notes: string | null;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerFeeChargeInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  fee_structure_id?: string | null;
+  description: string;
+  category?: FeeCategory;
+  amount: number;
+  due_date?: string | null;
+  notes?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerFeeChargeUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  academic_year_id?: string;
+  fee_structure_id?: string | null;
+  description?: string;
+  category?: FeeCategory;
+  amount?: number;
+  due_date?: string | null;
+  notes?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerFeePaymentRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  amount: number;
+  payment_date: string;
+  method: FeePaymentMethod;
+  reference: string | null;
+  notes: string | null;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerFeePaymentInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  amount: number;
+  payment_date: string;
+  method?: FeePaymentMethod;
+  reference?: string | null;
+  notes?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerFeePaymentUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  academic_year_id?: string;
+  amount?: number;
+  payment_date?: string;
+  method?: FeePaymentMethod;
+  reference?: string | null;
+  notes?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type BehaviourIncidentRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  incident_type: BehaviourIncidentType;
+  severity: BehaviourSeverity | null;
+  category: string | null;
+  occurred_at: string;
+  description: string;
+  action_taken: string | null;
+  outcome: string | null;
+  follow_up_required: boolean;
+  follow_up_notes: string | null;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BehaviourIncidentInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  incident_type: BehaviourIncidentType;
+  severity?: BehaviourSeverity | null;
+  category?: string | null;
+  occurred_at?: string;
+  description: string;
+  action_taken?: string | null;
+  outcome?: string | null;
+  follow_up_required?: boolean;
+  follow_up_notes?: string | null;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type BehaviourIncidentUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  academic_year_id?: string;
+  incident_type?: BehaviourIncidentType;
+  severity?: BehaviourSeverity | null;
+  category?: string | null;
+  occurred_at?: string;
+  description?: string;
+  action_taken?: string | null;
+  outcome?: string | null;
+  follow_up_required?: boolean;
+  follow_up_notes?: string | null;
+  active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -658,6 +936,8 @@ export type LearnerGuardianRow = {
   guardian_profile_id: string;
   relationship_type: GuardianRelationshipType;
   is_primary: boolean;
+  is_emergency_contact: boolean;
+  is_authorized_pickup: boolean;
   custody_notes: string | null;
   active: boolean;
   created_by: string | null;
@@ -673,6 +953,8 @@ export type LearnerGuardianInsert = {
   guardian_profile_id: string;
   relationship_type: GuardianRelationshipType;
   is_primary?: boolean;
+  is_emergency_contact?: boolean;
+  is_authorized_pickup?: boolean;
   custody_notes?: string | null;
   active?: boolean;
   created_by?: string | null;
@@ -688,8 +970,93 @@ export type LearnerGuardianUpdate = {
   guardian_profile_id?: string;
   relationship_type?: GuardianRelationshipType;
   is_primary?: boolean;
+  is_emergency_contact?: boolean;
+  is_authorized_pickup?: boolean;
   custody_notes?: string | null;
   active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type GuardianProfileDetailsRow = {
+  id: string;
+  school_id: string;
+  guardian_profile_id: string;
+  address: string | null;
+  id_number: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GuardianProfileDetailsInsert = {
+  id?: string;
+  school_id: string;
+  guardian_profile_id: string;
+  address?: string | null;
+  id_number?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type GuardianProfileDetailsUpdate = {
+  id?: string;
+  school_id?: string;
+  guardian_profile_id?: string;
+  address?: string | null;
+  id_number?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type GuardianInvitationStatus = 'pending' | 'accepted' | 'revoked';
+
+export type GuardianInvitationRow = {
+  id: string;
+  school_id: string;
+  guardian_profile_id: string;
+  status: GuardianInvitationStatus;
+  invited_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GuardianInvitationInsert = {
+  id?: string;
+  school_id: string;
+  guardian_profile_id: string;
+  status?: GuardianInvitationStatus;
+  invited_at?: string;
+  expires_at: string;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type GuardianInvitationUpdate = {
+  id?: string;
+  school_id?: string;
+  guardian_profile_id?: string;
+  status?: GuardianInvitationStatus;
+  invited_at?: string;
+  expires_at?: string;
+  accepted_at?: string | null;
+  revoked_at?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -1008,10 +1375,35 @@ export type Database = {
         Insert: AssessmentResultInsert;
         Update: AssessmentResultUpdate;
       };
+      fee_structures: {
+        Row: FeeStructureRow;
+        Insert: FeeStructureInsert;
+        Update: FeeStructureUpdate;
+      };
+      learner_fee_charges: {
+        Row: LearnerFeeChargeRow;
+        Insert: LearnerFeeChargeInsert;
+        Update: LearnerFeeChargeUpdate;
+      };
+      learner_fee_payments: {
+        Row: LearnerFeePaymentRow;
+        Insert: LearnerFeePaymentInsert;
+        Update: LearnerFeePaymentUpdate;
+      };
+      behaviour_incidents: {
+        Row: BehaviourIncidentRow;
+        Insert: BehaviourIncidentInsert;
+        Update: BehaviourIncidentUpdate;
+      };
       class_teacher_assignments: {
         Row: ClassTeacherAssignmentRow;
         Insert: ClassTeacherAssignmentInsert;
         Update: ClassTeacherAssignmentUpdate;
+      };
+      timetable_entries: {
+        Row: TimetableEntryRow;
+        Insert: TimetableEntryInsert;
+        Update: TimetableEntryUpdate;
       };
       attendance_records: {
         Row: AttendanceRecordRow;
@@ -1032,6 +1424,16 @@ export type Database = {
         Row: LearnerGuardianRow;
         Insert: LearnerGuardianInsert;
         Update: LearnerGuardianUpdate;
+      };
+      guardian_profile_details: {
+        Row: GuardianProfileDetailsRow;
+        Insert: GuardianProfileDetailsInsert;
+        Update: GuardianProfileDetailsUpdate;
+      };
+      guardian_invitations: {
+        Row: GuardianInvitationRow;
+        Insert: GuardianInvitationInsert;
+        Update: GuardianInvitationUpdate;
       };
       learner_emergency_contacts: {
         Row: LearnerEmergencyContactRow;
@@ -1072,6 +1474,18 @@ export type Database = {
         };
         Returns: { user_id: string; temporary_password: string }[];
       };
+      admin_create_guardian: {
+        Args: {
+          p_email: string;
+          p_first_name: string;
+          p_last_name: string;
+          p_phone?: string | null;
+          p_tenant_id?: string | null;
+          p_address?: string | null;
+          p_id_number?: string | null;
+        };
+        Returns: { user_id: string; temporary_password: string }[];
+      };
       admin_update_user_role: {
         Args: { p_user_id: string; p_new_role: UserRole };
         Returns: undefined;
@@ -1104,6 +1518,34 @@ export type Database = {
       provision_employee_login: {
         Args: { p_employee_id: string; p_role: UserRole; p_phone?: string | null };
         Returns: { user_id: string; temporary_password: string }[];
+      };
+      send_guardian_invitation: {
+        Args: { p_guardian_profile_id: string; p_expires_in_hours?: number };
+        Returns: GuardianInvitationRow;
+      };
+      revoke_guardian_invitation: {
+        Args: { p_invitation_id: string };
+        Returns: GuardianInvitationRow;
+      };
+      accept_guardian_invitation: {
+        Args: Record<string, never>;
+        Returns: GuardianInvitationRow;
+      };
+      get_my_guardian_invitation: {
+        Args: Record<string, never>;
+        Returns: {
+          guardianFirstName: string;
+          guardianLastName: string;
+          schoolName: string;
+          invitation: {
+            id: string;
+            status: GuardianInvitationStatus;
+            effectiveStatus: GuardianInvitationStatus | 'expired';
+            expiresAt: string;
+            acceptedAt: string | null;
+          } | null;
+          children: { id: string; firstName: string; lastName: string }[];
+        };
       };
     };
   };

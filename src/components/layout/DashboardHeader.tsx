@@ -1,10 +1,11 @@
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { MenuIcon } from '@/components/ui/icons';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
+import { usePermissions } from '@/hooks/usePermissions';
 import { getPageTitle } from '@/lib/pageTitles';
 
 export interface DashboardHeaderProps {
@@ -20,8 +21,10 @@ export interface DashboardHeaderProps {
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   const { school } = useSchool();
   const { currentAcademicYear } = useAcademic();
+  const { can } = usePermissions();
   const { pathname } = useLocation();
   const { title, section } = getPageTitle(pathname);
+  const canSwitchSchool = can('tenant.switch');
 
   return (
     <header className="flex h-[4.5rem] shrink-0 items-center justify-between gap-4 border-b border-border bg-surface-raised px-4 sm:px-6">
@@ -42,20 +45,34 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
         <div className="hidden h-9 w-px bg-border md:block" />
 
         <div className="min-w-0">
-          <p className="truncate text-lg font-semibold leading-tight text-content-primary">{title}</p>
-          <p className="truncate font-mono text-xs uppercase tracking-wide text-content-tertiary">{section}</p>
+          <p className="truncate text-lg font-semibold leading-tight text-content-primary">
+            {title}
+          </p>
+          <p className="truncate font-mono text-xs uppercase tracking-wide text-content-tertiary">
+            {section}
+          </p>
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
         <span className="hidden max-w-[16rem] truncate text-right sm:block">
-          <span className="block text-sm font-medium text-content-secondary">{school?.name ?? 'No school selected'}</span>
+          <span className="block text-sm font-medium text-content-secondary">
+            {school?.name ?? 'No school selected'}
+          </span>
           {currentAcademicYear && (
             <span className="block font-mono text-[11px] uppercase tracking-wide text-content-tertiary">
               {currentAcademicYear.name}
             </span>
           )}
         </span>
+        {canSwitchSchool && (
+          <Link
+            to="/schools"
+            className="focus-ring hidden h-9 shrink-0 items-center rounded-md border border-border-strong px-3 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-sunken hover:text-content-primary sm:flex"
+          >
+            Switch school
+          </Link>
+        )}
         <div className="hidden h-9 w-px bg-border sm:block" />
         <ThemeToggle />
         <UserMenu />

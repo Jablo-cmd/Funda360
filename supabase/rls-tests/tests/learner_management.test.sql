@@ -16,7 +16,9 @@ begin
   execute 'set local role authenticated';
 
   select count(*) into v_count from public.learners where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  call test_util.record('school owner can view own school learner directory', v_count = 2, 'rows visible: ' || v_count);
+  -- 3, not 2: Learner A3 (11110000...0004) was added by
+  -- 12_guardian_management_fixtures.sql for the multiple-learners-per-guardian case.
+  call test_util.record('school owner can view own school learner directory', v_count = 3, 'rows visible: ' || v_count);
 
   execute 'reset role';
 end;
@@ -409,3 +411,51 @@ begin
     v_created_by = '10101010-1010-1010-1010-101010101010', 'created_by=' || coalesce(v_created_by::text, 'null'));
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- 18. can_view_learners() was widened (2026-08-23) to include
+-- finance_manager/accountant/vice_principal/department_head so they can
+-- open a learner's Learner 360 page to reach their new
+-- learner.view_financial/learner.view_behaviour tabs — but NOT
+-- can_manage_learners(), which stays untouched (they still cannot create or
+-- edit a learner's core identity). Uses finance_manager 17171717 /
+-- vice_principal 14141414 from 11_fees_behaviour_fixtures.sql.
+do $$
+declare v_count int;
+begin
+  perform set_config('request.jwt.claims',
+    test_util.jwt_claims('17171717-1717-1717-1717-171717171717', 'finance_manager', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
+  execute 'set local role authenticated';
+  select count(*) into v_count from public.learners where id = '11110000-0000-0000-0000-000000000001';
+  execute 'reset role';
+  call test_util.record('finance_manager can now view a learner (widened for Learner 360 access)', v_count = 1, 'rows visible: ' || v_count);
+end $$;
+
+do $$
+declare v_count int;
+begin
+  perform set_config('request.jwt.claims',
+    test_util.jwt_claims('14141414-1414-1414-1414-141414141414', 'vice_principal', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
+  execute 'set local role authenticated';
+  select count(*) into v_count from public.learners where id = '11110000-0000-0000-0000-000000000001';
+  execute 'reset role';
+  call test_util.record('vice_principal can now view a learner (widened for Learner 360 access)', v_count = 1, 'rows visible: ' || v_count);
+end $$;
+
+-- learners_update's USING clause (can_manage_learners) simply excludes the
+-- row for a role that fails it — Postgres RLS filters silently here rather
+-- than raising, since the row is never matched in the first place (unlike
+-- an INSERT's WITH CHECK, which does raise because a row was already about
+-- to be written). Zero rows affected is therefore the correct assertion,
+-- not an exception.
+do $$
+declare v_updated int;
+begin
+  perform set_config('request.jwt.claims',
+    test_util.jwt_claims('17171717-1717-1717-1717-171717171717', 'finance_manager', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
+  execute 'set local role authenticated';
+  update public.learners set first_name = 'Hacked' where id = '11110000-0000-0000-0000-000000000001';
+  get diagnostics v_updated = row_count;
+  execute 'reset role';
+  call test_util.record('finance_manager still cannot edit a learner''s core identity (can_manage_learners untouched)', v_updated = 0, 'rows updated: ' || v_updated);
+end $$;

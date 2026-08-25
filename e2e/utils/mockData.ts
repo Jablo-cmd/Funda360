@@ -239,10 +239,60 @@ export function buildMockClassTeacherAssignmentRow(overrides: MockClassTeacherAs
   };
 }
 
+interface MockTimetableEntryOverrides {
+  id?: string;
+  schoolId?: string;
+  academicYearId?: string;
+  termId?: string | null;
+  classId?: string;
+  subjectId?: string;
+  teacherProfileId?: string;
+  dayOfWeek?: string;
+  startTime?: string;
+  endTime?: string;
+  room?: string | null;
+  active?: boolean;
+}
+
+export function buildMockTimetableEntryRow(overrides: MockTimetableEntryOverrides = {}) {
+  const {
+    id = 'timetable-entry-1',
+    schoolId = MOCK_TENANT_ID,
+    academicYearId = 'year-2026',
+    termId = null,
+    classId = 'class-8a',
+    subjectId = 'subject-math',
+    teacherProfileId = 'teacher-1',
+    dayOfWeek = 'monday',
+    startTime = '08:00:00',
+    endTime = '09:00:00',
+    room = 'Room 1',
+    active = true,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    academic_year_id: academicYearId,
+    term_id: termId,
+    class_id: classId,
+    subject_id: subjectId,
+    teacher_profile_id: teacherProfileId,
+    day_of_week: dayOfWeek,
+    start_time: startTime,
+    end_time: endTime,
+    room,
+    active,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
 /** Mocks a `.from('<table>').select('*').eq(...)` LIST query (GET, no `limit`/`offset` params — see installUsersListMock for that shape) for one of the academic tables. */
 export async function installAcademicListMock(
   page: Page,
-  table: 'academic_years' | 'terms' | 'grades' | 'classes' | 'subjects' | 'class_teacher_assignments',
+  table: 'academic_years' | 'terms' | 'grades' | 'classes' | 'subjects' | 'class_teacher_assignments' | 'timetable_entries',
   rows: Record<string, unknown>[],
 ) {
   await page.route(`**/rest/v1/${table}*`, async (route: Route) => {
@@ -785,7 +835,7 @@ interface MockAttendanceRecordOverrides {
   classId?: string;
   learnerId?: string;
   attendanceDate?: string;
-  status?: 'present' | 'absent' | 'late';
+  status?: 'present' | 'absent' | 'late' | 'excused';
 }
 
 export function buildMockAttendanceRecordRow(overrides: MockAttendanceRecordOverrides = {}) {
@@ -963,4 +1013,102 @@ export async function installAssessmentResultsUpsertMock(page: Page, results: Re
     if (route.request().method() !== 'POST') return route.fallback();
     await fulfillJson(route, results);
   });
+}
+
+/**
+ * Mocks a Storage upload (POST `.../storage/v1/object/{bucket}/{path}`) —
+ * the shape @supabase/storage-js's uploadOrUpdate() expects back is
+ * `{Id, Key}` (capitalized — not the same casing as PostgREST responses),
+ * read into `data.id`/`data.fullPath`.
+ */
+export async function installStorageUploadMock(page: Page, bucket: string, status = 200) {
+  await page.route(`**/storage/v1/object/${bucket}/**`, async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    if (status >= 400) {
+      await fulfillJson(route, { statusCode: String(status), error: 'Error', message: 'Upload failed.' }, status);
+      return;
+    }
+    await fulfillJson(route, { Id: 'mock-object-id', Key: `${bucket}/mock-path` }, status);
+  });
+}
+
+/**
+ * Mocks a Storage signed-URL request (POST
+ * `.../storage/v1/object/sign/{bucket}/{path}`) — storage-js reads back
+ * `data.signedURL` (capitalized) and prepends its own base URL to it, so
+ * this only needs to return a relative path.
+ */
+export async function installStorageSignedUrlMock(page: Page, bucket: string) {
+  await page.route(`**/storage/v1/object/sign/${bucket}/**`, async (route: Route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    await fulfillJson(route, { signedURL: `/object/sign/${bucket}/mock-path?token=mock-token` });
+  });
+}
+
+interface MockGuardianInvitationOverrides {
+  id?: string;
+  schoolId?: string;
+  guardianProfileId?: string;
+  status?: 'pending' | 'accepted' | 'revoked';
+  invitedAt?: string;
+  expiresAt?: string;
+  acceptedAt?: string | null;
+  revokedAt?: string | null;
+}
+
+export function buildMockGuardianInvitationRow(overrides: MockGuardianInvitationOverrides = {}) {
+  // Computed relative to "now" rather than hardcoded — a fixed past-dated
+  // default would silently start rendering as "expired" once the wall
+  // clock passed it (deriveGuardianInvitationDisplayStatus treats
+  // status='pending' + expires_at < now as expired), breaking every test
+  // that expects a plain "pending" badge without ever touching this file.
+  const {
+    id = 'invitation-1',
+    schoolId = MOCK_TENANT_ID,
+    guardianProfileId = 'guardian-profile-1',
+    status = 'pending',
+    invitedAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    acceptedAt = null,
+    revokedAt = null,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    guardian_profile_id: guardianProfileId,
+    status,
+    invited_at: invitedAt,
+    expires_at: expiresAt,
+    accepted_at: acceptedAt,
+    revoked_at: revokedAt,
+    created_by: null,
+    updated_by: null,
+    created_at: invitedAt,
+    updated_at: invitedAt,
+  };
+}
+
+/** Mocks the `.from('guardian_invitations').select('*').in('guardian_profile_id', ...)` batch lookup. */
+export async function installGuardianInvitationListMock(page: Page, rows: ReturnType<typeof buildMockGuardianInvitationRow>[]) {
+  await page.route('**/rest/v1/guardian_invitations*', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, rows);
+  });
+}
+
+/** Mocks the `guardian_profile_details` `.in('guardian_profile_id', ...)` batch lookup GuardianProfilePage/GuardiansPage issue. */
+export async function installGuardianProfileDetailsMock(page: Page, rows: Record<string, unknown>[]) {
+  await page.route('**/rest/v1/guardian_profile_details*', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, rows);
+  });
+}
+
+/** Mocks a `.rpc('send_guardian_invitation' | 'revoke_guardian_invitation' | 'accept_guardian_invitation' | 'get_my_guardian_invitation', ...)` call. */
+export async function installGuardianInvitationRpcMock(
+  page: Page,
+  fnName: 'send_guardian_invitation' | 'revoke_guardian_invitation' | 'accept_guardian_invitation' | 'get_my_guardian_invitation',
+  handler: (route: Route) => Promise<void>,
+) {
+  await page.route(`**/rest/v1/rpc/${fnName}`, handler);
 }

@@ -5,6 +5,7 @@ import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useSubjects } from '@/features/academic/hooks/useSubjects';
@@ -68,7 +69,8 @@ export function SubjectsPage() {
         title="Subjects"
         description="Manage the subject catalogue for your school."
         action={
-          canManage && (
+          canManage &&
+          school && (
             <div className="w-full sm:w-auto sm:min-w-[9rem]">
               <Button type="button" onClick={openCreate}>
                 Add subject
@@ -78,32 +80,36 @@ export function SubjectsPage() {
         }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary" />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name or code…"
-            aria-label="Search subjects"
-            className="focus-ring h-11 w-full rounded-lg border border-border-strong bg-surface-raised pl-9 pr-3.5 text-sm text-content-primary placeholder:text-content-tertiary"
-          />
+      {school && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by name or code…"
+              aria-label="Search subjects"
+              className="focus-ring h-11 w-full rounded-lg border border-border-strong bg-surface-raised pl-9 pr-3.5 text-sm text-content-primary placeholder:text-content-tertiary"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-content-secondary">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(event) => setShowArchived(event.target.checked)}
+              className="focus-ring h-4 w-4 rounded border-border-strong"
+            />
+            Show archived
+          </label>
         </div>
-        <label className="flex items-center gap-2 text-sm text-content-secondary">
-          <input
-            type="checkbox"
-            checked={showArchived}
-            onChange={(event) => setShowArchived(event.target.checked)}
-            className="focus-ring h-4 w-4 rounded border-border-strong"
-          />
-          Show archived
-        </label>
-      </div>
+      )}
 
       <ErrorAlert message={error ?? actionError} />
 
-      {isLoading ? (
+      {!school ? (
+        <NoActiveSchoolNotice resource="subjects" />
+      ) : isLoading ? (
         <LoadingBlock label="Loading subjects…" />
       ) : (
         <SubjectsTable

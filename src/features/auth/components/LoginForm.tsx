@@ -17,6 +17,7 @@ import {
 interface LocationState {
   from?: { pathname?: string };
   justReset?: boolean;
+  justActivated?: boolean;
 }
 
 export function LoginForm() {
@@ -27,6 +28,7 @@ export function LoginForm() {
 
   const state = location.state as LocationState | null;
   const justReset = Boolean(state?.justReset);
+  const justActivated = Boolean(state?.justActivated);
 
   const {
     register,
@@ -65,6 +67,15 @@ export function LoginForm() {
           className="rounded-lg border border-success-500/30 bg-success-500/10 px-3.5 py-2.5 text-sm font-medium text-success-500"
         >
           Your password has been updated. Please sign in.
+        </div>
+      )}
+
+      {justActivated && !submitError && (
+        <div
+          role="status"
+          className="rounded-lg border border-success-500/30 bg-success-500/10 px-3.5 py-2.5 text-sm font-medium text-success-500"
+        >
+          Your account is now active. Please sign in.
         </div>
       )}
 

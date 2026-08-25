@@ -18,7 +18,6 @@ export const schoolProfileSchema = z.object({
   email: z.union([z.literal(''), z.string().trim().email('Enter a valid email address')]).optional(),
   phone: z.string().trim().optional(),
   website: optionalUrl,
-  logoUrl: optionalUrl,
   physicalAddress: z.string().trim().optional(),
   postalAddress: z.string().trim().optional(),
   principalName: z.string().trim().optional(),

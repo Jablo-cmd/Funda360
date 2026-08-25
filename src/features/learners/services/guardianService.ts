@@ -7,6 +7,7 @@ export interface GuardianCandidate {
   firstName: string;
   lastName: string;
   email: string;
+  phone: string | null;
 }
 
 /**
@@ -18,7 +19,7 @@ export interface GuardianCandidate {
 async function searchGuardianCandidates(schoolId: string, search = ''): Promise<GuardianCandidate[]> {
   let query = supabase
     .from('profiles')
-    .select('id, first_name, last_name, email')
+    .select('id, first_name, last_name, email, phone')
     .eq('tenant_id', schoolId)
     .in('role', ['parent', 'guardian']);
 
@@ -30,7 +31,7 @@ async function searchGuardianCandidates(schoolId: string, search = ''): Promise<
 
   const { data, error } = await query.order('first_name', { ascending: true }).limit(20);
   if (error) throw error;
-  return data.map((row) => ({ id: row.id, firstName: row.first_name, lastName: row.last_name, email: row.email }));
+  return data.map((row) => ({ id: row.id, firstName: row.first_name, lastName: row.last_name, email: row.email, phone: row.phone }));
 }
 
 export function toLearnerGuardian(row: LearnerGuardianRow): LearnerGuardian {
@@ -41,6 +42,8 @@ export function toLearnerGuardian(row: LearnerGuardianRow): LearnerGuardian {
     guardianProfileId: row.guardian_profile_id,
     relationshipType: row.relationship_type,
     isPrimary: row.is_primary,
+    isEmergencyContact: row.is_emergency_contact,
+    isAuthorizedPickup: row.is_authorized_pickup,
     custodyNotes: row.custody_notes,
     active: row.active,
     createdAt: row.created_at,
@@ -69,6 +72,8 @@ async function createGuardian(
     guardian_profile_id: input.guardianProfileId,
     relationship_type: input.relationshipType,
     is_primary: input.isPrimary ?? false,
+    is_emergency_contact: input.isEmergencyContact ?? false,
+    is_authorized_pickup: input.isAuthorizedPickup ?? false,
     custody_notes: input.custodyNotes ?? null,
   };
   const { data, error } = await supabase.from('learner_guardians').insert(payload).select('*').single();
@@ -76,18 +81,52 @@ async function createGuardian(
   return toLearnerGuardian(data);
 }
 
+export interface CreateGuardianProfileInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  idNumber?: string | null;
+}
+
+/**
+ * Creates a brand-new guardian (profiles row, role=guardian) via
+ * admin_create_guardian() — for when GuardianFormModal's search finds no
+ * existing candidate. Gated server-side by can_manage_learners(), not the
+ * staff role-assignment ladder admin_create_user() uses (see the
+ * guardian_management migration). Returns a GuardianCandidate directly so
+ * the caller can select it immediately without a second round-trip.
+ */
+async function createGuardianProfile(input: CreateGuardianProfileInput): Promise<GuardianCandidate> {
+  const { data, error } = await supabase.rpc('admin_create_guardian', {
+    p_email: input.email,
+    p_first_name: input.firstName,
+    p_last_name: input.lastName,
+    p_phone: input.phone || null,
+    p_address: input.address || null,
+    p_id_number: input.idNumber || null,
+  });
+  if (error) throw error;
+  const created = data[0];
+  if (!created) throw new Error('admin_create_guardian returned no result');
+  return { id: created.user_id, firstName: input.firstName, lastName: input.lastName, email: input.email, phone: input.phone || null };
+}
+
 /** Batch profile lookup for rendering guardian names — avoids the 20-row limit on searchGuardianCandidates. */
 async function getGuardianCandidatesByIds(ids: string[]): Promise<GuardianCandidate[]> {
   if (ids.length === 0) return [];
-  const { data, error } = await supabase.from('profiles').select('id, first_name, last_name, email').in('id', ids);
+  const { data, error } = await supabase.from('profiles').select('id, first_name, last_name, email, phone').in('id', ids);
   if (error) throw error;
-  return data.map((row) => ({ id: row.id, firstName: row.first_name, lastName: row.last_name, email: row.email }));
+  return data.map((row) => ({ id: row.id, firstName: row.first_name, lastName: row.last_name, email: row.email, phone: row.phone }));
 }
 
 async function updateGuardian(id: string, updates: UpdateLearnerGuardianInput): Promise<LearnerGuardian> {
   const payload: LearnerGuardianUpdate = {};
   if (updates.relationshipType !== undefined) payload.relationship_type = updates.relationshipType;
   if (updates.isPrimary !== undefined) payload.is_primary = updates.isPrimary;
+  if (updates.isEmergencyContact !== undefined) payload.is_emergency_contact = updates.isEmergencyContact;
+  if (updates.isAuthorizedPickup !== undefined) payload.is_authorized_pickup = updates.isAuthorizedPickup;
   if (updates.custodyNotes !== undefined) payload.custody_notes = updates.custodyNotes;
 
   const { data, error } = await supabase.from('learner_guardians').update(payload).eq('id', id).select('*').single();
@@ -133,4 +172,5 @@ export const guardianService = {
   restoreGuardian,
   searchGuardianCandidates,
   getGuardianCandidatesByIds,
+  createGuardianProfile,
 };

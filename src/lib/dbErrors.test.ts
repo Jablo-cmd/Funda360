@@ -12,6 +12,11 @@ describe('getDbErrorMessage', () => {
     expect(getDbErrorMessage(error, 'fallback')).toBe('The requested record could not be found.');
   });
 
+  it('passes through a conflict: RAISE EXCEPTION message as-is (already user-facing, no schema names)', () => {
+    const error = { message: 'conflict: teacher already has an overlapping lesson scheduled on monday', code: 'P0001' };
+    expect(getDbErrorMessage(error, 'fallback')).toBe('teacher already has an overlapping lesson scheduled on monday');
+  });
+
   it('maps a unique_violation SQLSTATE to safe copy without the constraint name', () => {
     const error = {
       message: 'duplicate key value violates unique constraint "learners_school_id_learner_number_key"',

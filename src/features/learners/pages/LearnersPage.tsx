@@ -4,6 +4,7 @@ import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useLearnersList } from '@/features/learners/hooks/useLearnersList';
@@ -17,8 +18,18 @@ export function LearnersPage() {
   const canManage = can('learner.manage');
   const canViewSensitive = can('learner.view_sensitive');
   const { school } = useSchool();
-  const { learners, totalCount, page, pageSize, isLoading, error, filters, setFilters, setPage, refetch } =
-    useLearnersList(school?.id);
+  const {
+    learners,
+    totalCount,
+    page,
+    pageSize,
+    isLoading,
+    error,
+    filters,
+    setFilters,
+    setPage,
+    refetch,
+  } = useLearnersList(school?.id);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -28,7 +39,8 @@ export function LearnersPage() {
         title="Learners"
         description="Manage the learner directory for your school."
         action={
-          canManage && (
+          canManage &&
+          school && (
             <div className="w-full sm:w-auto sm:min-w-[9rem]">
               <Button type="button" onClick={() => setIsCreateOpen(true)}>
                 Add learner
@@ -38,16 +50,23 @@ export function LearnersPage() {
         }
       />
 
-      <LearnersFiltersBar filters={filters} onChange={setFilters} />
+      {school && <LearnersFiltersBar filters={filters} onChange={setFilters} />}
 
       <ErrorAlert message={error} />
 
-      {isLoading ? (
+      {!school ? (
+        <NoActiveSchoolNotice resource="learners" />
+      ) : isLoading ? (
         <LoadingBlock label="Loading learners…" />
       ) : (
         <>
           <LearnersTable learners={learners} canViewSensitive={canViewSensitive} />
-          <LearnersPagination page={page} pageSize={pageSize} totalCount={totalCount} onPageChange={setPage} />
+          <LearnersPagination
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setPage}
+          />
         </>
       )}
 

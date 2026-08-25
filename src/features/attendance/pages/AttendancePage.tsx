@@ -12,6 +12,7 @@ import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import { cn } from '@/lib/cn';
 import { getDbErrorMessage } from '@/lib/dbErrors';
@@ -24,12 +25,17 @@ const STATUS_OPTIONS: { value: AttendanceStatus; label: string }[] = [
   { value: 'present', label: 'Present' },
   { value: 'absent', label: 'Absent' },
   { value: 'late', label: 'Late' },
+  { value: 'excused', label: 'Excused' },
 ];
 
 const STATUS_BUTTON_CLASSES: Record<AttendanceStatus, string> = {
-  present: 'data-[active=true]:bg-success-500/15 data-[active=true]:text-success-500 data-[active=true]:border-success-500/40',
-  absent: 'data-[active=true]:bg-danger-50 data-[active=true]:text-danger-600 data-[active=true]:border-danger-500/40',
+  present:
+    'data-[active=true]:bg-success-500/15 data-[active=true]:text-success-500 data-[active=true]:border-success-500/40',
+  absent:
+    'data-[active=true]:bg-danger-50 data-[active=true]:text-danger-600 data-[active=true]:border-danger-500/40',
   late: 'data-[active=true]:bg-warning-50 data-[active=true]:text-warning-600 data-[active=true]:border-warning-500/40 dark:data-[active=true]:bg-warning-500/15 dark:data-[active=true]:text-warning-500',
+  excused:
+    'data-[active=true]:bg-brand-50 data-[active=true]:text-brand-700 data-[active=true]:border-brand-400 dark:data-[active=true]:bg-brand-500/15 dark:data-[active=true]:text-brand-300',
 };
 
 export function AttendancePage() {
@@ -40,7 +46,10 @@ export function AttendancePage() {
   const { classes } = useClasses(school?.id);
   const myAssignments = useMyTeachingAssignments();
 
-  const myClassIds = useMemo(() => new Set(myAssignments.data.map((a) => a.classId)), [myAssignments.data]);
+  const myClassIds = useMemo(
+    () => new Set(myAssignments.data.map((a) => a.classId)),
+    [myAssignments.data],
+  );
   const availableClasses = useMemo(
     () =>
       classes
@@ -90,7 +99,10 @@ export function AttendancePage() {
         currentAcademicYear.id,
         classId,
         date,
-        roster.map((learner) => ({ learnerId: learner.id, status: statuses[learner.id] ?? 'present' })),
+        roster.map((learner) => ({
+          learnerId: learner.id,
+          status: statuses[learner.id] ?? 'present',
+        })),
       );
       // Deliberately not refetching here: `statuses` already reflects
       // exactly what was just persisted (that's what we sent), and the
@@ -114,13 +126,28 @@ export function AttendancePage() {
     year: 'numeric',
   });
 
+  if (!school) {
+    return (
+      <PageContainer>
+        <PageHeader
+          title="Attendance"
+          description="Take or review the daily register for a class."
+        />
+        <NoActiveSchoolNotice resource="attendance" />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <PageHeader title="Attendance" description="Take or review the daily register for a class." />
 
       <div className="flex flex-col gap-3 rounded-card border border-border bg-surface-raised p-4 sm:flex-row sm:items-end sm:gap-4">
         <div className="flex-1">
-          <label htmlFor="attendance-class" className="mb-1.5 block text-sm font-medium text-content-primary">
+          <label
+            htmlFor="attendance-class"
+            className="mb-1.5 block text-sm font-medium text-content-primary"
+          >
             Class
           </label>
           {availableClasses.length === 0 ? (
@@ -144,7 +171,10 @@ export function AttendancePage() {
         </div>
 
         <div>
-          <label htmlFor="attendance-date" className="mb-1.5 block text-sm font-medium text-content-primary">
+          <label
+            htmlFor="attendance-date"
+            className="mb-1.5 block text-sm font-medium text-content-primary"
+          >
             Date
           </label>
           <input
@@ -158,7 +188,9 @@ export function AttendancePage() {
       </div>
 
       {!currentAcademicYear && (
-        <p className="text-sm text-content-tertiary">Set an active academic year before taking attendance.</p>
+        <p className="text-sm text-content-tertiary">
+          Set an active academic year before taking attendance.
+        </p>
       )}
 
       <ErrorAlert message={error ?? saveError} />
@@ -167,7 +199,9 @@ export function AttendancePage() {
         <div className="flex flex-col gap-3">
           {!isLoading && roster.length > 0 && (
             <p className="text-sm text-content-secondary">
-              <span className="font-medium text-content-primary">{selectedClassName ?? 'Class'}</span>
+              <span className="font-medium text-content-primary">
+                {selectedClassName ?? 'Class'}
+              </span>
               {' · '}
               {formattedDate}
               {' · '}
@@ -208,7 +242,9 @@ export function AttendancePage() {
                           <td className="px-4 py-3 font-medium text-content-primary">
                             {learner.firstName} {learner.lastName}
                           </td>
-                          <td className="px-4 py-3 text-content-secondary">{learner.learnerNumber}</td>
+                          <td className="px-4 py-3 text-content-secondary">
+                            {learner.learnerNumber}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-1.5">
                               {STATUS_OPTIONS.map((option) => (
@@ -217,7 +253,9 @@ export function AttendancePage() {
                                   type="button"
                                   disabled={!canRecordForClass}
                                   data-active={statuses[learner.id] === option.value}
-                                  onClick={() => setStatuses((prev) => ({ ...prev, [learner.id]: option.value }))}
+                                  onClick={() =>
+                                    setStatuses((prev) => ({ ...prev, [learner.id]: option.value }))
+                                  }
                                   className={cn(
                                     'focus-ring rounded-md border border-border-strong px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors disabled:cursor-not-allowed disabled:opacity-60',
                                     STATUS_BUTTON_CLASSES[option.value],
@@ -238,7 +276,10 @@ export function AttendancePage() {
               {/* Mobile: one card per learner, full-width status buttons */}
               <div className="flex flex-col gap-2 md:hidden">
                 {roster.map((learner) => (
-                  <div key={learner.id} className="rounded-card border border-border bg-surface-raised p-3.5">
+                  <div
+                    key={learner.id}
+                    className="rounded-card border border-border bg-surface-raised p-3.5"
+                  >
                     <p className="text-sm font-medium text-content-primary">
                       {learner.firstName} {learner.lastName}
                     </p>
@@ -250,7 +291,9 @@ export function AttendancePage() {
                           type="button"
                           disabled={!canRecordForClass}
                           data-active={statuses[learner.id] === option.value}
-                          onClick={() => setStatuses((prev) => ({ ...prev, [learner.id]: option.value }))}
+                          onClick={() =>
+                            setStatuses((prev) => ({ ...prev, [learner.id]: option.value }))
+                          }
                           className={cn(
                             'focus-ring flex-1 rounded-md border border-border-strong px-2.5 py-2 text-xs font-medium text-content-secondary transition-colors disabled:cursor-not-allowed disabled:opacity-60',
                             STATUS_BUTTON_CLASSES[option.value],

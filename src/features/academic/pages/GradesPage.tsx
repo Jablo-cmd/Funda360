@@ -4,6 +4,7 @@ import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useGrades } from '@/features/academic/hooks/useGrades';
@@ -56,7 +57,8 @@ export function GradesPage() {
         title="Grades"
         description="Manage the grade catalogue for your school."
         action={
-          canManage && (
+          canManage &&
+          school && (
             <div className="w-full sm:w-auto sm:min-w-[9rem]">
               <Button type="button" onClick={openCreate}>
                 Add grade
@@ -66,19 +68,23 @@ export function GradesPage() {
         }
       />
 
-      <label className="flex w-fit items-center gap-2 text-sm text-content-secondary">
-        <input
-          type="checkbox"
-          checked={showArchived}
-          onChange={(event) => setShowArchived(event.target.checked)}
-          className="focus-ring h-4 w-4 rounded border-border-strong"
-        />
-        Show archived grades
-      </label>
+      {school && (
+        <label className="flex w-fit items-center gap-2 text-sm text-content-secondary">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(event) => setShowArchived(event.target.checked)}
+            className="focus-ring h-4 w-4 rounded border-border-strong"
+          />
+          Show archived grades
+        </label>
+      )}
 
       <ErrorAlert message={error ?? actionError} />
 
-      {isLoading ? (
+      {!school ? (
+        <NoActiveSchoolNotice resource="grades" />
+      ) : isLoading ? (
         <LoadingBlock label="Loading grades…" />
       ) : (
         <GradesTable

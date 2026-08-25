@@ -4,7 +4,10 @@ import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { PublicOnlyRoute } from '@/routes/PublicOnlyRoute';
 import { TenantGate } from '@/routes/TenantGate';
 import { RequirePermission } from '@/routes/RequirePermission';
+import { RequireGuardianRole } from '@/routes/RequireGuardianRole';
+import { RedirectGuardiansToParentPortal } from '@/routes/RedirectGuardiansToParentPortal';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ParentLayout } from '@/components/layout/ParentLayout';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
 
 /**
@@ -30,6 +33,10 @@ const ResetPasswordPage = named(
   () => import('@/features/auth/pages/ResetPasswordPage'),
   'ResetPasswordPage',
 );
+const ActivateAccountPage = named(
+  () => import('@/features/auth/pages/ActivateAccountPage'),
+  'ActivateAccountPage',
+);
 const VerifyEmailPage = named(
   () => import('@/features/auth/pages/VerifyEmailPage'),
   'VerifyEmailPage',
@@ -40,6 +47,7 @@ const SchoolProfilePage = named(
   () => import('@/features/school/pages/SchoolProfilePage'),
   'SchoolProfilePage',
 );
+const SchoolsPage = named(() => import('@/features/tenant/pages/SchoolsPage'), 'SchoolsPage');
 const UsersPage = named(() => import('@/features/users/pages/UsersPage'), 'UsersPage');
 const UserProfilePage = named(
   () => import('@/features/users/pages/UserProfilePage'),
@@ -65,6 +73,14 @@ const LearnersPage = named(() => import('@/features/learners/pages/LearnersPage'
 const LearnerProfilePage = named(
   () => import('@/features/learners/pages/LearnerProfilePage'),
   'LearnerProfilePage',
+);
+const GuardiansPage = named(
+  () => import('@/features/guardians/pages/GuardiansPage'),
+  'GuardiansPage',
+);
+const GuardianProfilePage = named(
+  () => import('@/features/guardians/pages/GuardianProfilePage'),
+  'GuardianProfilePage',
 );
 const EmployeesPage = named(
   () => import('@/features/employees/pages/EmployeesPage'),
@@ -94,15 +110,45 @@ const AcademicReportPage = named(
   () => import('@/features/reports/pages/AcademicReportPage'),
   'AcademicReportPage',
 );
-const AttendancePage = named(() => import('@/features/attendance/pages/AttendancePage'), 'AttendancePage');
-const AssessmentsPage = named(() => import('@/features/assessments/pages/AssessmentsPage'), 'AssessmentsPage');
+const AttendancePage = named(
+  () => import('@/features/attendance/pages/AttendancePage'),
+  'AttendancePage',
+);
+const AssessmentsPage = named(
+  () => import('@/features/assessments/pages/AssessmentsPage'),
+  'AssessmentsPage',
+);
 const AssessmentDetailPage = named(
   () => import('@/features/assessments/pages/AssessmentDetailPage'),
   'AssessmentDetailPage',
 );
+const TimetablePage = named(
+  () => import('@/features/timetable/pages/TimetablePage'),
+  'TimetablePage',
+);
 const AssessmentReportPage = named(
   () => import('@/features/reports/pages/AssessmentReportPage'),
   'AssessmentReportPage',
+);
+const AttendanceReportPage = named(
+  () => import('@/features/reports/pages/AttendanceReportPage'),
+  'AttendanceReportPage',
+);
+const ParentDashboardPage = named(
+  () => import('@/features/parentPortal/pages/ParentDashboardPage'),
+  'ParentDashboardPage',
+);
+const ParentChildrenPage = named(
+  () => import('@/features/parentPortal/pages/ParentChildrenPage'),
+  'ParentChildrenPage',
+);
+const ParentChildProfilePage = named(
+  () => import('@/features/parentPortal/pages/ParentChildProfilePage'),
+  'ParentChildProfilePage',
+);
+const ParentProfilePage = named(
+  () => import('@/features/parentPortal/pages/ParentProfilePage'),
+  'ParentProfilePage',
 );
 
 export function AppRoutes() {
@@ -115,14 +161,26 @@ export function AppRoutes() {
         </Route>
 
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/activate-account" element={<ActivateAccountPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<TenantGate />}>
             <Route element={<DashboardLayout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/my-profile" element={<MyProfilePage />} />
-              <Route path="/school/profile" element={<SchoolProfilePage />} />
+              {/* /dashboard, /my-profile, /school/profile are the only staff
+                  routes with no RequirePermission guard (any signed-in,
+                  tenant-gated user could otherwise reach them) — every other
+                  route below is already safe from guardians via
+                  RequirePermission + their empty ROLE_PERMISSIONS entry. */}
+              <Route element={<RedirectGuardiansToParentPortal />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/my-profile" element={<MyProfilePage />} />
+                <Route path="/school/profile" element={<SchoolProfilePage />} />
+              </Route>
+
+              <Route element={<RequirePermission permission="tenant.switch" />}>
+                <Route path="/schools" element={<SchoolsPage />} />
+              </Route>
 
               <Route element={<RequirePermission permission="profile.view_any" />}>
                 <Route path="/users" element={<UsersPage />} />
@@ -136,7 +194,10 @@ export function AppRoutes() {
                 <Route path="/academic/grades" element={<GradesPage />} />
                 <Route path="/academic/classes" element={<ClassesPage />} />
                 <Route path="/academic/subjects" element={<SubjectsPage />} />
-                <Route path="/academic/teaching-assignments" element={<TeachingAssignmentsPage />} />
+                <Route
+                  path="/academic/teaching-assignments"
+                  element={<TeachingAssignmentsPage />}
+                />
               </Route>
 
               <Route element={<RequirePermission permission="assessment.view" />}>
@@ -147,6 +208,15 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="learner.view" />}>
                 <Route path="/learners" element={<LearnersPage />} />
                 <Route path="/learners/:id" element={<LearnerProfilePage />} />
+              </Route>
+
+              <Route element={<RequirePermission permission="timetable.view" />}>
+                <Route path="/timetable" element={<TimetablePage />} />
+              </Route>
+
+              <Route element={<RequirePermission permission="guardian.view" />}>
+                <Route path="/guardians" element={<GuardiansPage />} />
+                <Route path="/guardians/:id" element={<GuardianProfilePage />} />
               </Route>
 
               <Route element={<RequirePermission permission="employee.view" />}>
@@ -165,6 +235,16 @@ export function AppRoutes() {
                 <Route path="/reports/employees" element={<EmployeeReportPage />} />
                 <Route path="/reports/academic" element={<AcademicReportPage />} />
                 <Route path="/reports/assessments" element={<AssessmentReportPage />} />
+                <Route path="/reports/attendance" element={<AttendanceReportPage />} />
+              </Route>
+            </Route>
+
+            <Route element={<RequireGuardianRole />}>
+              <Route element={<ParentLayout />}>
+                <Route path="/parent/dashboard" element={<ParentDashboardPage />} />
+                <Route path="/parent/children" element={<ParentChildrenPage />} />
+                <Route path="/parent/children/:learnerId" element={<ParentChildProfilePage />} />
+                <Route path="/parent/profile" element={<ParentProfilePage />} />
               </Route>
             </Route>
           </Route>

@@ -77,6 +77,24 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     [localSchool],
   );
 
+  const uploadLogo = useCallback(
+    async (file: File) => {
+      if (!localSchool) throw new Error('No active school to update.');
+      setIsMutating(true);
+      setMutationError(null);
+      try {
+        const updated = await schoolService.uploadLogo(localSchool.id, file);
+        setLocalSchool(updated);
+      } catch (err) {
+        setMutationError(getDbErrorMessage(err, 'Failed to upload logo.'));
+        throw err;
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [localSchool],
+  );
+
   const value = useMemo<SchoolContextValue>(
     () => ({
       school: localSchool,
@@ -85,6 +103,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       refresh: refetch,
       updateSchool,
       updateSchoolSettings,
+      uploadLogo,
     }),
     [
       localSchool,
@@ -95,6 +114,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       refetch,
       updateSchool,
       updateSchoolSettings,
+      uploadLogo,
     ],
   );
 

@@ -5,6 +5,7 @@ import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
@@ -41,7 +42,10 @@ export function AssessmentsPage() {
 
   const { terms } = useTerms(academicYearId || undefined);
 
-  const myClassIds = useMemo(() => new Set(myAssignments.data.map((a) => a.classId)), [myAssignments.data]);
+  const myClassIds = useMemo(
+    () => new Set(myAssignments.data.map((a) => a.classId)),
+    [myAssignments.data],
+  );
   const availableClasses = useMemo(
     () =>
       classes
@@ -58,7 +62,10 @@ export function AssessmentsPage() {
   });
 
   const classesById = useMemo(() => Object.fromEntries(classes.map((c) => [c.id, c])), [classes]);
-  const subjectsById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects]);
+  const subjectsById = useMemo(
+    () => Object.fromEntries(subjects.map((s) => [s.id, s])),
+    [subjects],
+  );
   const termsById = useMemo(() => Object.fromEntries(terms.map((t) => [t.id, t])), [terms]);
 
   const handleClassFilterChange = (value: string) => {
@@ -80,6 +87,7 @@ export function AssessmentsPage() {
         title="Assessments"
         description="Tests, assignments and exams across your classes."
         action={
+          school &&
           (canManageAny || availableClasses.length > 0) && (
             <div className="w-full sm:w-auto sm:min-w-[10rem]">
               <Button type="button" onClick={() => setIsFormOpen(true)}>
@@ -90,96 +98,116 @@ export function AssessmentsPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 rounded-card border border-border bg-surface-raised p-4 sm:grid-cols-4">
-        <div>
-          <label htmlFor="filter-year" className="mb-1.5 block text-xs font-medium text-content-tertiary">
-            Academic year
-          </label>
-          <select
-            id="filter-year"
-            value={academicYearId}
-            onChange={(event) => setAcademicYearId(event.target.value)}
-            className="focus-ring h-10 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm text-content-primary"
-          >
-            <option value="">All years</option>
-            {academicYears.map((year) => (
-              <option key={year.id} value={year.id}>
-                {year.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      {!school && <NoActiveSchoolNotice resource="assessments" />}
 
-        <div>
-          <label htmlFor="filter-term" className="mb-1.5 block text-xs font-medium text-content-tertiary">
-            Term
-          </label>
-          <select
-            id="filter-term"
-            value={termId}
-            onChange={(event) => setTermId(event.target.value)}
-            className="focus-ring h-10 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm text-content-primary"
-          >
-            <option value="">All terms</option>
-            {terms.map((term) => (
-              <option key={term.id} value={term.id}>
-                {term.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      {school && (
+        <>
+          <div className="grid grid-cols-2 gap-3 rounded-card border border-border bg-surface-raised p-4 sm:grid-cols-4">
+            <div>
+              <label
+                htmlFor="filter-year"
+                className="mb-1.5 block text-xs font-medium text-content-tertiary"
+              >
+                Academic year
+              </label>
+              <select
+                id="filter-year"
+                value={academicYearId}
+                onChange={(event) => setAcademicYearId(event.target.value)}
+                className="focus-ring h-10 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm text-content-primary"
+              >
+                <option value="">All years</option>
+                {academicYears.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label htmlFor="filter-class" className="mb-1.5 block text-xs font-medium text-content-tertiary">
-            Class
-          </label>
-          <select
-            id="filter-class"
-            value={classId}
-            onChange={(event) => handleClassFilterChange(event.target.value)}
-            className="focus-ring h-10 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm text-content-primary"
-          >
-            <option value="">{canManageAny ? 'All classes' : 'My classes'}</option>
-            {(canManageAny ? classes.filter((c) => c.active) : availableClasses).map((cls) => (
-              <option key={cls.id} value={cls.id}>
-                {cls.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div>
+              <label
+                htmlFor="filter-term"
+                className="mb-1.5 block text-xs font-medium text-content-tertiary"
+              >
+                Term
+              </label>
+              <select
+                id="filter-term"
+                value={termId}
+                onChange={(event) => setTermId(event.target.value)}
+                className="focus-ring h-10 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm text-content-primary"
+              >
+                <option value="">All terms</option>
+                {terms.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label htmlFor="filter-subject" className="mb-1.5 block text-xs font-medium text-content-tertiary">
-            Subject
-          </label>
-          <select
-            id="filter-subject"
-            value={subjectId}
-            onChange={(event) => setSubjectId(event.target.value)}
-            className="focus-ring h-10 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm text-content-primary"
-          >
-            <option value="">All subjects</option>
-            {subjects.filter((s) => s.active).map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+            <div>
+              <label
+                htmlFor="filter-class"
+                className="mb-1.5 block text-xs font-medium text-content-tertiary"
+              >
+                Class
+              </label>
+              <select
+                id="filter-class"
+                value={classId}
+                onChange={(event) => handleClassFilterChange(event.target.value)}
+                className="focus-ring h-10 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm text-content-primary"
+              >
+                <option value="">{canManageAny ? 'All classes' : 'My classes'}</option>
+                {(canManageAny ? classes.filter((c) => c.active) : availableClasses).map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      <ErrorAlert message={error} />
+            <div>
+              <label
+                htmlFor="filter-subject"
+                className="mb-1.5 block text-xs font-medium text-content-tertiary"
+              >
+                Subject
+              </label>
+              <select
+                id="filter-subject"
+                value={subjectId}
+                onChange={(event) => setSubjectId(event.target.value)}
+                className="focus-ring h-10 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm text-content-primary"
+              >
+                <option value="">All subjects</option>
+                {subjects
+                  .filter((s) => s.active)
+                  .map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
 
-      {isLoading ? (
-        <LoadingBlock label="Loading assessments…" />
-      ) : (
-        <AssessmentsTable
-          assessments={assessments}
-          classesById={classesById}
-          subjectsById={subjectsById}
-          termsById={termsById}
-          showClassColumn={!classId}
-        />
+          <ErrorAlert message={error} />
+
+          {isLoading ? (
+            <LoadingBlock label="Loading assessments…" />
+          ) : (
+            <AssessmentsTable
+              assessments={assessments}
+              classesById={classesById}
+              subjectsById={subjectsById}
+              termsById={termsById}
+              showClassColumn={!classId}
+            />
+          )}
+        </>
       )}
 
       {school && (

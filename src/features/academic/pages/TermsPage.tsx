@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
@@ -36,8 +37,17 @@ export function TermsPage() {
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  if (academicLoading || !school) {
+  if (academicLoading) {
     return <FullScreenSpinner label="Loading terms…" />;
+  }
+
+  if (!school) {
+    return (
+      <PageContainer>
+        <PageHeader title="Terms" description="Manage the terms within an academic year." />
+        <NoActiveSchoolNotice resource="terms" />
+      </PageContainer>
+    );
   }
 
   const visibleTerms = showArchived ? terms : terms.filter((term) => term.active);
@@ -83,7 +93,8 @@ export function TermsPage() {
         title="Terms"
         description="Manage the terms within an academic year."
         action={
-          canManage && selectedYearId && (
+          canManage &&
+          selectedYearId && (
             <div className="w-full sm:w-auto sm:min-w-[9rem]">
               <Button type="button" onClick={openCreate}>
                 Add term

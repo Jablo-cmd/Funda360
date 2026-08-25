@@ -6,6 +6,7 @@ import type {
   AttendanceStatusCounts,
   RosterLearner,
 } from '@/features/attendance/types/attendance.types';
+import { tallyStatusCounts } from '@/features/attendance/utils/calculations';
 
 function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
   return {
@@ -98,10 +99,53 @@ async function getSchoolAttendanceSummary(schoolId: string, date: string): Promi
     .eq('school_id', schoolId)
     .eq('attendance_date', date);
   if (error) throw error;
+  return tallyStatusCounts(data);
+}
 
-  const counts: AttendanceStatusCounts = { present: 0, absent: 0, late: 0 };
-  for (const row of data) counts[row.status] += 1;
-  return counts;
+/**
+ * Every attendance record for the school within a date range (inclusive),
+ * optionally narrowed to one class — the raw source data for the
+ * principal/admin attendance report. Deliberately returns raw rows rather
+ * than pre-aggregating here: calculateAttendanceStats (utils/calculations)
+ * is the single place counts/rates are derived from them, so the report
+ * service and any future consumer share one calculation, not two.
+ */
+async function getAttendanceInRange(
+  schoolId: string,
+  startDate: string,
+  endDate: string,
+  classId?: string,
+): Promise<AttendanceRecord[]> {
+  let query = supabase
+    .from('attendance_records')
+    .select('*')
+    .eq('school_id', schoolId)
+    .gte('attendance_date', startDate)
+    .lte('attendance_date', endDate);
+  if (classId) query = query.eq('class_id', classId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data.map(toAttendanceRecord);
+}
+
+/**
+ * Every attendance record for one learner, most recent first, optionally
+ * capped to the most recent N — the Learner 360 attendance card's data
+ * source. RLS (can_view_academic) is the actual visibility boundary, same
+ * as every other query in this service.
+ */
+async function getAttendanceForLearner(learnerId: string, limit?: number): Promise<AttendanceRecord[]> {
+  let query = supabase
+    .from('attendance_records')
+    .select('*')
+    .eq('learner_id', learnerId)
+    .order('attendance_date', { ascending: false });
+  if (limit) query = query.limit(limit);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data.map(toAttendanceRecord);
 }
 
 export const attendanceService = {
@@ -109,4 +153,6 @@ export const attendanceService = {
   getAttendanceForClassDate,
   saveAttendance,
   getSchoolAttendanceSummary,
+  getAttendanceInRange,
+  getAttendanceForLearner,
 };

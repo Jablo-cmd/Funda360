@@ -12,6 +12,7 @@ import {
   ChalkboardIcon,
   CheckIcon,
   ChartIcon,
+  GearIcon,
   GraduationCapIcon,
   GridIcon,
   LayersIcon,
@@ -41,12 +42,15 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const role = user?.role ?? null;
 
   const canViewUsers = hasPermission(role, 'profile.view_any');
+  const canViewGuardians = hasPermission(role, 'guardian.view');
   const canViewEmployees = hasPermission(role, 'employee.view');
   const canViewAcademic = hasPermission(role, 'academic.view');
+  const canViewTimetable = hasPermission(role, 'timetable.view');
   const canViewLearners = hasPermission(role, 'learner.view');
   const canViewReports = hasPermission(role, 'reports.view');
   const canViewAttendance = hasPermission(role, 'attendance.view');
   const canViewAssessments = hasPermission(role, 'assessment.view');
+  const canSwitchSchool = hasPermission(role, 'tenant.switch');
 
   const sections: NavSection[] = [
     {
@@ -59,7 +63,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewLearners
           ? { label: 'Learners', path: '/learners', icon: GraduationCapIcon }
           : { label: 'Learners', icon: GraduationCapIcon },
-        { label: 'Guardians', icon: UsersIcon },
+        canViewGuardians
+          ? { label: 'Guardians', path: '/guardians', icon: UsersIcon }
+          : { label: 'Guardians', icon: UsersIcon },
         canViewEmployees
           ? { label: 'Employees', path: '/employees', icon: BriefcaseIcon }
           : { label: 'Employees', icon: BriefcaseIcon },
@@ -87,11 +93,18 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
           ? { label: 'Subjects', path: '/academic/subjects', icon: BookIcon }
           : { label: 'Subjects', icon: BookIcon },
         canViewAcademic
-          ? { label: 'Teaching Assignments', path: '/academic/teaching-assignments', icon: UsersIcon }
+          ? {
+              label: 'Teaching Assignments',
+              path: '/academic/teaching-assignments',
+              icon: UsersIcon,
+            }
           : { label: 'Teaching Assignments', icon: UsersIcon },
         canViewAssessments
           ? { label: 'Assessments', path: '/academic/assessments', icon: ChartIcon }
           : { label: 'Assessments', icon: ChartIcon },
+        canViewTimetable
+          ? { label: 'Timetable', path: '/timetable', icon: CalendarIcon }
+          : { label: 'Timetable', icon: CalendarIcon },
       ],
     },
     {
@@ -117,6 +130,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewUsers
           ? { label: 'Users & Roles', path: '/users', icon: UsersIcon }
           : { label: 'Users & Roles', icon: UsersIcon },
+        ...(canSwitchSchool ? [{ label: 'Schools', path: '/schools', icon: GearIcon }] : []),
         { label: 'School Profile', path: '/school/profile', icon: BuildingIcon },
         { label: 'My Profile', path: '/my-profile', icon: UsersIcon },
       ],
@@ -152,7 +166,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                     className={({ isActive }) =>
                       cn(
                         'focus-ring flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                        isActive ? 'bg-sidebar-active text-white' : 'text-white/70 hover:bg-sidebar-raised hover:text-white',
+                        isActive
+                          ? 'bg-sidebar-active text-white'
+                          : 'text-white/70 hover:bg-sidebar-raised hover:text-white',
                       )
                     }
                   >
@@ -194,7 +210,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
             {initials}
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-medium text-white">{fullName ?? 'Account'}</span>
+            <span className="block truncate text-sm font-medium text-white">
+              {fullName ?? 'Account'}
+            </span>
             <span className="block truncate text-xs capitalize text-white/50">
               {profile?.role ? profile.role.replace(/_/g, ' ') : '—'}
             </span>

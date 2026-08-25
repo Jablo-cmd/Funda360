@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { GraduationCapIcon, BriefcaseIcon, LayersIcon, ChartIcon } from '@/components/ui/icons';
+import { GraduationCapIcon, BriefcaseIcon, LayersIcon, ChartIcon, CheckIcon } from '@/components/ui/icons';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -42,6 +42,13 @@ const LINKS: ReportLink[] = [
     path: '/reports/assessments',
     icon: ChartIcon,
     permission: 'assessment.view',
+  },
+  {
+    label: 'Attendance',
+    description: 'School-wide attendance rates by class and by learner.',
+    path: '/reports/attendance',
+    icon: CheckIcon,
+    permission: 'academic.manage',
   },
 ];
 

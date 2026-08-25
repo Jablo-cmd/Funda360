@@ -12,6 +12,7 @@ export interface SchoolContextValue {
   refresh: () => Promise<void>;
   updateSchool: (updates: SchoolProfileUpdateInput) => Promise<void>;
   updateSchoolSettings: (updates: SchoolSettingsUpdateInput) => Promise<void>;
+  uploadLogo: (file: File) => Promise<void>;
 }
 
 export const SchoolContext = createContext<SchoolContextValue | undefined>(undefined);

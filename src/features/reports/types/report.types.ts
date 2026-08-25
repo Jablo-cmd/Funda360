@@ -73,3 +73,27 @@ export interface AssessmentClassPerformanceRow {
   lowestMark: number | null;
   maxMark: number;
 }
+
+export interface AttendanceClassSummaryRow {
+  classId: string;
+  className: string;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  qualifyingDays: number;
+  attendanceRate: number | null;
+}
+
+export interface AttendanceLearnerSummaryRow {
+  learnerId: string;
+  learnerName: string;
+  classId: string;
+  className: string;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  qualifyingDays: number;
+  attendanceRate: number | null;
+}

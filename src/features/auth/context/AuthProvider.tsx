@@ -47,7 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isMounted) return;
       applySession(session);
       if (event === 'PASSWORD_RECOVERY') {
-        navigate('/reset-password', { replace: true });
+        // Guardian account activation (/activate-account) reuses this same
+        // Supabase recovery-session mechanism as staff "forgot password"
+        // (/reset-password) — both call resetPasswordForEmail() under the
+        // hood, just with a different redirectTo. Only redirect to the
+        // staff reset page if the browser isn't already sitting on the
+        // activation page the guardian's link actually pointed at.
+        if (window.location.pathname !== '/activate-account') {
+          navigate('/reset-password', { replace: true });
+        }
       }
     });
 

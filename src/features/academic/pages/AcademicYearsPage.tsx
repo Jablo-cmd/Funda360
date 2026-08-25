@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
@@ -24,8 +25,20 @@ export function AcademicYearsPage() {
   const [activatingId, setActivatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  if (loading || !school) {
+  if (loading) {
     return <FullScreenSpinner label="Loading academic years…" />;
+  }
+
+  if (!school) {
+    return (
+      <PageContainer>
+        <PageHeader
+          title="Academic Years"
+          description="Only one academic year can be active at a time."
+        />
+        <NoActiveSchoolNotice resource="academic years" />
+      </PageContainer>
+    );
   }
 
   const openCreate = () => {

@@ -5,7 +5,6 @@ export interface SchoolProfileUpdateInput {
   email?: string | null;
   phone?: string | null;
   website?: string | null;
-  logoUrl?: string | null;
   physicalAddress?: string | null;
   postalAddress?: string | null;
   principalName?: string | null;

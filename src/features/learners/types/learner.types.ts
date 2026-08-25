@@ -60,6 +60,8 @@ export interface LearnerGuardian {
   guardianProfileId: string;
   relationshipType: GuardianRelationshipType;
   isPrimary: boolean;
+  isEmergencyContact: boolean;
+  isAuthorizedPickup: boolean;
   custodyNotes: string | null;
   active: boolean;
   createdAt: string;
@@ -149,6 +151,8 @@ export interface CreateLearnerGuardianInput {
   guardianProfileId: string;
   relationshipType: GuardianRelationshipType;
   isPrimary?: boolean;
+  isEmergencyContact?: boolean;
+  isAuthorizedPickup?: boolean;
   custodyNotes?: string | null;
 }
 
@@ -176,8 +180,7 @@ export interface UpdateLearnerMedicalInformationInput {
 
 export interface CreateLearnerDocumentInput {
   documentType: LearnerDocumentType;
-  fileUrl: string;
-  fileName?: string | null;
+  file: File;
   notes?: string | null;
 }
 

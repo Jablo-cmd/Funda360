@@ -13,6 +13,7 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/dashboard', { title: 'Dashboard', section: 'Overview' }],
   ['/my-profile', { title: 'My Profile', section: 'Administration' }],
   ['/school/profile', { title: 'School Profile', section: 'Administration' }],
+  ['/schools', { title: 'Schools', section: 'Administration' }],
   ['/users', { title: 'Users & Roles', section: 'Administration' }],
   ['/academic/years', { title: 'Academic Years', section: 'Academics' }],
   ['/academic/terms', { title: 'Terms', section: 'Academics' }],
@@ -21,6 +22,7 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/academic/subjects', { title: 'Subjects', section: 'Academics' }],
   ['/academic/teaching-assignments', { title: 'Teaching Assignments', section: 'Academics' }],
   ['/academic/assessments', { title: 'Assessments', section: 'Academics' }],
+  ['/timetable', { title: 'Timetable', section: 'Academics' }],
   ['/academic', { title: 'Academic Overview', section: 'Academics' }],
   ['/learners', { title: 'Learners', section: 'People' }],
   ['/employees/departments', { title: 'Departments', section: 'People' }],
@@ -30,12 +32,15 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/reports/employees', { title: 'Employee Report', section: 'Reporting' }],
   ['/reports/academic', { title: 'Academic Report', section: 'Reporting' }],
   ['/reports/assessments', { title: 'Assessment Report', section: 'Reporting' }],
+  ['/reports/attendance', { title: 'Attendance Report', section: 'Reporting' }],
   ['/reports', { title: 'Reports', section: 'Reporting' }],
 ];
 
 const DEFAULT_ENTRY: PageTitleEntry = { title: 'Funda360', section: 'Overview' };
 
 export function getPageTitle(pathname: string): PageTitleEntry {
-  const match = PAGE_TITLES.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  const match = PAGE_TITLES.find(
+    ([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
   return match ? match[1] : DEFAULT_ENTRY;
 }

@@ -5,6 +5,7 @@ import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useEmployeesList } from '@/features/employees/hooks/useEmployeesList';
@@ -21,8 +22,18 @@ export function EmployeesPage() {
   const { can } = usePermissions();
   const canManage = can('employee.manage');
   const { school } = useSchool();
-  const { employees, totalCount, page, pageSize, isLoading, error, filters, setFilters, setPage, refetch } =
-    useEmployeesList(school?.id);
+  const {
+    employees,
+    totalCount,
+    page,
+    pageSize,
+    isLoading,
+    error,
+    filters,
+    setFilters,
+    setPage,
+    refetch,
+  } = useEmployeesList(school?.id);
   const { departments } = useDepartments(school?.id);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -43,7 +54,7 @@ export function EmployeesPage() {
             >
               Manage departments
             </Link>
-            {canManage && (
+            {canManage && school && (
               <div className="w-full sm:w-auto sm:min-w-[9rem]">
                 <Button type="button" onClick={() => setIsCreateOpen(true)}>
                   Add employee
@@ -54,11 +65,15 @@ export function EmployeesPage() {
         }
       />
 
-      <EmployeesFiltersBar filters={filters} departments={departments} onChange={setFilters} />
+      {school && (
+        <EmployeesFiltersBar filters={filters} departments={departments} onChange={setFilters} />
+      )}
 
       <ErrorAlert message={error} />
 
-      {isLoading ? (
+      {!school ? (
+        <NoActiveSchoolNotice resource="employees" />
+      ) : isLoading ? (
         <LoadingBlock label="Loading employees…" />
       ) : (
         <>
@@ -70,7 +85,12 @@ export function EmployeesPage() {
             onTerminate={setTerminatingEmployee}
             onReactivate={setReactivatingEmployee}
           />
-          <EmployeesPagination page={page} pageSize={pageSize} totalCount={totalCount} onPageChange={setPage} />
+          <EmployeesPagination
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setPage}
+          />
         </>
       )}
 

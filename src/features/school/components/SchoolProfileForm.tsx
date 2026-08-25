@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
+import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { BuildingIcon } from '@/components/ui/icons';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 import { getSchoolStatusLabel } from '@/features/school/utils/schoolStatusLabel';
+import { schoolService, SCHOOL_LOGO_FILE_RULE } from '@/features/school/services/schoolService';
+import { storage } from '@/lib/storage';
 import {
   schoolProfileSchema,
   type SchoolProfileFormValues,
@@ -23,22 +26,23 @@ const EMPTY_VALUES: SchoolProfileFormValues = {
   email: '',
   phone: '',
   website: '',
-  logoUrl: '',
   physicalAddress: '',
   postalAddress: '',
   principalName: '',
 };
 
 export function SchoolProfileForm() {
-  const { school, updateSchool } = useSchool();
+  const { school, loading, updateSchool, uploadLogo } = useSchool();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const {
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<SchoolProfileFormValues>({
     resolver: zodResolver(schoolProfileSchema),
@@ -53,14 +57,55 @@ export function SchoolProfileForm() {
       email: school.email ?? '',
       phone: school.phone ?? '',
       website: school.website ?? '',
-      logoUrl: school.logoUrl ?? '',
       physicalAddress: school.physicalAddress ?? '',
       postalAddress: school.postalAddress ?? '',
       principalName: school.principalName ?? '',
     });
   }, [school, reset]);
 
-  const logoUrlValue = watch('logoUrl');
+  // Resolves the stored object path to a fresh signed URL whenever the
+  // school (or its logo) changes — logoUrl itself is never directly
+  // fetchable, so this can't be done with a plain <img src={school.logoUrl}>.
+  useEffect(() => {
+    if (!school?.logoUrl) {
+      setLogoPreviewUrl(null);
+      return;
+    }
+    let cancelled = false;
+    schoolService
+      .getLogoSignedUrl(school)
+      .then((url) => {
+        if (!cancelled) setLogoPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setLogoPreviewUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [school]);
+
+  const handleLogoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const validationError = storage.validateFile(file, SCHOOL_LOGO_FILE_RULE);
+    if (validationError) {
+      setLogoError(validationError);
+      return;
+    }
+
+    setLogoError(null);
+    setIsUploadingLogo(true);
+    try {
+      await uploadLogo(file);
+    } catch (error) {
+      setLogoError(getDbErrorMessage(error, 'Failed to upload logo.'));
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   const onValid = async (values: SchoolProfileFormValues) => {
     setSubmitError(null);
@@ -72,7 +117,6 @@ export function SchoolProfileForm() {
         email: emptyToNull(values.email),
         phone: emptyToNull(values.phone),
         website: emptyToNull(values.website),
-        logoUrl: emptyToNull(values.logoUrl),
         physicalAddress: emptyToNull(values.physicalAddress),
         postalAddress: emptyToNull(values.postalAddress),
         principalName: emptyToNull(values.principalName),
@@ -83,8 +127,17 @@ export function SchoolProfileForm() {
     }
   };
 
-  if (!school) {
+  if (loading) {
     return <FullScreenSpinner label="Loading school profile…" />;
+  }
+
+  if (!school) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        <h1 className="mb-4 text-2xl font-bold text-content-primary">School Profile</h1>
+        <NoActiveSchoolNotice resource="a school's profile" />
+      </div>
+    );
   }
 
   return (
@@ -118,7 +171,7 @@ export function SchoolProfileForm() {
         </div>
       )}
 
-      <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card sm:p-6 dark:shadow-card-dark">
+      <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card dark:shadow-card-dark sm:p-6">
         <h2 className="text-base font-semibold text-content-primary">General Information</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField
@@ -133,8 +186,18 @@ export function SchoolProfileForm() {
             error={errors.registrationNumber?.message}
             {...register('registrationNumber')}
           />
-          <TextField label="Email" type="email" error={errors.email?.message} {...register('email')} />
-          <TextField label="Phone" type="tel" error={errors.phone?.message} {...register('phone')} />
+          <TextField
+            label="Email"
+            type="email"
+            error={errors.email?.message}
+            {...register('email')}
+          />
+          <TextField
+            label="Phone"
+            type="tel"
+            error={errors.phone?.message}
+            {...register('phone')}
+          />
           <TextField
             label="Website"
             type="url"
@@ -145,7 +208,7 @@ export function SchoolProfileForm() {
         </div>
       </section>
 
-      <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card sm:p-6 dark:shadow-card-dark">
+      <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card dark:shadow-card-dark sm:p-6">
         <h2 className="text-base font-semibold text-content-primary">Address</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField
@@ -161,29 +224,44 @@ export function SchoolProfileForm() {
         </div>
       </section>
 
-      <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card sm:p-6 dark:shadow-card-dark">
+      <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card dark:shadow-card-dark sm:p-6">
         <h2 className="text-base font-semibold text-content-primary">Branding</h2>
         <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-card border border-border bg-surface-sunken">
-            {logoUrlValue ? (
-              <img src={logoUrlValue} alt="School logo preview" className="h-full w-full object-contain" />
+            {logoPreviewUrl ? (
+              <img
+                src={logoPreviewUrl}
+                alt="School logo preview"
+                className="h-full w-full object-contain"
+              />
             ) : (
               <BuildingIcon className="h-8 w-8 text-content-tertiary" />
             )}
           </div>
-          <TextField
-            label="Logo URL"
-            type="url"
-            placeholder="https://"
-            hint="Paste a hosted image URL for now — direct upload is coming in a later release."
-            containerClassName="flex-1"
-            error={errors.logoUrl?.message}
-            {...register('logoUrl')}
-          />
+          <div className="flex-1">
+            <label
+              htmlFor="school-logo"
+              className="mb-1.5 block text-sm font-medium text-content-primary"
+            >
+              Logo
+            </label>
+            <input
+              id="school-logo"
+              type="file"
+              accept={SCHOOL_LOGO_FILE_RULE.allowedMimeTypes.join(',')}
+              onChange={(event) => void handleLogoChange(event)}
+              disabled={isUploadingLogo}
+              className="focus-ring block w-full text-sm text-content-secondary file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3.5 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100 disabled:opacity-60 dark:file:bg-brand-500/15 dark:file:text-brand-300"
+            />
+            <p className="mt-1.5 text-xs text-content-tertiary">
+              {isUploadingLogo ? 'Uploading…' : 'PNG, JPEG, or WebP, up to 2MB.'}
+            </p>
+            {logoError && <p className="mt-1.5 text-xs font-medium text-danger-600">{logoError}</p>}
+          </div>
         </div>
       </section>
 
-      <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card sm:p-6 dark:shadow-card-dark">
+      <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card dark:shadow-card-dark sm:p-6">
         <h2 className="text-base font-semibold text-content-primary">Administration</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField
@@ -192,7 +270,9 @@ export function SchoolProfileForm() {
             {...register('principalName')}
           />
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-content-primary">School status</span>
+            <span className="mb-1.5 block text-sm font-medium text-content-primary">
+              School status
+            </span>
             <span className="inline-flex h-11 items-center rounded-lg border border-border-strong bg-surface-sunken px-3.5 text-sm text-content-secondary">
               {getSchoolStatusLabel(school.status)}
             </span>

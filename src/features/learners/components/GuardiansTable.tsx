@@ -1,6 +1,7 @@
 import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import type { LearnerGuardian } from '@/features/learners/types/learner.types';
 import type { GuardianCandidate } from '@/features/learners/services/guardianService';
+import { guardianSecondaryBadges } from '@/features/guardians/utils/guardianDisplay';
 
 export interface GuardiansTableProps {
   guardians: LearnerGuardian[];
@@ -35,6 +36,9 @@ export function GuardiansTable({ guardians, candidatesById, canManage, onEdit, o
               Primary
             </th>
             <th scope="col" className="px-4 py-3 font-medium">
+              Other roles
+            </th>
+            <th scope="col" className="px-4 py-3 font-medium">
               Status
             </th>
             {canManage && (
@@ -56,6 +60,9 @@ export function GuardiansTable({ guardians, candidatesById, canManage, onEdit, o
                   {guardian.relationshipType.replace(/_/g, ' ')}
                 </td>
                 <td className="px-4 py-3 text-content-secondary">{guardian.isPrimary ? 'Yes' : 'No'}</td>
+                <td className="px-4 py-3 text-content-secondary">
+                  {guardianSecondaryBadges(guardian).join(', ') || '—'}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={

@@ -34,11 +34,12 @@ as $$
   )::text
 $$;
 
--- Tests run impersonated as `authenticated` (see run.sh / test files), so
--- that role needs access to the recording helpers themselves — this is
--- harness plumbing, not part of what's under test.
-grant usage on schema test_util to authenticated;
-grant insert on test_util.results to authenticated;
-grant usage, select on all sequences in schema test_util to authenticated;
-grant execute on all functions in schema test_util to authenticated;
-grant execute on all procedures in schema test_util to authenticated;
+-- Tests run impersonated as `authenticated` or `anon` (see run.sh / test
+-- files — function_security_hardening.test.sql specifically impersonates
+-- anon), so both roles need access to the recording helpers themselves —
+-- this is harness plumbing, not part of what's under test.
+grant usage on schema test_util to authenticated, anon;
+grant insert on test_util.results to authenticated, anon;
+grant usage, select on all sequences in schema test_util to authenticated, anon;
+grant execute on all functions in schema test_util to authenticated, anon;
+grant execute on all procedures in schema test_util to authenticated, anon;

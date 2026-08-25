@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { storage, type FileValidationRule } from '@/lib/storage';
 import { tenantService, toSchool } from '@/features/tenant/services/tenantService';
 import { profileService } from '@/features/profile/services/profileService';
 import type { SchoolUpdate } from '@/lib/database.types';
@@ -7,6 +8,18 @@ import type {
   SchoolProfileUpdateInput,
   SchoolSettingsUpdateInput,
 } from '@/features/school/types/school.types';
+
+const LOGO_BUCKET = 'school-logos';
+
+/** Mirrors the bucket's own server-side allowed_mime_types/file_size_limit (20260821100000_storage_buckets_and_documents.sql). */
+export const SCHOOL_LOGO_FILE_RULE: FileValidationRule = {
+  maxSizeBytes: 2 * 1024 * 1024,
+  allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
+};
+
+function logoPath(schoolId: string): string {
+  return `${schoolId}/logo`;
+}
 
 /** Delegates to tenantService — schoolService doesn't own school *reads*, only re-exposes them plus writes. */
 async function getSchoolById(id: string): Promise<School | null> {
@@ -37,7 +50,6 @@ function toProfileUpdatePayload(updates: SchoolProfileUpdateInput): SchoolUpdate
   if (updates.email !== undefined) payload.email = updates.email;
   if (updates.phone !== undefined) payload.phone = updates.phone;
   if (updates.website !== undefined) payload.website = updates.website;
-  if (updates.logoUrl !== undefined) payload.logo_url = updates.logoUrl;
   if (updates.physicalAddress !== undefined) payload.physical_address = updates.physicalAddress;
   if (updates.postalAddress !== undefined) payload.postal_address = updates.postalAddress;
   if (updates.principalName !== undefined) payload.principal_name = updates.principalName;
@@ -68,9 +80,32 @@ async function updateSchoolSettings(id: string, updates: SchoolSettingsUpdateInp
   return applyUpdate(id, toSettingsUpdatePayload(updates));
 }
 
+/**
+ * Uploads (or replaces) the school's logo at a fixed path — upsert:true
+ * means a re-upload overwrites the same object in place, so there is
+ * never an orphaned previous logo to clean up. Uploads first, then
+ * updates logo_url to that fixed path (a no-op after the first upload,
+ * since the path never changes — kept explicit so the column stays NULL,
+ * and the UI can tell "no logo yet" apart from "logo exists", until the
+ * first successful upload).
+ */
+async function uploadLogo(id: string, file: File): Promise<School> {
+  const path = logoPath(id);
+  await storage.uploadFile(LOGO_BUCKET, path, file);
+  return applyUpdate(id, { logo_url: path });
+}
+
+/** Resolves the school's logo path to a short-lived signed URL — logo_url is never directly fetchable. Returns null if no logo has been uploaded. */
+async function getLogoSignedUrl(school: School): Promise<string | null> {
+  if (!school.logoUrl) return null;
+  return storage.getSignedUrl(LOGO_BUCKET, school.logoUrl);
+}
+
 export const schoolService = {
   getSchoolById,
   getCurrentSchool,
   updateSchool,
   updateSchoolSettings,
+  uploadLogo,
+  getLogoSignedUrl,
 };

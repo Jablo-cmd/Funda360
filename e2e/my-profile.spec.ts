@@ -5,19 +5,35 @@ import {
   buildMockProfileRow,
   buildMockEmployeeRow,
   buildMockLearnerRow,
-  buildMockLearnerMedicalInformationRow,
-  buildMockLearnerEmergencyContactRow,
   installDataMocks,
   installEmployeeDetailMock,
   installReportRowsMock,
-  installLearnerMedicalInformationMock,
   installLearnerChildListMock,
+  installAcademicListMock,
 } from './utils/mockData';
+
+/**
+ * MyProfilePage calls useMyTeachingAssignments()/useClasses()/useSubjects()
+ * unconditionally, regardless of role — same as useMyEmployee() (see
+ * assessments.spec.ts's "My Classes links..." investigation). None of this
+ * file's tests mocked those three tables, so every test in it was making a
+ * genuine, unmocked round trip per run to whatever real Supabase instance
+ * VITE_SUPABASE_URL points at, with a fabricated session token — the actual
+ * cause of this file's previously-observed, previously-unexplained
+ * under-load flakiness. Applied once here and spread into every test below,
+ * matching how installEmployeeDetailMock is already used throughout.
+ */
+async function installMyProfileAcademicMocks(page: Parameters<typeof installAcademicListMock>[0]) {
+  await installAcademicListMock(page, 'class_teacher_assignments', []);
+  await installAcademicListMock(page, 'classes', []);
+  await installAcademicListMock(page, 'subjects', []);
+}
 
 test('an employee-linked account sees the Employee Information section', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'teacher' });
   await installDataMocks(page, { profile: buildMockProfileRow({ role: 'teacher' }), school: buildMockSchoolRow() });
   await installEmployeeDetailMock(page, buildMockEmployeeRow());
+  await installMyProfileAcademicMocks(page);
   await installReportRowsMock(page, 'learners', []);
 
   await page.goto('/my-profile');
@@ -27,110 +43,29 @@ test('an employee-linked account sees the Employee Information section', async (
   await expect(page.getByRole('heading', { name: 'My Children' })).toHaveCount(0);
 });
 
-test('a guardian linked to exactly one learner sees My Children with one entry', async ({ page }) => {
+// Guardian-specific content (My Children, medical info, emergency contacts,
+// multi-child, empty state) moved to parent-portal.spec.ts — guardians no
+// longer land on this page at all (see RedirectGuardiansToParentPortal in
+// AppRoutes.tsx). The one guardian-relevant behavior left to verify here is
+// that the redirect actually happens, which the following test covers.
+test('a guardian is redirected away from the staff profile page to the Parent Portal', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'guardian' });
   await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
-  await installEmployeeDetailMock(page, null);
-  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
-  await installLearnerMedicalInformationMock(page, null);
-  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
-
-  await page.goto('/my-profile');
-  await expect(page.getByRole('heading', { name: 'My Children' })).toBeVisible();
-  await expect(page.getByText('Naledi')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Employee Information' })).toHaveCount(0);
-});
-
-test('a guardian sees their linked child\'s medical information when a record exists', async ({ page }) => {
-  await seedAuthenticatedSession(page, { role: 'guardian' });
-  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
-  await installEmployeeDetailMock(page, null);
-  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
-  await installLearnerMedicalInformationMock(
-    page,
-    buildMockLearnerMedicalInformationRow({ learnerId: 'learner-1', allergies: 'Peanuts' }),
-  );
-  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
-
-  await page.goto('/my-profile');
-  await expect(page.getByRole('heading', { name: 'Medical information' })).toBeVisible();
-  await expect(page.getByText('Peanuts')).toBeVisible();
-});
-
-test('a guardian\'s linked child with no medical record shows no Medical information section', async ({ page }) => {
-  await seedAuthenticatedSession(page, { role: 'guardian' });
-  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
-  await installEmployeeDetailMock(page, null);
-  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
-  await installLearnerMedicalInformationMock(page, null);
-  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
-
-  await page.goto('/my-profile');
-  await expect(page.getByText('Naledi')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Medical information' })).toHaveCount(0);
-  await expect(page.getByRole('alert')).toHaveCount(0);
-});
-
-test('a guardian sees emergency contacts for a linked learner', async ({ page }) => {
-  await seedAuthenticatedSession(page, { role: 'guardian' });
-  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
-  await installEmployeeDetailMock(page, null);
-  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
-  await installLearnerMedicalInformationMock(page, null);
-  await installLearnerChildListMock(page, 'learner_emergency_contacts', [
-    buildMockLearnerEmergencyContactRow({ learnerId: 'learner-1', name: 'Zanele Dube' }),
-  ]);
-
-  await page.goto('/my-profile');
-  await expect(page.getByRole('heading', { name: 'Emergency Contacts' })).toBeVisible();
-  await expect(page.getByText('Zanele Dube')).toBeVisible();
-});
-
-test('a guardian with no emergency contacts sees no emergency-contact section', async ({ page }) => {
-  await seedAuthenticatedSession(page, { role: 'guardian' });
-  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
-  await installEmployeeDetailMock(page, null);
-  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' })]);
-  await installLearnerMedicalInformationMock(page, null);
-  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
-
-  await page.goto('/my-profile');
-  await expect(page.getByText('Naledi')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Emergency Contacts' })).toHaveCount(0);
-  await expect(page.getByRole('alert')).toHaveCount(0);
-});
-
-test('a guardian linked to more than one learner sees all of them', async ({ page }) => {
-  await seedAuthenticatedSession(page, { role: 'guardian' });
-  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
-  await installEmployeeDetailMock(page, null);
-  await installReportRowsMock(page, 'learners', [
-    buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi', lastName: 'Dube' }),
-    buildMockLearnerRow({ id: 'learner-2', firstName: 'Thabo', lastName: 'Dube' }),
-  ]);
-  await installLearnerMedicalInformationMock(page, null);
-  await installLearnerChildListMock(page, 'learner_emergency_contacts', []);
-
-  await page.goto('/my-profile');
-  await expect(page.getByText('Naledi Dube')).toBeVisible();
-  await expect(page.getByText('Thabo Dube')).toBeVisible();
-});
-
-test('a guardian linked to zero learners sees the empty state, not an error', async ({ page }) => {
-  await seedAuthenticatedSession(page, { role: 'guardian' });
-  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
-  await installEmployeeDetailMock(page, null);
   await installReportRowsMock(page, 'learners', []);
+  await installLearnerChildListMock(page, 'learner_enrollments', []);
+  await installAcademicListMock(page, 'grades', []);
+  await installAcademicListMock(page, 'classes', []);
+  await installAcademicListMock(page, 'class_teacher_assignments', []);
 
   await page.goto('/my-profile');
-  await expect(page.getByText("There's nothing linked to your account yet.")).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'My Children' })).toHaveCount(0);
+  await expect(page).toHaveURL('http://localhost:5173/parent/dashboard');
 });
 
 test('a user with neither an employee nor a guardian linkage sees the empty state', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'finance_manager' });
   await installDataMocks(page, { profile: buildMockProfileRow({ role: 'finance_manager' }), school: buildMockSchoolRow() });
   await installEmployeeDetailMock(page, null);
+  await installMyProfileAcademicMocks(page);
   await installReportRowsMock(page, 'learners', []);
 
   await page.goto('/my-profile');
@@ -148,6 +83,7 @@ test('a role with learner.view does not see the entire roster mislabeled as "My 
   await seedAuthenticatedSession(page, { role: 'principal' });
   await installDataMocks(page, { profile: buildMockProfileRow({ role: 'principal' }), school: buildMockSchoolRow() });
   await installEmployeeDetailMock(page, null);
+  await installMyProfileAcademicMocks(page);
   await installReportRowsMock(page, 'learners', [
     buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' }),
     buildMockLearnerRow({ id: 'learner-2', firstName: 'Sipho' }),
@@ -162,6 +98,7 @@ test('any authenticated role can reach /my-profile without a permission redirect
   await seedAuthenticatedSession(page, { role: 'auditor' });
   await installDataMocks(page, { profile: buildMockProfileRow({ role: 'auditor' }), school: buildMockSchoolRow() });
   await installEmployeeDetailMock(page, null);
+  await installMyProfileAcademicMocks(page);
   await installReportRowsMock(page, 'learners', []);
 
   await page.goto('/my-profile');
