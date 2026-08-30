@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { feeService } from '@/features/fees/services/feeService';
+import { useFeeStructures } from '@/features/fees/hooks/useFeeStructures';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 import { feeChargeSchema, feeChargeDefaultValues, type FeeChargeFormValues } from '@/features/fees/schemas/feeChargeSchema';
 
@@ -28,11 +29,13 @@ const CATEGORY_LABELS: Record<FeeChargeFormValues['category'], string> = {
 
 export function FeeChargeFormModal({ isOpen, onClose, schoolId, learnerId, academicYearId, onSaved }: FeeChargeFormModalProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const { feeStructures } = useFeeStructures(schoolId, academicYearId);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FeeChargeFormValues>({ resolver: zodResolver(feeChargeSchema), defaultValues: feeChargeDefaultValues });
 
@@ -41,6 +44,15 @@ export function FeeChargeFormModal({ isOpen, onClose, schoolId, learnerId, acade
     reset(feeChargeDefaultValues);
     setSubmitError(null);
   }, [isOpen, reset]);
+
+  const applyTemplate = (feeStructureId: string) => {
+    const template = feeStructures.find((fs) => fs.id === feeStructureId);
+    if (!template) return;
+    setValue('description', template.name);
+    setValue('category', template.category);
+    setValue('amount', template.amount);
+    setValue('feeStructureId', template.id);
+  };
 
   const onValid = async (values: FeeChargeFormValues) => {
     setSubmitError(null);
@@ -52,6 +64,7 @@ export function FeeChargeFormModal({ isOpen, onClose, schoolId, learnerId, acade
         amount: values.amount,
         dueDate: values.dueDate || null,
         notes: values.notes?.trim() || null,
+        feeStructureId: values.feeStructureId || null,
       });
       onSaved();
       onClose();
@@ -75,6 +88,27 @@ export function FeeChargeFormModal({ isOpen, onClose, schoolId, learnerId, acade
         {submitError && (
           <div role="alert" className="rounded-lg border border-danger-500/30 bg-danger-50 px-3.5 py-2.5 text-sm font-medium text-danger-600">
             {submitError}
+          </div>
+        )}
+
+        {feeStructures.length > 0 && (
+          <div>
+            <label htmlFor="fee-charge-template" className="mb-1.5 block text-sm font-medium text-content-primary">
+              Use a fee structure template (optional)
+            </label>
+            <select
+              id="fee-charge-template"
+              className="focus-ring h-11 w-full rounded-md border border-border-strong bg-surface-raised px-3.5 text-sm text-content-primary"
+              defaultValue=""
+              onChange={(event) => applyTemplate(event.target.value)}
+            >
+              <option value="">Enter manually</option>
+              {feeStructures.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} — {new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(template.amount)}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 

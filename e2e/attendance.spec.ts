@@ -109,6 +109,30 @@ test('dashboard shows today\'s attendance summary once registers have been taken
   await expect(attendancePanel.getByText('00,001', { exact: true })).toBeVisible();
 });
 
+test('dashboard shows a 30-day attendance rate KPI, computed from the trailing 30 days of records', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'principal' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow(),
+    school: buildMockSchoolRow(),
+    academicYears: [buildMockAcademicYearRow()],
+  });
+  // 3 present/late + 1 absent -> 75% (present+late / present+late+absent), independent of the "today only" summary above.
+  await installAttendanceRecordsMock(page, [
+    buildMockAttendanceRecordRow({ id: 'a1', learnerId: 'learner-1', attendanceDate: '2026-08-01', status: 'present' }),
+    buildMockAttendanceRecordRow({ id: 'a2', learnerId: 'learner-1', attendanceDate: '2026-08-02', status: 'present' }),
+    buildMockAttendanceRecordRow({ id: 'a3', learnerId: 'learner-1', attendanceDate: '2026-08-03', status: 'late' }),
+    buildMockAttendanceRecordRow({ id: 'a4', learnerId: 'learner-1', attendanceDate: '2026-08-04', status: 'absent' }),
+  ]);
+  await installLearnersListMock(page, []);
+  await installEmployeesListMock(page, []);
+  await installUsersListMock(page, [buildMockProfileRow()]);
+
+  await page.goto('/dashboard');
+  const kpiCard = page.getByRole('link', { name: /30-Day Attendance Rate/ });
+  await expect(kpiCard).toBeVisible();
+  await expect(kpiCard).toContainText('75%');
+});
+
 test('dashboard shows an empty state when no attendance has been recorded today', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'principal' });
   await installDataMocks(page, {
@@ -212,6 +236,28 @@ test('a principal can view the school-wide attendance report with a correctly ca
   await page.getByRole('button', { name: /learner has attendance below/ }).click();
   await expect(page.getByRole('heading', { name: /Attendance by learner \(below 80%\)/ })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Naledi Dube' })).toBeVisible();
+});
+
+test('the attendance report shows a trend chart summarizing the selected period', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'principal' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow(),
+    school: buildMockSchoolRow(),
+    academicYears: [buildMockAcademicYearRow()],
+  });
+  await installAcademicListMock(page, 'classes', [buildMockClassRow()]);
+  await installAttendanceRecordsMock(page, [
+    buildMockAttendanceRecordRow({ id: 'a1', learnerId: 'learner-1', attendanceDate: '2026-08-01', status: 'present' }),
+    buildMockAttendanceRecordRow({ id: 'a2', learnerId: 'learner-1', attendanceDate: '2026-08-02', status: 'absent' }),
+  ]);
+  await installReportRowsMock(page, 'learners', [buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi', lastName: 'Dube' })]);
+  await installLearnersListMock(page, []);
+  await installEmployeesListMock(page, []);
+  await installUsersListMock(page, [buildMockProfileRow()]);
+
+  await page.goto('/reports/attendance');
+  await expect(page.getByRole('heading', { name: 'Attendance trend' })).toBeVisible();
+  await expect(page.getByRole('img', { name: /Attendance rate trend/ })).toBeVisible();
 });
 
 test('a teacher without academic.manage is blocked from the attendance report even by direct URL', async ({ page }) => {

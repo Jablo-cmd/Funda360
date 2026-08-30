@@ -251,6 +251,7 @@ interface MockTimetableEntryOverrides {
   startTime?: string;
   endTime?: string;
   room?: string | null;
+  status?: 'draft' | 'published';
   active?: boolean;
 }
 
@@ -267,6 +268,7 @@ export function buildMockTimetableEntryRow(overrides: MockTimetableEntryOverride
     startTime = '08:00:00',
     endTime = '09:00:00',
     room = 'Room 1',
+    status = 'published',
     active = true,
   } = overrides;
   return {
@@ -281,6 +283,7 @@ export function buildMockTimetableEntryRow(overrides: MockTimetableEntryOverride
     start_time: startTime,
     end_time: endTime,
     room,
+    status,
     active,
     created_by: null,
     updated_by: null,
@@ -532,6 +535,80 @@ export function buildMockLearnerEmergencyContactRow(overrides: MockEmergencyCont
   };
 }
 
+interface MockAcademicInterventionOverrides {
+  id?: string;
+  schoolId?: string;
+  learnerId?: string;
+  academicYearId?: string;
+  subjectId?: string | null;
+  title?: string;
+  status?: 'open' | 'in_progress' | 'resolved';
+  resolutionNotes?: string | null;
+}
+
+export function buildMockAcademicInterventionRow(overrides: MockAcademicInterventionOverrides = {}) {
+  const {
+    id = 'intervention-1',
+    schoolId = MOCK_TENANT_ID,
+    learnerId = 'learner-1',
+    academicYearId = 'year-2026',
+    subjectId = null,
+    title = 'Extra Mathematics support',
+    status = 'open',
+    resolutionNotes = null,
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    learner_id: learnerId,
+    academic_year_id: academicYearId,
+    subject_id: subjectId,
+    title,
+    description: 'Struggling with fractions this term',
+    status,
+    target_date: '2026-10-01',
+    resolved_at: status === 'resolved' ? '2026-09-15T00:00:00Z' : null,
+    resolution_notes: resolutionNotes,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+interface MockLearnerTransferOverrides {
+  id?: string;
+  schoolId?: string;
+  learnerId?: string;
+  direction?: 'outgoing' | 'incoming';
+  otherSchoolName?: string;
+  transferDate?: string;
+  reason?: string | null;
+}
+
+export function buildMockLearnerTransferRow(overrides: MockLearnerTransferOverrides = {}) {
+  const {
+    id = 'transfer-1',
+    schoolId = MOCK_TENANT_ID,
+    learnerId = 'learner-1',
+    direction = 'outgoing',
+    otherSchoolName = 'Riverside Prep',
+    transferDate = '2026-09-01',
+    reason = 'Family relocating',
+  } = overrides;
+  return {
+    id,
+    school_id: schoolId,
+    learner_id: learnerId,
+    direction,
+    other_school_name: otherSchoolName,
+    other_school_contact: 'admissions@riverside.example',
+    transfer_date: transferDate,
+    reason,
+    notes: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
 interface MockMedicalInformationOverrides {
   id?: string;
   schoolId?: string;
@@ -564,6 +641,8 @@ interface MockDocumentOverrides {
   learnerId?: string;
   documentType?: string;
   active?: boolean;
+  expiryDate?: string | null;
+  supersedesDocumentId?: string | null;
 }
 
 export function buildMockLearnerDocumentRow(overrides: MockDocumentOverrides = {}) {
@@ -573,6 +652,8 @@ export function buildMockLearnerDocumentRow(overrides: MockDocumentOverrides = {
     learnerId = 'learner-1',
     documentType = 'birth_certificate',
     active = true,
+    expiryDate = null,
+    supersedesDocumentId = null,
   } = overrides;
   return {
     id,
@@ -583,6 +664,8 @@ export function buildMockLearnerDocumentRow(overrides: MockDocumentOverrides = {
     file_name: 'birth-certificate.pdf',
     uploaded_at: '2026-01-01T00:00:00Z',
     notes: null,
+    expiry_date: expiryDate,
+    supersedes_document_id: supersedesDocumentId,
     active,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
@@ -612,6 +695,16 @@ export async function installLearnersListMock(page: Page, learners: ReturnType<t
   });
 }
 
+/** Mocks the admissions pipeline board's `.in('status', [...]).order('created_at')` fetch (GET, no `limit`/`offset` params, identified by a `status=in.(...)` query param) — must be installed before installLearnerDetailMock/installLearnersListMock when both are needed on the same page, since all three match the same learners-endpoint route glob and Playwright uses the most-recently-registered matching route. */
+export async function installAdmissionsPipelineMock(page: Page, learners: ReturnType<typeof buildMockLearnerRow>[]) {
+  await page.route('**/rest/v1/learners*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    const isPipelineQuery = (url.searchParams.get('status') ?? '').startsWith('in.');
+    if (!isPipelineQuery) return route.fallback();
+    await fulfillJson(route, learners);
+  });
+}
+
 /** Mocks the single-learner `.eq('id', ...).maybeSingle()` fetch (GET, no `limit`/`offset` params) LearnerProfilePage issues. */
 export async function installLearnerDetailMock(page: Page, learner: ReturnType<typeof buildMockLearnerRow> | null) {
   await page.route('**/rest/v1/learners*', async (route: Route) => {
@@ -625,7 +718,13 @@ export async function installLearnerDetailMock(page: Page, learner: ReturnType<t
 /** Mocks a `.from('<table>').select('*').eq(...)` LIST query (GET, unpaginated) for one of the learner child tables. */
 export async function installLearnerChildListMock(
   page: Page,
-  table: 'learner_enrollments' | 'learner_guardians' | 'learner_emergency_contacts' | 'learner_documents',
+  table:
+    | 'learner_enrollments'
+    | 'learner_guardians'
+    | 'learner_emergency_contacts'
+    | 'learner_documents'
+    | 'learner_transfers'
+    | 'academic_interventions',
   rows: Record<string, unknown>[],
 ) {
   await page.route(`**/rest/v1/${table}*`, async (route: Route) => {
@@ -771,6 +870,14 @@ export async function installEmployeesListMock(page: Page, employees: ReturnType
       },
       body: JSON.stringify(employees),
     });
+  });
+}
+
+/** Mocks the `leave_requests` GET (unpaginated, list of a MyLeaveSection/LeaveRequestsPage caller's requests). */
+export async function installLeaveRequestsMock(page: Page, rows: Record<string, unknown>[]) {
+  await page.route('**/rest/v1/leave_requests*', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, rows);
   });
 }
 
@@ -1111,4 +1218,12 @@ export async function installGuardianInvitationRpcMock(
   handler: (route: Route) => Promise<void>,
 ) {
   await page.route(`**/rest/v1/rpc/${fnName}`, handler);
+}
+
+/** Mocks the `.rpc('get_guardian_visible_behaviour_incidents', ...)` call ChildBehaviourTab issues — the column-narrowed guardian read, never the raw `behaviour_incidents` table. */
+export async function installGuardianVisibleBehaviourMock(page: Page, rows: unknown[]) {
+  await page.route('**/rest/v1/rpc/get_guardian_visible_behaviour_incidents', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    await fulfillJson(route, rows);
+  });
 }

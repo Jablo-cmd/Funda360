@@ -3,21 +3,30 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
 import { FullScreenNotice } from '@/components/ui/FullScreenNotice';
+import { Tabs } from '@/components/ui/Tabs';
 import { useLearner } from '@/features/learners/hooks/useLearner';
 import { ChildOverviewTab } from '@/features/parentPortal/components/ChildOverviewTab';
 import { ChildAttendanceTab } from '@/features/parentPortal/components/ChildAttendanceTab';
 import { ChildAcademicsTab } from '@/features/parentPortal/components/ChildAcademicsTab';
 import { ChildFeesTab } from '@/features/parentPortal/components/ChildFeesTab';
 import { ChildBehaviourTab } from '@/features/parentPortal/components/ChildBehaviourTab';
+import { ChildTimetableTab } from '@/features/parentPortal/components/ChildTimetableTab';
+import { ChildDocumentsTab } from '@/features/parentPortal/components/ChildDocumentsTab';
+import { useSchool } from '@/features/school/hooks/useSchool';
+import { useAuth } from '@/features/auth/context/authContext';
+import { MyConsentSection } from '@/features/consent/components/MyConsentSection';
 
-type TabKey = 'overview' | 'attendance' | 'academics' | 'fees' | 'behaviour';
+type TabKey = 'overview' | 'attendance' | 'timetable' | 'academics' | 'fees' | 'behaviour' | 'documents' | 'consent';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'attendance', label: 'Attendance' },
+  { key: 'timetable', label: 'Timetable' },
   { key: 'academics', label: 'Academics' },
   { key: 'fees', label: 'Fees' },
   { key: 'behaviour', label: 'Behaviour' },
+  { key: 'documents', label: 'Documents' },
+  { key: 'consent', label: 'Consent' },
 ];
 
 /**
@@ -35,6 +44,8 @@ export function ParentChildProfilePage() {
   const { learnerId } = useParams<{ learnerId: string }>();
   const navigate = useNavigate();
   const { learner, isLoading, error } = useLearner(learnerId);
+  const { school } = useSchool();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
   if (isLoading) {
@@ -75,29 +86,18 @@ export function ParentChildProfilePage() {
         </h1>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-border">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            aria-current={activeTab === tab.key ? 'page' : undefined}
-            className={`focus-ring rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
-              activeTab === tab.key
-                ? 'border-b-2 border-brand-600 text-brand-700 dark:text-brand-300'
-                : 'text-content-secondary hover:text-content-primary'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'overview' && <ChildOverviewTab learner={learner} />}
       {activeTab === 'attendance' && <ChildAttendanceTab learnerId={learner.id} />}
+      {activeTab === 'timetable' && school && <ChildTimetableTab learnerId={learner.id} schoolId={school.id} />}
       {activeTab === 'academics' && <ChildAcademicsTab learnerId={learner.id} />}
       {activeTab === 'fees' && <ChildFeesTab learnerId={learner.id} />}
-      {activeTab === 'behaviour' && <ChildBehaviourTab />}
+      {activeTab === 'behaviour' && <ChildBehaviourTab learnerId={learner.id} />}
+      {activeTab === 'documents' && <ChildDocumentsTab learnerId={learner.id} />}
+      {activeTab === 'consent' && school && user && (
+        <MyConsentSection schoolId={school.id} learnerId={learner.id} guardianProfileId={user.id} />
+      )}
     </div>
   );
 }

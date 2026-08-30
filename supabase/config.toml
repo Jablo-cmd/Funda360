@@ -368,9 +368,17 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
+# FND-ARCH-003: enabled so school_owner/principal/finance_manager/
+# accountant/platform admins can actually set up the two-factor
+# authentication the app now supports (src/features/mfa/) — disabled by
+# default in a fresh Supabase CLI config, which is why enrollment silently
+# failed until this was found and fixed here. The equivalent toggle needs
+# enabling in the hosted project's Auth settings (Authentication >
+# Providers > Multi-Factor Authentication) before this works there too —
+# this file only configures the local dev stack.
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

@@ -12,6 +12,8 @@ export const documentSchema = z.object({
     z.literal('other'),
   ]),
   notes: z.string().trim().optional(),
+  expiryDate: z.string().trim().optional(),
+  supersedesDocumentId: z.string().trim().optional(),
 });
 
 export type DocumentFormValues = z.infer<typeof documentSchema>;
@@ -19,4 +21,6 @@ export type DocumentFormValues = z.infer<typeof documentSchema>;
 export const documentDefaultValues: DocumentFormValues = {
   documentType: 'other',
   notes: '',
+  expiryDate: '',
+  supersedesDocumentId: '',
 };

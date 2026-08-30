@@ -12,11 +12,15 @@ import {
   ChalkboardIcon,
   CheckIcon,
   ChartIcon,
+  ClipboardListIcon,
   GearIcon,
   GraduationCapIcon,
   GridIcon,
   LayersIcon,
+  MegaphoneIcon,
+  ShieldIcon,
   UsersIcon,
+  WalletIcon,
 } from '@/components/ui/icons';
 
 interface NavItem {
@@ -50,6 +54,8 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const canViewReports = hasPermission(role, 'reports.view');
   const canViewAttendance = hasPermission(role, 'attendance.view');
   const canViewAssessments = hasPermission(role, 'assessment.view');
+  const canViewFinance = hasPermission(role, 'learner.view_financial');
+  const canViewSafeguarding = hasPermission(role, 'learner.view_safeguarding');
   const canSwitchSchool = hasPermission(role, 'tenant.switch');
 
   const sections: NavSection[] = [
@@ -63,6 +69,12 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewLearners
           ? { label: 'Learners', path: '/learners', icon: GraduationCapIcon }
           : { label: 'Learners', icon: GraduationCapIcon },
+        canViewLearners
+          ? { label: 'Admissions', path: '/admissions', icon: ClipboardListIcon }
+          : { label: 'Admissions', icon: ClipboardListIcon },
+        canViewLearners
+          ? { label: 'Alumni', path: '/alumni', icon: GraduationCapIcon }
+          : { label: 'Alumni', icon: GraduationCapIcon },
         canViewGuardians
           ? { label: 'Guardians', path: '/guardians', icon: UsersIcon }
           : { label: 'Guardians', icon: UsersIcon },
@@ -113,7 +125,20 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewAttendance
           ? { label: 'Attendance', path: '/attendance', icon: CheckIcon }
           : { label: 'Attendance', icon: CheckIcon },
+        canViewEmployees
+          ? { label: 'Staff Attendance', path: '/employees/attendance', icon: CheckIcon }
+          : { label: 'Staff Attendance', icon: CheckIcon },
+        canViewEmployees
+          ? { label: 'Leave Requests', path: '/employees/leave', icon: CalendarIcon }
+          : { label: 'Leave Requests', icon: CalendarIcon },
         { label: 'My Classes', path: '/my-profile', icon: ChalkboardIcon },
+        canViewFinance
+          ? { label: 'Fees', path: '/fees', icon: WalletIcon }
+          : { label: 'Fees', icon: WalletIcon },
+        canViewSafeguarding
+          ? { label: 'Safeguarding', path: '/safeguarding', icon: ShieldIcon }
+          : { label: 'Safeguarding', icon: ShieldIcon },
+        { label: 'Announcements', path: '/announcements', icon: MegaphoneIcon },
       ],
     },
     {
@@ -152,7 +177,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
       <nav aria-label="Main" className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4">
         {sections.map((section) => (
           <div key={section.label}>
-            <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+            <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/50">
               {section.label}
             </p>
             <div className="flex flex-col gap-0.5">
@@ -178,13 +203,13 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
                 ) : (
                   <div
                     key={label}
-                    className="flex cursor-not-allowed items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/35"
+                    className="flex cursor-not-allowed items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/50"
                   >
                     <span className="flex items-center gap-3">
                       <Icon className="h-[18px] w-[18px] shrink-0" />
                       {label}
                     </span>
-                    <span className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+                    <span className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/50">
                       Soon
                     </span>
                   </div>

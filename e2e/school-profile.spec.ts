@@ -61,6 +61,34 @@ test('school details update successfully', async ({ page }) => {
   await expect(page.getByLabel('Principal name')).toHaveValue('Naledi Dlamini');
 });
 
+test('regional settings load correctly and can be updated independently of the profile form', async ({ page }) => {
+  await seedAuthenticatedSession(page);
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+
+  let patchedSettings: Record<string, unknown> | undefined;
+  await page.route('**/rest/v1/schools*', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    patchedSettings = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...buildMockSchoolRow(), currency: 'USD' }),
+    });
+  });
+
+  await page.goto('/school/profile');
+
+  await expect(page.getByLabel('Timezone')).toHaveValue('Africa/Johannesburg');
+  await expect(page.getByLabel('Currency')).toHaveValue('ZAR');
+  await expect(page.getByLabel('Language')).toHaveValue('en');
+
+  await page.getByLabel('Currency').selectOption('USD');
+  await page.getByRole('button', { name: 'Save regional settings' }).click();
+
+  await expect(page.getByRole('status')).toHaveText('Regional settings updated successfully.');
+  expect(patchedSettings).toEqual({ timezone: 'Africa/Johannesburg', currency: 'USD', language: 'en' });
+});
+
 test('a role without school.manage permission sees a clear error on save', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'teacher' });
   await installDataMocks(page, {

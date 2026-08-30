@@ -1,12 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { seedAuthenticatedSession } from './utils/mockAuth';
+import { fulfillJson, seedAuthenticatedSession } from './utils/mockAuth';
 import {
+  MOCK_TENANT_ID,
   buildMockSchoolRow,
   buildMockProfileRow,
+  buildMockAcademicYearRow,
   buildMockLearnerRow,
   buildMockLearnerEnrollmentRow,
   buildMockGradeRow,
   buildMockClassRow,
+  buildMockSubjectRow,
+  buildMockTimetableEntryRow,
   buildMockLearnerMedicalInformationRow,
   buildMockLearnerEmergencyContactRow,
   installDataMocks,
@@ -150,4 +154,62 @@ test('a guardian cannot reach a staff-only route', async ({ page }) => {
 
   await page.goto('/users');
   await expect(page).toHaveURL('http://localhost:5173/parent/dashboard');
+});
+
+test("a guardian sees their child's weekly timetable on the child profile", async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'guardian' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow({ role: 'guardian' }),
+    school: buildMockSchoolRow(),
+    academicYears: [buildMockAcademicYearRow()],
+  });
+  await installLearnerDetailMock(page, buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' }));
+  await installLearnerChildListMock(page, 'learner_enrollments', [buildMockLearnerEnrollmentRow()]);
+  await installAcademicListMock(page, 'grades', [buildMockGradeRow()]);
+  await installAcademicListMock(page, 'classes', [buildMockClassRow()]);
+  await installAcademicListMock(page, 'subjects', [buildMockSubjectRow()]);
+  await installAcademicListMock(page, 'class_teacher_assignments', []);
+  await installAcademicListMock(page, 'timetable_entries', [buildMockTimetableEntryRow()]);
+  await page.route('**/rest/v1/profiles*', async (route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() !== 'GET' || !url.searchParams.get('id')?.startsWith('in.')) return route.fallback();
+    await fulfillJson(route, [{ id: 'teacher-1', first_name: 'Naledi', last_name: 'Teacher', email: 'naledi@riverside.funda360.dev' }]);
+  });
+
+  await page.goto('/parent/children/learner-1');
+  await page.getByRole('button', { name: 'Timetable', exact: true }).click();
+
+  const lessonChip = page.getByRole('button', { name: /Mathematics/ });
+  await expect(lessonChip).toBeVisible();
+  await expect(lessonChip).toContainText('Room 1');
+  // No "manage" affordance — the guardian's grid is read-only.
+  await expect(lessonChip).toBeDisabled();
+});
+
+test("a guardian sees their child's documents on the child profile", async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'guardian' });
+  await installDataMocks(page, { profile: buildMockProfileRow({ role: 'guardian' }), school: buildMockSchoolRow() });
+  await installLearnerDetailMock(page, buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi' }));
+  await installLearnerChildListMock(page, 'learner_documents', [
+    {
+      id: 'doc-1',
+      school_id: MOCK_TENANT_ID,
+      learner_id: 'learner-1',
+      document_type: 'report_card',
+      file_url: `${MOCK_TENANT_ID}/learner-1/report.pdf`,
+      file_name: 'report.pdf',
+      uploaded_at: '2026-02-01T00:00:00Z',
+      notes: null,
+      active: true,
+      created_at: '2026-02-01T00:00:00Z',
+      updated_at: '2026-02-01T00:00:00Z',
+    },
+  ]);
+
+  await page.goto('/parent/children/learner-1');
+  await page.getByRole('button', { name: 'Documents', exact: true }).click();
+
+  await expect(page.getByText('report.pdf')).toBeVisible();
+  // Read-only — no archive/restore action column for a guardian.
+  await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0);
 });

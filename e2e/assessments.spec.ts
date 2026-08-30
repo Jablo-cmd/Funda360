@@ -193,6 +193,12 @@ test("a learner's academic results appear on their profile", async ({ page }) =>
   await expect(page.getByText('Mathematics')).toBeVisible();
   await expect(page.getByText('42/50')).toBeVisible();
   await expect(page.getByText('84%')).toBeVisible();
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download report card' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/report-card\.pdf$/);
 });
 
 test('an administrator can view the assessment report', async ({ page }) => {

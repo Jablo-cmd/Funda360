@@ -15,6 +15,7 @@ export function toTimetableEntry(row: TimetableEntryRow): TimetableEntry {
     startTime: row.start_time,
     endTime: row.end_time,
     room: row.room,
+    status: row.status,
     active: row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -46,6 +47,7 @@ async function createEntry(schoolId: string, input: CreateTimetableEntryInput): 
     start_time: input.startTime,
     end_time: input.endTime,
     room: input.room || null,
+    status: input.status,
   };
   const { data, error } = await supabase.from('timetable_entries').insert(payload).select('*').single();
   if (error) throw error;
@@ -67,10 +69,33 @@ async function restoreEntry(id: string): Promise<TimetableEntry> {
   return updateEntry(id, { active: true });
 }
 
+/**
+ * Bulk-flips every draft entry for this school/academic year to published
+ * in one request — the "reveal a staged batch of schedule changes at
+ * once" action (FND-TT-003). Deliberately a plain client-side UPDATE, not
+ * a SECURITY DEFINER RPC: the existing timetable_entries_update RLS policy
+ * (can_manage_academic()) already authorizes exactly the right actor set,
+ * so a new database function would only duplicate that check. Returns the
+ * number of entries actually published (0 is a normal "nothing was in
+ * draft" result, not an error).
+ */
+async function publishDraftEntries(schoolId: string, academicYearId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('timetable_entries')
+    .update({ status: 'published' })
+    .eq('school_id', schoolId)
+    .eq('academic_year_id', academicYearId)
+    .eq('status', 'draft')
+    .select('id');
+  if (error) throw error;
+  return data.length;
+}
+
 export const timetableService = {
   getEntries,
   createEntry,
   updateEntry,
   archiveEntry,
   restoreEntry,
+  publishDraftEntries,
 };

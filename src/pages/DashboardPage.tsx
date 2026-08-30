@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ComponentType, ReactNode, SVGProps } from 'react';
 import { useProfile } from '@/features/profile/context/profileContext';
@@ -12,8 +12,12 @@ import { useClasses } from '@/features/academic/hooks/useClasses';
 import { useSubjects } from '@/features/academic/hooks/useSubjects';
 import { useUsersList } from '@/features/users/hooks/useUsersList';
 import { useAttendanceSummary } from '@/features/attendance/hooks/useAttendanceSummary';
+import { attendanceService } from '@/features/attendance/services/attendanceService';
+import { calculateAttendanceStats } from '@/features/attendance/utils/calculations';
 import { useAssessments } from '@/features/assessments/hooks/useAssessments';
 import { useMyTeachingAssignments } from '@/features/teaching/hooks/useMyTeachingAssignments';
+import { feeService } from '@/features/fees/services/feeService';
+import { calculateCollectionRate } from '@/features/fees/utils/calculations';
 import {
   BriefcaseIcon,
   BuildingIcon,
@@ -156,7 +160,7 @@ interface QuickAction {
 }
 
 export function DashboardPage() {
-  const { profile } = useProfile();
+  const { profile, error: profileError } = useProfile();
   const { tenant } = useTenant();
   const { school } = useSchool();
   const { can } = usePermissions();
@@ -173,7 +177,7 @@ export function DashboardPage() {
 
   const learners = useLearnersList(canViewLearners ? school?.id : undefined);
   const employees = useEmployeesList(canViewEmployees ? school?.id : undefined);
-  const { error: academicError } = useAcademic();
+  const { error: academicError, currentAcademicYear } = useAcademic();
   const users = useUsersList();
   const attendance = useAttendanceSummary(
     canViewAttendance ? school?.id : undefined,
@@ -192,6 +196,62 @@ export function DashboardPage() {
       attendance.counts.late +
       attendance.counts.excused
     : 0;
+
+  // FND-AN-002: cross-domain executive KPIs, distinct from the raw
+  // same-day counts above — a rolling rate/percentage a school owner
+  // actually wants at a glance, not just "how many records exist".
+  const canViewFinance = can('learner.view_financial');
+  const [collectionRate, setCollectionRate] = useState<number | null>(null);
+  const [isCollectionRateLoading, setIsCollectionRateLoading] = useState(true);
+  useEffect(() => {
+    if (!canViewFinance || !school || !currentAcademicYear) {
+      setIsCollectionRateLoading(false);
+      return;
+    }
+    let isMounted = true;
+    setIsCollectionRateLoading(true);
+    feeService
+      .getSchoolFinanceOverview(school.id, currentAcademicYear.id)
+      .then((overview) => {
+        if (isMounted) setCollectionRate(calculateCollectionRate(overview));
+      })
+      .catch(() => {
+        if (isMounted) setCollectionRate(null);
+      })
+      .finally(() => {
+        if (isMounted) setIsCollectionRateLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [canViewFinance, school, currentAcademicYear]);
+
+  const [attendanceRate30d, setAttendanceRate30d] = useState<number | null>(null);
+  const [isAttendanceRateLoading, setIsAttendanceRateLoading] = useState(true);
+  useEffect(() => {
+    if (!canViewAttendance || !school) {
+      setIsAttendanceRateLoading(false);
+      return;
+    }
+    let isMounted = true;
+    setIsAttendanceRateLoading(true);
+    const endDate = todayIsoDate();
+    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    attendanceService
+      .getAttendanceInRange(school.id, startDate, endDate)
+      .then((records) => {
+        if (isMounted) setAttendanceRate30d(calculateAttendanceStats(records).attendanceRate);
+      })
+      .catch(() => {
+        if (isMounted) setAttendanceRate30d(null);
+      })
+      .finally(() => {
+        if (isMounted) setIsAttendanceRateLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [canViewAttendance, school]);
 
   const myAssignments = useMyTeachingAssignments();
   const { subjects } = useSubjects(school?.id);
@@ -347,6 +407,24 @@ export function DashboardPage() {
                     isLoading={attendance.isLoading}
                   />
                 )}
+                {canViewAttendance && (
+                  <StatPanel
+                    label="30-Day Attendance Rate"
+                    value={attendanceRate30d !== null ? `${attendanceRate30d}%` : '—'}
+                    caption="Present or late, last 30 days"
+                    to="/reports/attendance"
+                    isLoading={isAttendanceRateLoading}
+                  />
+                )}
+                {canViewFinance && (
+                  <StatPanel
+                    label="Fee Collection Rate"
+                    value={collectionRate !== null ? `${collectionRate}%` : '—'}
+                    caption="Net collected vs. billed, this year"
+                    to="/fees"
+                    isLoading={isCollectionRateLoading}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -444,7 +522,10 @@ export function DashboardPage() {
 
             <InfoPanel title="System Status">
               <div>
-                <StatusRow label="Authentication" status="online" />
+                {/* Same "did my own fetch return an error" convention as every row below — not
+                    infrastructure monitoring, just an honest reflection of whether the session
+                    that got us onto this page is still resolving successfully. */}
+                <StatusRow label="Authentication" status={profileError ? 'degraded' : 'online'} />
                 {canViewAcademic && (
                   <StatusRow
                     label="Academic Services"

@@ -5,7 +5,9 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { useLearnerBehaviour } from '@/features/behaviour/hooks/useLearnerBehaviour';
 import { behaviourService } from '@/features/behaviour/services/behaviourService';
 import { BehaviourIncidentFormModal } from '@/features/behaviour/components/BehaviourIncidentFormModal';
+import { UpdateFollowUpDialog } from '@/features/behaviour/components/UpdateFollowUpDialog';
 import { getDbErrorMessage } from '@/lib/dbErrors';
+import type { BehaviourIncident, BehaviourFollowUpStatus } from '@/features/behaviour/types/behaviour.types';
 
 export interface LearnerBehaviourSectionProps {
   schoolId: string;
@@ -18,15 +20,32 @@ function formatDateTime(value: string): string {
   return new Date(value).toLocaleString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function formatDate(value: string): string {
+  return new Date(`${value}T00:00:00`).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 const SEVERITY_CLASSES: Record<string, string> = {
   low: 'bg-surface-sunken text-content-tertiary',
   medium: 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500',
   high: 'bg-danger-50 text-danger-600',
 };
 
+const FOLLOW_UP_STATUS_LABELS: Record<BehaviourFollowUpStatus, string> = {
+  not_started: 'Not started',
+  in_progress: 'In progress',
+  resolved: 'Resolved',
+};
+
+const FOLLOW_UP_STATUS_CLASSES: Record<BehaviourFollowUpStatus, string> = {
+  not_started: 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500',
+  in_progress: 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',
+  resolved: 'bg-success-500/10 text-success-500',
+};
+
 export function LearnerBehaviourSection({ schoolId, learnerId, academicYearId, canManage }: LearnerBehaviourSectionProps) {
   const { summary, isLoading, error, refetch } = useLearnerBehaviour(learnerId);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [followUpTarget, setFollowUpTarget] = useState<BehaviourIncident | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const handleRemove = async (id: string) => {
@@ -36,6 +55,16 @@ export function LearnerBehaviourSection({ schoolId, learnerId, academicYearId, c
       await refetch();
     } catch (err) {
       setActionError(getDbErrorMessage(err, 'Failed to remove incident.'));
+    }
+  };
+
+  const handleToggleGuardianVisible = async (id: string, next: boolean) => {
+    setActionError(null);
+    try {
+      await behaviourService.setGuardianVisible(id, next);
+      await refetch();
+    } catch (err) {
+      setActionError(getDbErrorMessage(err, 'Failed to update parent portal visibility.'));
     }
   };
 
@@ -80,9 +109,23 @@ export function LearnerBehaviourSection({ schoolId, learnerId, academicYearId, c
                     {incident.severity ? ` · ${incident.severity}` : ''}
                   </span>
                   {incident.category && <span className="ml-2 text-xs text-content-tertiary">{incident.category}</span>}
+                  {incident.guardianVisible && (
+                    <span className="ml-2 inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
+                      Visible to parent portal
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-content-tertiary">{formatDateTime(incident.occurredAt)}</span>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleGuardianVisible(incident.id, !incident.guardianVisible)}
+                      className="focus-ring rounded-md px-2 py-1 text-xs font-medium text-content-secondary hover:bg-surface-sunken"
+                    >
+                      {incident.guardianVisible ? 'Hide from parent portal' : 'Show in parent portal'}
+                    </button>
+                  )}
                   {canManage && (
                     <button
                       type="button"
@@ -106,9 +149,24 @@ export function LearnerBehaviourSection({ schoolId, learnerId, academicYearId, c
                 </p>
               )}
               {incident.followUpRequired && (
-                <p className="mt-1 text-sm text-warning-600 dark:text-warning-500">
-                  Follow-up required{incident.followUpNotes ? `: ${incident.followUpNotes}` : ''}
-                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${FOLLOW_UP_STATUS_CLASSES[incident.followUpStatus]}`}>
+                    Follow-up: {FOLLOW_UP_STATUS_LABELS[incident.followUpStatus]}
+                  </span>
+                  {incident.followUpTargetDate && (
+                    <span className="text-xs text-content-tertiary">Target: {formatDate(incident.followUpTargetDate)}</span>
+                  )}
+                  {incident.followUpNotes && <span className="text-xs text-content-tertiary">{incident.followUpNotes}</span>}
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setFollowUpTarget(incident)}
+                      className="focus-ring rounded-md px-2 py-1 text-xs font-medium text-content-secondary hover:bg-surface-sunken"
+                    >
+                      Update follow-up
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           ))}
@@ -123,6 +181,14 @@ export function LearnerBehaviourSection({ schoolId, learnerId, academicYearId, c
           learnerId={learnerId}
           academicYearId={academicYearId}
           onSaved={() => void refetch()}
+        />
+      )}
+      {followUpTarget && (
+        <UpdateFollowUpDialog
+          isOpen
+          onClose={() => setFollowUpTarget(null)}
+          incident={followUpTarget}
+          onChanged={() => void refetch()}
         />
       )}
     </div>

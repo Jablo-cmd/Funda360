@@ -123,13 +123,19 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       }
       const school = await tenantService.createSchool(input);
       setAvailableSchools((prev) => [...prev, school].sort((a, b) => a.name.localeCompare(b.name)));
-      // Onboarding a school with no way to enter it would be a dead end —
-      // creating implies selecting, same as every other "Add ___" flow in
-      // the app landing the user on the record they just created.
-      await loadTenant(school.id, true);
+      // Deliberately does NOT switch the active tenant itself — TenantGate
+      // shows a full-screen spinner for the brief 'loading' window
+      // switchTenant()/loadTenant() passes through, which unmounts
+      // whatever routed page called this (confirmed the hard way: the
+      // onboarding wizard's own local step state was wiped by this exact
+      // remount when createSchool() used to switch inline). Callers that
+      // want the "creating implies selecting" behavior (CreateSchoolModal)
+      // call switchTenant() themselves right after; a multi-step flow
+      // (SchoolOnboardingWizardPage) can defer switching until it's
+      // actually navigating away, when a remount no longer matters.
       return school;
     },
-    [isPlatformLevel, loadTenant],
+    [isPlatformLevel],
   );
 
   const refetch = useCallback(async () => {

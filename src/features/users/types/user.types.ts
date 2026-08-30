@@ -22,6 +22,8 @@ export interface CreateUserInput {
   email: string;
   phone?: string | null;
   role: AssignableRole;
+  /** Only ever set by the onboarding wizard — see userService.createUser's own doc comment. */
+  tenantId?: string;
 }
 
 export interface CreateUserResult {

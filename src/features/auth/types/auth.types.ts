@@ -51,10 +51,16 @@ export interface SignOutOptions {
 export interface AuthContextValue {
   status: AuthStatus;
   user: AuthenticatedUser | null;
+  /** True once a signed-in user with a verified MFA factor still needs to complete this session's step-up challenge (aal1, but aal2 available). Null while unknown/not applicable — never a false negative used to hide the challenge screen. See ProtectedRoute. */
+  mfaChallengePending: boolean | null;
+  /** True once the user has at least one verified MFA factor (regardless of whether this session has stepped up yet). Computed alongside mfaChallengePending from the same getAssuranceLevel() call — read this in MfaRequiredBanner instead of re-fetching, so the banner never flashes in after first paint. */
+  hasMfaEnabled: boolean | null;
   signIn: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   signOut: (options?: SignOutOptions) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
+  /** Re-derives mfaChallengePending — call after a successful MFA challenge (see MfaChallengePage). */
+  refreshMfaChallengeStatus: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
 }

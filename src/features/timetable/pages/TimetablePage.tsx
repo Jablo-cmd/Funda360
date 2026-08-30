@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
+import { useToast } from '@/components/ui/toast/useToast';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
@@ -12,6 +13,7 @@ import { useTerms } from '@/features/academic/hooks/useTerms';
 import { useClasses } from '@/features/academic/hooks/useClasses';
 import { useSubjects } from '@/features/academic/hooks/useSubjects';
 import { useTimetableEntries } from '@/features/timetable/hooks/useTimetableEntries';
+import { useSubstitutions } from '@/features/timetable/hooks/useSubstitutions';
 import { timetableService } from '@/features/timetable/services/timetableService';
 import { teachingAssignmentService } from '@/features/teaching/services/teachingAssignmentService';
 import type { TeacherCandidate } from '@/features/teaching/services/teachingAssignmentService';
@@ -20,11 +22,14 @@ import type { TimetableViewMode } from '@/features/timetable/components/Timetabl
 import { WeeklyTimetableGrid } from '@/features/timetable/components/WeeklyTimetableGrid';
 import { ArchivedTimetableEntriesTable } from '@/features/timetable/components/ArchivedTimetableEntriesTable';
 import { TimetableEntryFormModal } from '@/features/timetable/components/TimetableEntryFormModal';
+import { SubstitutionFormModal } from '@/features/timetable/components/SubstitutionFormModal';
+import { SubstitutionsSection } from '@/features/timetable/components/SubstitutionsSection';
 import type { TimetableEntry, DayOfWeek } from '@/features/timetable/types/timetable.types';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export function TimetablePage() {
   const { can } = usePermissions();
+  const { showToast } = useToast();
   const canManage = can('timetable.manage');
   const { school } = useSchool();
   const { academicYears, currentAcademicYear } = useAcademic();
@@ -38,6 +43,7 @@ export function TimetablePage() {
   const { classes } = useClasses(school?.id);
   const { subjects } = useSubjects(school?.id);
   const { entries, isLoading, error, refetch } = useTimetableEntries(school?.id, academicYearId || undefined);
+  const { substitutions, refetch: refetchSubstitutions } = useSubstitutions(school?.id);
 
   const [viewMode, setViewMode] = useState<TimetableViewMode>('school');
   const [classId, setClassId] = useState('');
@@ -50,11 +56,25 @@ export function TimetablePage() {
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [teachersById, setTeachersById] = useState<Record<string, TeacherCandidate>>({});
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [substitutionEntry, setSubstitutionEntry] = useState<TimetableEntry | null>(null);
+
+  const draftCount = useMemo(() => entries.filter((entry) => entry.active && entry.status === 'draft').length, [entries]);
+  const entriesById = useMemo(() => Object.fromEntries(entries.map((entry) => [entry.id, entry])), [entries]);
 
   const classesById = useMemo(() => Object.fromEntries(classes.map((cls) => [cls.id, cls])), [classes]);
   const subjectsById = useMemo(() => Object.fromEntries(subjects.map((subject) => [subject.id, subject])), [subjects]);
 
-  const teacherProfileIds = useMemo(() => [...new Set(entries.map((entry) => entry.teacherProfileId))], [entries]);
+  const teacherProfileIds = useMemo(
+    () =>
+      [
+        ...new Set([
+          ...entries.map((entry) => entry.teacherProfileId),
+          ...substitutions.map((substitution) => substitution.substituteTeacherProfileId),
+        ]),
+      ],
+    [entries, substitutions],
+  );
   useEffect(() => {
     const missingIds = teacherProfileIds.filter((id) => !teachersById[id]);
     if (missingIds.length === 0) return;
@@ -117,6 +137,21 @@ export function TimetablePage() {
     setIsFormOpen(true);
   };
 
+  const handlePublishDrafts = async () => {
+    if (!school || !academicYearId) return;
+    setActionError(null);
+    setIsPublishing(true);
+    try {
+      const publishedCount = await timetableService.publishDraftEntries(school.id, academicYearId);
+      await refetch();
+      showToast(`Published ${publishedCount} draft lesson${publishedCount === 1 ? '' : 's'}.`, { variant: 'success' });
+    } catch (err) {
+      setActionError(getDbErrorMessage(err, 'Failed to publish draft lessons.'));
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   return (
     <PageContainer>
       <PageHeader
@@ -125,10 +160,19 @@ export function TimetablePage() {
         action={
           canManage &&
           school && (
-            <div className="w-full sm:w-auto sm:min-w-[9rem]">
-              <Button type="button" onClick={openCreate} disabled={!academicYearId}>
-                Add lesson
-              </Button>
+            <div className="flex flex-wrap gap-3">
+              {draftCount > 0 && (
+                <div className="w-full sm:w-auto sm:min-w-[9rem]">
+                  <Button type="button" variant="secondary" onClick={() => void handlePublishDrafts()} isLoading={isPublishing}>
+                    {isPublishing ? 'Publishing…' : `Publish ${draftCount} draft lesson${draftCount === 1 ? '' : 's'}`}
+                  </Button>
+                </div>
+              )}
+              <div className="w-full sm:w-auto sm:min-w-[9rem]">
+                <Button type="button" onClick={openCreate} disabled={!academicYearId}>
+                  Add lesson
+                </Button>
+              </div>
             </div>
           )
         }
@@ -217,6 +261,16 @@ export function TimetablePage() {
               />
             </div>
           )}
+
+          <SubstitutionsSection
+            substitutions={substitutions}
+            entriesById={entriesById}
+            classesById={classesById}
+            subjectsById={subjectsById}
+            teachersById={teachersById}
+            canManage={canManage}
+            onCancelled={() => void refetchSubstitutions()}
+          />
         </>
       )}
 
@@ -229,6 +283,7 @@ export function TimetablePage() {
           terms={terms}
           classes={classes}
           subjects={subjects}
+          existingEntries={entries}
           entry={editingEntry}
           onSaved={(_, candidate) => {
             if (candidate) setTeachersById((prev) => ({ ...prev, [candidate.id]: candidate }));
@@ -238,6 +293,22 @@ export function TimetablePage() {
             await handleArchive(entryId);
             setIsFormOpen(false);
           }}
+          onAssignSubstitute={(entry) => {
+            setIsFormOpen(false);
+            setSubstitutionEntry(entry);
+          }}
+        />
+      )}
+
+      {school && (
+        <SubstitutionFormModal
+          isOpen={substitutionEntry !== null}
+          onClose={() => setSubstitutionEntry(null)}
+          schoolId={school.id}
+          entry={substitutionEntry}
+          classesById={classesById}
+          subjectsById={subjectsById}
+          onSaved={() => void refetchSubstitutions()}
         />
       )}
     </PageContainer>

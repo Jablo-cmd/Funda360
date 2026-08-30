@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { learnerService } from '@/features/learners/services/learnerService';
 import { getDbErrorMessage } from '@/lib/dbErrors';
+import { LEARNER_STATUS_OPTIONS } from '@/features/learners/constants/learnerStatusLabels';
 import type { Learner, LearnerStatus } from '@/features/learners/types/learner.types';
 
 export interface ChangeLearnerStatusDialogProps {
@@ -12,18 +13,6 @@ export interface ChangeLearnerStatusDialogProps {
   learner: Learner;
   onChanged: (learner: Learner) => void;
 }
-
-const STATUS_OPTIONS: { value: LearnerStatus; label: string }[] = [
-  { value: 'prospective', label: 'Prospective' },
-  { value: 'applied', label: 'Applied' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'enrolled', label: 'Enrolled' },
-  { value: 'active', label: 'Active' },
-  { value: 'suspended', label: 'Suspended' },
-  { value: 'transferred', label: 'Transferred' },
-  { value: 'graduated', label: 'Graduated' },
-  { value: 'withdrawn', label: 'Withdrawn' },
-];
 
 export function ChangeLearnerStatusDialog({ isOpen, onClose, learner, onChanged }: ChangeLearnerStatusDialogProps) {
   const [newStatus, setNewStatus] = useState<LearnerStatus>(learner.status);
@@ -85,7 +74,7 @@ export function ChangeLearnerStatusDialog({ isOpen, onClose, learner, onChanged 
             onChange={(event) => setNewStatus(event.target.value as LearnerStatus)}
             className="focus-ring h-11 w-full rounded-lg border border-border-strong bg-surface-raised px-3.5 text-sm text-content-primary"
           >
-            {STATUS_OPTIONS.map((option) => (
+            {LEARNER_STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

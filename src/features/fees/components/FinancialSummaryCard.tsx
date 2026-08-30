@@ -63,6 +63,18 @@ export function FinancialSummaryCard({ summary, isLoading, error, onViewAll }: F
               <dt className="text-xs text-content-tertiary">Amount paid</dt>
               <dd className="font-mono font-medium text-content-primary">{formatCurrency(summary.totalPaid)}</dd>
             </div>
+            {summary.totalAdjustments > 0 && (
+              <div>
+                <dt className="text-xs text-content-tertiary">Discounts / bursaries</dt>
+                <dd className="font-mono font-medium text-content-primary">-{formatCurrency(summary.totalAdjustments)}</dd>
+              </div>
+            )}
+            {summary.totalRefunded > 0 && (
+              <div>
+                <dt className="text-xs text-content-tertiary">Refunded</dt>
+                <dd className="font-mono font-medium text-content-primary">-{formatCurrency(summary.totalRefunded)}</dd>
+              </div>
+            )}
             <div>
               <dt className="text-xs text-content-tertiary">Outstanding balance</dt>
               <dd className="font-mono font-semibold text-content-primary">{formatCurrency(summary.outstandingBalance)}</dd>

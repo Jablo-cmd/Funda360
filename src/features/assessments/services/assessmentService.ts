@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { fetchAllRows } from '@/lib/pagination';
 import type { AssessmentRow, AssessmentInsert, AssessmentResultRow } from '@/lib/database.types';
 import type {
   Assessment,
@@ -52,17 +53,27 @@ async function getAssessments(
   schoolId: string,
   filters: { classId?: string; subjectId?: string; termId?: string; academicYearId?: string; limit?: number } = {},
 ): Promise<Assessment[]> {
-  let query = supabase.from('assessments').select('*').eq('school_id', schoolId);
-  if (filters.classId) query = query.eq('class_id', filters.classId);
-  if (filters.subjectId) query = query.eq('subject_id', filters.subjectId);
-  if (filters.termId) query = query.eq('term_id', filters.termId);
-  if (filters.academicYearId) query = query.eq('academic_year_id', filters.academicYearId);
+  function buildQuery() {
+    let query = supabase.from('assessments').select('*').eq('school_id', schoolId);
+    if (filters.classId) query = query.eq('class_id', filters.classId);
+    if (filters.subjectId) query = query.eq('subject_id', filters.subjectId);
+    if (filters.termId) query = query.eq('term_id', filters.termId);
+    if (filters.academicYearId) query = query.eq('academic_year_id', filters.academicYearId);
+    return query.order('assessment_date', { ascending: false });
+  }
 
-  query = query.order('assessment_date', { ascending: false });
-  if (filters.limit) query = query.limit(filters.limit);
+  // An explicit caller-supplied limit (e.g. the Dashboard's "recent
+  // assessments" widget) stays exactly that — a single capped request.
+  // With no limit, this is a "give me the true complete set" call site
+  // (e.g. the Assessment Report), so it's paged past PostgREST's 1000-row
+  // default cap — see FND-QA-003 / src/lib/pagination.ts.
+  if (filters.limit) {
+    const { data, error } = await buildQuery().limit(filters.limit);
+    if (error) throw error;
+    return data.map(toAssessment);
+  }
 
-  const { data, error } = await query;
-  if (error) throw error;
+  const data = await fetchAllRows<AssessmentRow>((from, to) => buildQuery().range(from, to));
   return data.map(toAssessment);
 }
 
@@ -156,8 +167,12 @@ async function getResultsForAssessment(assessmentId: string): Promise<Assessment
 /** Batch results fetch across several assessments in one request — the Assessment Report page's own concern, kept here since it's the same table/mapper. Avoids one request per assessment (N+1). */
 async function getResultsForAssessments(assessmentIds: string[]): Promise<AssessmentResult[]> {
   if (assessmentIds.length === 0) return [];
-  const { data, error } = await supabase.from('assessment_results').select('*').in('assessment_id', assessmentIds);
-  if (error) throw error;
+  // See FND-QA-003 / src/lib/pagination.ts — a school-wide results fetch
+  // (e.g. the Assessment Report with no filters) can exceed the 1000-row
+  // default cap once a school has enough assessments x learners.
+  const data = await fetchAllRows<AssessmentResultRow>((from, to) =>
+    supabase.from('assessment_results').select('*').in('assessment_id', assessmentIds).range(from, to),
+  );
   return data.map(toAssessmentResult);
 }
 

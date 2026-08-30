@@ -1,8 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { MenuIcon } from '@/components/ui/icons';
+import { MenuIcon, SearchIcon } from '@/components/ui/icons';
 import { UserMenu } from '@/components/layout/UserMenu';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -10,6 +11,8 @@ import { getPageTitle } from '@/lib/pageTitles';
 
 export interface DashboardHeaderProps {
   onMenuClick: () => void;
+  /** Omitted (rather than gated internally) when the caller holds none of learner.view/employee.view/guardian.view — DashboardLayout already knows this before rendering the button, so there is nothing to show. */
+  onSearchClick?: () => void;
 }
 
 /**
@@ -18,7 +21,7 @@ export interface DashboardHeaderProps {
  * would both break single-H1-per-page accessibility and make every
  * `getByRole('heading', ...)` query in the app ambiguous.
  */
-export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
+export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderProps) {
   const { school } = useSchool();
   const { currentAcademicYear } = useAcademic();
   const { can } = usePermissions();
@@ -73,7 +76,20 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
             Switch school
           </Link>
         )}
+        {onSearchClick && (
+          <button
+            type="button"
+            onClick={onSearchClick}
+            aria-label="Search"
+            className="focus-ring hidden h-9 shrink-0 items-center gap-2 rounded-md border border-border-strong px-3 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-sunken hover:text-content-primary sm:flex"
+          >
+            <SearchIcon className="h-3.5 w-3.5" />
+            Search
+            <kbd className="rounded border border-border-strong px-1 py-0.5 text-[10px] text-content-tertiary">⌘K</kbd>
+          </button>
+        )}
         <div className="hidden h-9 w-px bg-border sm:block" />
+        <NotificationBell to="/notifications" />
         <ThemeToggle />
         <UserMenu />
       </div>

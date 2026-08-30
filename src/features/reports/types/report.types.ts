@@ -97,3 +97,9 @@ export interface AttendanceLearnerSummaryRow {
   qualifyingDays: number;
   attendanceRate: number | null;
 }
+
+/** One day's school-wide attendance rate — the trend chart's data source (FND-AN-001). */
+export interface AttendanceTrendRow {
+  date: string;
+  attendanceRate: number | null;
+}

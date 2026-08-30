@@ -13,6 +13,9 @@
 
 import type { UserRole } from '@/features/auth/types/auth.types';
 
+/** Matches the shape Supabase's own `gen types typescript` emits for a jsonb column — used only by audit_log.before/after. */
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 export type EmploymentType = 'full_time' | 'part_time' | 'contract' | 'temporary';
 export type EmploymentStatus = 'active' | 'on_leave' | 'suspended' | 'terminated';
 
@@ -49,6 +52,19 @@ export type FeeCategory = 'tuition' | 'transport' | 'boarding' | 'uniform' | 'ac
 export type FeePaymentMethod = 'cash' | 'eft' | 'card' | 'debit_order' | 'cheque' | 'other';
 export type BehaviourIncidentType = 'positive' | 'negative';
 export type BehaviourSeverity = 'low' | 'medium' | 'high';
+export type FeeAdjustmentType = 'discount' | 'bursary' | 'scholarship' | 'waiver';
+export type FeeAdjustmentMethod = 'percentage' | 'fixed_amount';
+export type FeeRefundStatus = 'pending' | 'completed' | 'rejected';
+export type NotificationEmailStatus = 'not_sent' | 'sent' | 'failed';
+export type AnnouncementAudience = 'all_staff' | 'all_guardians' | 'everyone';
+export type LearnerTransferDirection = 'outgoing' | 'incoming';
+export type AcademicInterventionStatus = 'open' | 'in_progress' | 'resolved';
+export type TimetableEntryStatus = 'draft' | 'published';
+export type LeaveType = 'annual' | 'sick' | 'family_responsibility' | 'unpaid' | 'other';
+export type LeaveRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type SafeguardingSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type SafeguardingStatus = 'open' | 'under_review' | 'escalated' | 'resolved' | 'closed';
+export type BehaviourFollowUpStatus = 'not_started' | 'in_progress' | 'resolved';
 
 export type SchoolRow = {
   id: string;
@@ -392,6 +408,7 @@ export type TimetableEntryRow = {
   start_time: string;
   end_time: string;
   room: string | null;
+  status: TimetableEntryStatus;
   active: boolean;
   created_by: string | null;
   updated_by: string | null;
@@ -411,6 +428,7 @@ export type TimetableEntryInsert = {
   start_time: string;
   end_time: string;
   room?: string | null;
+  status?: TimetableEntryStatus;
   active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
@@ -430,6 +448,7 @@ export type TimetableEntryUpdate = {
   start_time?: string;
   end_time?: string;
   room?: string | null;
+  status?: TimetableEntryStatus;
   active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
@@ -475,6 +494,200 @@ export type AttendanceRecordUpdate = {
   learner_id?: string;
   attendance_date?: string;
   status?: AttendanceStatus;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type StaffAttendanceRecordRow = {
+  id: string;
+  school_id: string;
+  employee_id: string;
+  attendance_date: string;
+  status: AttendanceStatus;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StaffAttendanceRecordInsert = {
+  id?: string;
+  school_id: string;
+  employee_id: string;
+  attendance_date: string;
+  status: AttendanceStatus;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type StaffAttendanceRecordUpdate = {
+  id?: string;
+  school_id?: string;
+  employee_id?: string;
+  attendance_date?: string;
+  status?: AttendanceStatus;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LeaveRequestRow = {
+  id: string;
+  school_id: string;
+  employee_id: string;
+  leave_type: LeaveType;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: LeaveRequestStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeaveRequestInsert = {
+  id?: string;
+  school_id: string;
+  employee_id: string;
+  leave_type: LeaveType;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status?: LeaveRequestStatus;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LeaveRequestUpdate = {
+  id?: string;
+  school_id?: string;
+  employee_id?: string;
+  leave_type?: LeaveType;
+  start_date?: string;
+  end_date?: string;
+  reason?: string;
+  status?: LeaveRequestStatus;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SafeguardingConcernRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  category: string | null;
+  description: string;
+  severity: SafeguardingSeverity;
+  status: SafeguardingStatus;
+  action_taken: string | null;
+  confidential_notes: string | null;
+  resolved_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SafeguardingConcernInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  category?: string | null;
+  description: string;
+  severity?: SafeguardingSeverity;
+  status?: SafeguardingStatus;
+  action_taken?: string | null;
+  confidential_notes?: string | null;
+  resolved_at?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SafeguardingConcernUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  category?: string | null;
+  description?: string;
+  severity?: SafeguardingSeverity;
+  status?: SafeguardingStatus;
+  action_taken?: string | null;
+  confidential_notes?: string | null;
+  resolved_at?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ConsentCategory = 'photo_media_use' | 'marketing_communications' | 'third_party_data_sharing';
+
+export type ConsentRecordRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  guardian_profile_id: string;
+  category: ConsentCategory;
+  granted: boolean;
+  granted_at: string | null;
+  revoked_at: string | null;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ConsentRecordInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  guardian_profile_id: string;
+  category: ConsentCategory;
+  granted: boolean;
+  granted_at?: string | null;
+  revoked_at?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ConsentRecordUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  guardian_profile_id?: string;
+  category?: ConsentCategory;
+  granted?: boolean;
+  granted_at?: string | null;
+  revoked_at?: string | null;
   notes?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
@@ -685,6 +898,7 @@ export type LearnerFeePaymentRow = {
   reference: string | null;
   notes: string | null;
   active: boolean;
+  reconciled_at: string | null;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
@@ -702,6 +916,7 @@ export type LearnerFeePaymentInsert = {
   reference?: string | null;
   notes?: string | null;
   active?: boolean;
+  reconciled_at?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -718,6 +933,189 @@ export type LearnerFeePaymentUpdate = {
   method?: FeePaymentMethod;
   reference?: string | null;
   notes?: string | null;
+  active?: boolean;
+  reconciled_at?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type BankStatementLineStatus = 'unmatched' | 'matched' | 'ignored';
+
+export type BankReconciliationImportRow = {
+  id: string;
+  school_id: string;
+  file_name: string;
+  imported_at: string;
+  created_by: string | null;
+};
+
+export type BankReconciliationImportInsert = {
+  id?: string;
+  school_id: string;
+  file_name: string;
+  imported_at?: string;
+  created_by?: string | null;
+};
+
+export type BankReconciliationImportUpdate = {
+  id?: string;
+  school_id?: string;
+  file_name?: string;
+  imported_at?: string;
+  created_by?: string | null;
+};
+
+export type BankStatementLineRow = {
+  id: string;
+  school_id: string;
+  import_id: string;
+  transaction_date: string;
+  description: string;
+  amount: number;
+  status: BankStatementLineStatus;
+  matched_payment_id: string | null;
+  matched_at: string | null;
+  matched_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BankStatementLineInsert = {
+  id?: string;
+  school_id: string;
+  import_id: string;
+  transaction_date: string;
+  description: string;
+  amount: number;
+  status?: BankStatementLineStatus;
+  matched_payment_id?: string | null;
+  matched_at?: string | null;
+  matched_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type BankStatementLineUpdate = {
+  id?: string;
+  school_id?: string;
+  import_id?: string;
+  transaction_date?: string;
+  description?: string;
+  amount?: number;
+  status?: BankStatementLineStatus;
+  matched_payment_id?: string | null;
+  matched_at?: string | null;
+  matched_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerFeeAdjustmentRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  charge_id: string | null;
+  adjustment_type: FeeAdjustmentType;
+  method: FeeAdjustmentMethod;
+  percentage: number | null;
+  amount: number;
+  reason: string;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerFeeAdjustmentInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  charge_id?: string | null;
+  adjustment_type?: FeeAdjustmentType;
+  method?: FeeAdjustmentMethod;
+  percentage?: number | null;
+  amount: number;
+  reason: string;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerFeeAdjustmentUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  academic_year_id?: string;
+  charge_id?: string | null;
+  adjustment_type?: FeeAdjustmentType;
+  method?: FeeAdjustmentMethod;
+  percentage?: number | null;
+  amount?: number;
+  reason?: string;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerFeeRefundRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  payment_id: string;
+  amount: number;
+  refund_date: string;
+  method: FeePaymentMethod;
+  reference: string | null;
+  reason: string;
+  status: FeeRefundStatus;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerFeeRefundInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  payment_id: string;
+  amount: number;
+  refund_date: string;
+  method?: FeePaymentMethod;
+  reference?: string | null;
+  reason: string;
+  status?: FeeRefundStatus;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerFeeRefundUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  academic_year_id?: string;
+  payment_id?: string;
+  amount?: number;
+  refund_date?: string;
+  method?: FeePaymentMethod;
+  reference?: string | null;
+  reason?: string;
+  status?: FeeRefundStatus;
   active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
@@ -739,6 +1137,11 @@ export type BehaviourIncidentRow = {
   outcome: string | null;
   follow_up_required: boolean;
   follow_up_notes: string | null;
+  follow_up_status: BehaviourFollowUpStatus;
+  follow_up_assigned_to: string | null;
+  follow_up_target_date: string | null;
+  follow_up_resolved_at: string | null;
+  guardian_visible: boolean;
   active: boolean;
   created_by: string | null;
   updated_by: string | null;
@@ -760,6 +1163,11 @@ export type BehaviourIncidentInsert = {
   outcome?: string | null;
   follow_up_required?: boolean;
   follow_up_notes?: string | null;
+  follow_up_status?: BehaviourFollowUpStatus;
+  follow_up_assigned_to?: string | null;
+  follow_up_target_date?: string | null;
+  follow_up_resolved_at?: string | null;
+  guardian_visible?: boolean;
   active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
@@ -781,6 +1189,11 @@ export type BehaviourIncidentUpdate = {
   outcome?: string | null;
   follow_up_required?: boolean;
   follow_up_notes?: string | null;
+  follow_up_status?: BehaviourFollowUpStatus;
+  follow_up_assigned_to?: string | null;
+  follow_up_target_date?: string | null;
+  follow_up_resolved_at?: string | null;
+  guardian_visible?: boolean;
   active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
@@ -1171,6 +1584,8 @@ export type LearnerDocumentRow = {
   file_name: string | null;
   uploaded_at: string;
   notes: string | null;
+  expiry_date: string | null;
+  supersedes_document_id: string | null;
   active: boolean;
   created_by: string | null;
   updated_by: string | null;
@@ -1187,6 +1602,8 @@ export type LearnerDocumentInsert = {
   file_name?: string | null;
   uploaded_at?: string;
   notes?: string | null;
+  expiry_date?: string | null;
+  supersedes_document_id?: string | null;
   active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
@@ -1203,7 +1620,153 @@ export type LearnerDocumentUpdate = {
   file_name?: string | null;
   uploaded_at?: string;
   notes?: string | null;
+  expiry_date?: string | null;
+  supersedes_document_id?: string | null;
   active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerTransferRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  direction: LearnerTransferDirection;
+  other_school_name: string;
+  other_school_contact: string | null;
+  transfer_date: string;
+  reason: string | null;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LearnerTransferInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  direction: LearnerTransferDirection;
+  other_school_name: string;
+  other_school_contact?: string | null;
+  transfer_date: string;
+  reason?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type LearnerTransferUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  direction?: LearnerTransferDirection;
+  other_school_name?: string;
+  other_school_contact?: string | null;
+  transfer_date?: string;
+  reason?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AcademicInterventionRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  subject_id: string | null;
+  title: string;
+  description: string | null;
+  status: AcademicInterventionStatus;
+  target_date: string | null;
+  resolved_at: string | null;
+  resolution_notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AcademicInterventionInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  subject_id?: string | null;
+  title: string;
+  description?: string | null;
+  status?: AcademicInterventionStatus;
+  target_date?: string | null;
+  resolved_at?: string | null;
+  resolution_notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AcademicInterventionUpdate = {
+  id?: string;
+  school_id?: string;
+  learner_id?: string;
+  academic_year_id?: string;
+  subject_id?: string | null;
+  title?: string;
+  description?: string | null;
+  status?: AcademicInterventionStatus;
+  target_date?: string | null;
+  resolved_at?: string | null;
+  resolution_notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TimetableSubstitutionRow = {
+  id: string;
+  school_id: string;
+  timetable_entry_id: string;
+  substitute_date: string;
+  substitute_teacher_profile_id: string;
+  reason: string | null;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TimetableSubstitutionInsert = {
+  id?: string;
+  school_id: string;
+  timetable_entry_id: string;
+  substitute_date: string;
+  substitute_teacher_profile_id: string;
+  reason?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TimetableSubstitutionUpdate = {
+  id?: string;
+  school_id?: string;
+  timetable_entry_id?: string;
+  substitute_date?: string;
+  substitute_teacher_profile_id?: string;
+  reason?: string | null;
+  notes?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string;
@@ -1327,6 +1890,99 @@ export type EmployeeUpdate = {
   updated_at?: string;
 };
 
+export type NotificationRow = {
+  id: string;
+  school_id: string | null;
+  recipient_profile_id: string;
+  type: string;
+  title: string;
+  body: string;
+  related_entity_table: string | null;
+  related_entity_id: string | null;
+  link_path: string | null;
+  email_status: NotificationEmailStatus;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type NotificationInsert = {
+  id?: string;
+  school_id?: string | null;
+  recipient_profile_id: string;
+  type: string;
+  title: string;
+  body: string;
+  related_entity_table?: string | null;
+  related_entity_id?: string | null;
+  link_path?: string | null;
+  email_status?: NotificationEmailStatus;
+  read_at?: string | null;
+  created_at?: string;
+};
+
+export type AuditLogRow = {
+  id: string;
+  school_id: string | null;
+  actor_profile_id: string | null;
+  action: string;
+  entity_table: string;
+  entity_id: string;
+  before: Json | null;
+  after: Json | null;
+  created_at: string;
+};
+
+export type AuditLogInsert = {
+  id?: string;
+  school_id?: string | null;
+  actor_profile_id?: string | null;
+  action: string;
+  entity_table: string;
+  entity_id: string;
+  before?: Json | null;
+  after?: Json | null;
+  created_at?: string;
+};
+
+export type AnnouncementRow = {
+  id: string;
+  school_id: string;
+  title: string;
+  body: string;
+  audience: AnnouncementAudience;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AnnouncementInsert = {
+  id?: string;
+  school_id: string;
+  title: string;
+  body: string;
+  audience?: AnnouncementAudience;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AnnouncementUpdate = {
+  id?: string;
+  school_id?: string;
+  title?: string;
+  body?: string;
+  audience?: AnnouncementAudience;
+  active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -1390,6 +2046,26 @@ export type Database = {
         Insert: LearnerFeePaymentInsert;
         Update: LearnerFeePaymentUpdate;
       };
+      bank_reconciliation_imports: {
+        Row: BankReconciliationImportRow;
+        Insert: BankReconciliationImportInsert;
+        Update: BankReconciliationImportUpdate;
+      };
+      bank_statement_lines: {
+        Row: BankStatementLineRow;
+        Insert: BankStatementLineInsert;
+        Update: BankStatementLineUpdate;
+      };
+      learner_fee_adjustments: {
+        Row: LearnerFeeAdjustmentRow;
+        Insert: LearnerFeeAdjustmentInsert;
+        Update: LearnerFeeAdjustmentUpdate;
+      };
+      learner_fee_refunds: {
+        Row: LearnerFeeRefundRow;
+        Insert: LearnerFeeRefundInsert;
+        Update: LearnerFeeRefundUpdate;
+      };
       behaviour_incidents: {
         Row: BehaviourIncidentRow;
         Insert: BehaviourIncidentInsert;
@@ -1409,6 +2085,26 @@ export type Database = {
         Row: AttendanceRecordRow;
         Insert: AttendanceRecordInsert;
         Update: AttendanceRecordUpdate;
+      };
+      staff_attendance_records: {
+        Row: StaffAttendanceRecordRow;
+        Insert: StaffAttendanceRecordInsert;
+        Update: StaffAttendanceRecordUpdate;
+      };
+      leave_requests: {
+        Row: LeaveRequestRow;
+        Insert: LeaveRequestInsert;
+        Update: LeaveRequestUpdate;
+      };
+      safeguarding_concerns: {
+        Row: SafeguardingConcernRow;
+        Insert: SafeguardingConcernInsert;
+        Update: SafeguardingConcernUpdate;
+      };
+      consent_records: {
+        Row: ConsentRecordRow;
+        Insert: ConsentRecordInsert;
+        Update: ConsentRecordUpdate;
       };
       learners: {
         Row: LearnerRow;
@@ -1450,6 +2146,21 @@ export type Database = {
         Insert: LearnerDocumentInsert;
         Update: LearnerDocumentUpdate;
       };
+      learner_transfers: {
+        Row: LearnerTransferRow;
+        Insert: LearnerTransferInsert;
+        Update: LearnerTransferUpdate;
+      };
+      academic_interventions: {
+        Row: AcademicInterventionRow;
+        Insert: AcademicInterventionInsert;
+        Update: AcademicInterventionUpdate;
+      };
+      timetable_substitutions: {
+        Row: TimetableSubstitutionRow;
+        Insert: TimetableSubstitutionInsert;
+        Update: TimetableSubstitutionUpdate;
+      };
       departments: {
         Row: DepartmentRow;
         Insert: DepartmentInsert;
@@ -1459,6 +2170,21 @@ export type Database = {
         Row: EmployeeRow;
         Insert: EmployeeInsert;
         Update: EmployeeUpdate;
+      };
+      notifications: {
+        Row: NotificationRow;
+        Insert: NotificationInsert;
+        Update: Partial<NotificationInsert>;
+      };
+      audit_log: {
+        Row: AuditLogRow;
+        Insert: AuditLogInsert;
+        Update: Partial<AuditLogInsert>;
+      };
+      announcements: {
+        Row: AnnouncementRow;
+        Insert: AnnouncementInsert;
+        Update: AnnouncementUpdate;
       };
     };
     Views: Record<string, never>;
@@ -1546,6 +2272,31 @@ export type Database = {
           } | null;
           children: { id: string; firstName: string; lastName: string }[];
         };
+      };
+      get_guardian_visible_behaviour_incidents: {
+        Args: { p_learner_id: string };
+        Returns: {
+          id: string;
+          learner_id: string;
+          incident_type: BehaviourIncidentType;
+          severity: BehaviourSeverity | null;
+          category: string | null;
+          occurred_at: string;
+          description: string;
+          follow_up_required: boolean;
+        }[];
+      };
+      trigger_fee_overdue_reminders: {
+        Args: { p_school_id: string };
+        Returns: number;
+      };
+      reconcile_bank_statement_line: {
+        Args: { p_line_id: string; p_payment_id: string };
+        Returns: void;
+      };
+      unreconcile_bank_statement_line: {
+        Args: { p_line_id: string };
+        Returns: void;
       };
     };
   };

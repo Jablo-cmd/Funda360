@@ -10,6 +10,8 @@ import {
   buildMockLearnerEnrollmentRow,
   buildMockLearnerEmergencyContactRow,
   buildMockLearnerMedicalInformationRow,
+  buildMockLearnerTransferRow,
+  buildMockAcademicInterventionRow,
   installDataMocks,
   installAcademicListMock,
   installLearnersListMock,
@@ -159,6 +161,65 @@ test('principal can add an emergency contact', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
 
   await expect(page.getByRole('heading', { name: 'Add emergency contact' })).toHaveCount(0);
+});
+
+test('principal can view transfer history and record a new transfer', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'principal' });
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+  await installLearnerDetailMock(page, buildMockLearnerRow());
+  await installLearnerChildListMock(page, 'learner_transfers', [buildMockLearnerTransferRow()]);
+
+  let postedDirection: string | null = null;
+  await page.route('**/rest/v1/learner_transfers*', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    postedDirection = JSON.parse(route.request().postData() ?? '{}').direction;
+    await fulfillJson(route, buildMockLearnerTransferRow({ id: 'transfer-2', direction: 'incoming', otherSchoolName: 'Prior Primary' }));
+  });
+
+  await page.goto('/learners/learner-1');
+  await page.getByRole('button', { name: 'Transfers' }).click();
+  await expect(page.getByText('Outgoing · Riverside Prep')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Download letter' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Record transfer' }).click();
+  await page.getByLabel('Direction').selectOption('incoming');
+  await page.getByLabel("Other school's name").fill('Prior Primary');
+  await page.getByLabel('Transfer date').fill('2024-01-10');
+  await page.getByRole('dialog').getByRole('button', { name: 'Record transfer' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Record transfer' })).toHaveCount(0);
+  await expect.poll(() => postedDirection).toBe('incoming');
+});
+
+test('principal can view academic interventions and update their status', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'principal' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow(),
+    school: buildMockSchoolRow(),
+    academicYears: [buildMockAcademicYearRow()],
+  });
+  await installLearnerDetailMock(page, buildMockLearnerRow());
+  await installAcademicListMock(page, 'subjects', []);
+  await installLearnerChildListMock(page, 'academic_interventions', [buildMockAcademicInterventionRow()]);
+
+  let patchedStatus: string | null = null;
+  await page.route('**/rest/v1/academic_interventions*', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    patchedStatus = JSON.parse(route.request().postData() ?? '{}').status;
+    await fulfillJson(route, buildMockAcademicInterventionRow({ status: 'resolved', resolutionNotes: 'Caught up' }));
+  });
+
+  await page.goto('/learners/learner-1');
+  await page.getByRole('button', { name: 'Interventions' }).click();
+  await expect(page.getByText('Extra Mathematics support')).toBeVisible();
+  await expect(page.getByText('Open', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Update status' }).click();
+  await page.getByLabel('Status', { exact: true }).selectOption('resolved');
+  await page.getByRole('dialog').getByRole('button', { name: 'Update' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Update intervention status' })).toHaveCount(0);
+  await expect.poll(() => patchedStatus).toBe('resolved');
 });
 
 test('a role without learner.view is blocked from the learners section', async ({ page }) => {

@@ -25,6 +25,8 @@ export function toLearnerDocument(row: LearnerDocumentRow): LearnerDocument {
     fileName: row.file_name,
     uploadedAt: row.uploaded_at,
     notes: row.notes,
+    expiryDate: row.expiry_date,
+    supersedesDocumentId: row.supersedes_document_id,
     active: row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -68,6 +70,8 @@ async function createDocument(
     file_url: path,
     file_name: input.file.name,
     notes: input.notes ?? null,
+    expiry_date: input.expiryDate ?? null,
+    supersedes_document_id: input.supersedesDocumentId ?? null,
   };
 
   const { data, error } = await supabase.from('learner_documents').insert(payload).select('*').single();
@@ -96,10 +100,18 @@ async function restoreDocument(id: string): Promise<LearnerDocument> {
   return toLearnerDocument(data);
 }
 
+/** Corrects an expiry date entered wrong at upload time — a common enough slip that re-uploading the whole file over it would be overkill. Also how staff clear one entirely (pass null). */
+async function updateExpiryDate(id: string, expiryDate: string | null): Promise<LearnerDocument> {
+  const { data, error } = await supabase.from('learner_documents').update({ expiry_date: expiryDate }).eq('id', id).select('*').single();
+  if (error) throw error;
+  return toLearnerDocument(data);
+}
+
 export const documentService = {
   getDocuments,
   createDocument,
   getSignedDownloadUrl,
   archiveDocument,
   restoreDocument,
+  updateExpiryDate,
 };

@@ -1,4 +1,5 @@
 import { BrowserRouter } from 'react-router-dom';
+import { ToastProvider } from '@/components/ui/toast/ToastProvider';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { ProfileProvider } from '@/features/profile/context/ProfileProvider';
 import { TenantProvider } from '@/features/tenant/context/TenantProvider';
@@ -9,17 +10,19 @@ import { AppRoutes } from '@/app/AppRoutes';
 export function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ProfileProvider>
-          <TenantProvider>
-            <SchoolProvider>
-              <AcademicProvider>
-                <AppRoutes />
-              </AcademicProvider>
-            </SchoolProvider>
-          </TenantProvider>
-        </ProfileProvider>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <ProfileProvider>
+            <TenantProvider>
+              <SchoolProvider>
+                <AcademicProvider>
+                  <AppRoutes />
+                </AcademicProvider>
+              </SchoolProvider>
+            </TenantProvider>
+          </ProfileProvider>
+        </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 }

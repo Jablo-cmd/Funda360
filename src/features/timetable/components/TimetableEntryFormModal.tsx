@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Modal } from '@/components/ui/Modal';
@@ -15,6 +15,7 @@ import {
 } from '@/features/timetable/schemas/timetableEntrySchema';
 import { DAYS_OF_WEEK, DAY_LABELS } from '@/features/timetable/types/timetable.types';
 import type { TimetableEntry } from '@/features/timetable/types/timetable.types';
+import { suggestAvailableSlots } from '@/features/timetable/utils/suggestSlots';
 import type { Class, Subject, AcademicYear, Term } from '@/features/academic/types/academic.types';
 
 export interface TimetableEntryFormModalProps {
@@ -25,9 +26,12 @@ export interface TimetableEntryFormModalProps {
   terms: Term[];
   classes: Class[];
   subjects: Subject[];
+  /** The school's already-fetched entries for this academic year — only used to derive assisted slot-suggestions (FND-TT-005) for a NEW entry; omit and suggestions are simply not offered. */
+  existingEntries?: TimetableEntry[];
   entry?: TimetableEntry | null;
   onSaved: (entry: TimetableEntry, candidate?: TeacherCandidate) => void;
   onArchive?: (entryId: string) => void | Promise<void>;
+  onAssignSubstitute?: (entry: TimetableEntry) => void;
 }
 
 export function TimetableEntryFormModal({
@@ -38,9 +42,11 @@ export function TimetableEntryFormModal({
   terms,
   classes,
   subjects,
+  existingEntries,
   entry,
   onSaved,
   onArchive,
+  onAssignSubstitute,
 }: TimetableEntryFormModalProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
@@ -62,7 +68,16 @@ export function TimetableEntryFormModal({
   });
 
   const teacherProfileId = watch('teacherProfileId');
+  const classId = watch('classId');
   const currentYear = academicYears.find((year) => year.isActive) ?? academicYears[0];
+
+  // Assisted slot-suggestion (FND-TT-005) — only for a brand-new entry:
+  // editing an existing one is a correction to a specific already-chosen
+  // slot, not a search for a free one.
+  const suggestedSlots = useMemo(() => {
+    if (isEditing || !existingEntries || !classId || !teacherProfileId) return [];
+    return suggestAvailableSlots(existingEntries, { classId, teacherProfileId });
+  }, [isEditing, existingEntries, classId, teacherProfileId]);
   const activeClasses = classes.filter((cls) => cls.active);
   const activeSubjects = subjects.filter((subject) => subject.active);
   // `terms` is already scoped by the caller to whichever academic year the
@@ -89,6 +104,7 @@ export function TimetableEntryFormModal({
             startTime: entry.startTime.slice(0, 5),
             endTime: entry.endTime.slice(0, 5),
             room: entry.room ?? '',
+            status: entry.status,
           }
         : { ...timetableEntryDefaultValues, academicYearId: currentYear?.id ?? '' },
     );
@@ -129,6 +145,7 @@ export function TimetableEntryFormModal({
         startTime: values.startTime,
         endTime: values.endTime,
         room: values.room?.trim() || null,
+        status: values.status,
       };
       const saved = entry
         ? await timetableService.updateEntry(entry.id, {
@@ -141,6 +158,7 @@ export function TimetableEntryFormModal({
             start_time: input.startTime,
             end_time: input.endTime,
             room: input.room,
+            status: input.status,
           })
         : await timetableService.createEntry(schoolId, input);
       onSaved(saved, selectedCandidate ?? undefined);
@@ -169,19 +187,28 @@ export function TimetableEntryFormModal({
       onClose={onClose}
       title={isEditing ? 'Edit lesson' : 'Add lesson'}
       footer={
-        <div className="flex w-full items-center justify-between gap-3">
-          {isEditing && onArchive ? (
-            <button
-              type="button"
-              onClick={() => void handleArchiveClick()}
-              disabled={isArchiving}
-              className="focus-ring rounded-md px-2 py-1 text-sm font-medium text-danger-600 hover:bg-danger-50 disabled:opacity-50"
-            >
-              {isArchiving ? 'Archiving…' : 'Archive this lesson'}
-            </button>
-          ) : (
-            <span />
-          )}
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {isEditing && onArchive && (
+              <button
+                type="button"
+                onClick={() => void handleArchiveClick()}
+                disabled={isArchiving}
+                className="focus-ring rounded-md px-2 py-1 text-sm font-medium text-danger-600 hover:bg-danger-50 disabled:opacity-50"
+              >
+                {isArchiving ? 'Archiving…' : 'Archive this lesson'}
+              </button>
+            )}
+            {isEditing && entry && onAssignSubstitute && (
+              <button
+                type="button"
+                onClick={() => onAssignSubstitute(entry)}
+                className="focus-ring rounded-md px-2 py-1 text-sm font-medium text-content-secondary hover:bg-surface-hover"
+              >
+                Assign substitute…
+              </button>
+            )}
+          </div>
           <Button type="submit" form="timetable-entry-form" isLoading={isSubmitting}>
             {isSubmitting ? 'Saving…' : 'Save'}
           </Button>
@@ -324,6 +351,31 @@ export function TimetableEntryFormModal({
           )}
         </div>
 
+        {suggestedSlots.length > 0 && (
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-content-primary">Suggested available slots</p>
+            <p className="mb-2 text-xs text-content-tertiary">
+              Free for both this class and this teacher, based on the periods your school already schedules.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedSlots.map((slot) => (
+                <button
+                  key={`${slot.dayOfWeek}-${slot.startTime}`}
+                  type="button"
+                  onClick={() => {
+                    setValue('dayOfWeek', slot.dayOfWeek, { shouldValidate: true });
+                    setValue('startTime', slot.startTime.slice(0, 5), { shouldValidate: true });
+                    setValue('endTime', slot.endTime.slice(0, 5), { shouldValidate: true });
+                  }}
+                  className="focus-ring rounded-full border border-brand-500/30 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
+                >
+                  {DAY_LABELS[slot.dayOfWeek]} {slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div>
           <label htmlFor="entry-day" className="mb-1.5 block text-sm font-medium text-content-primary">
             Day
@@ -347,6 +399,20 @@ export function TimetableEntryFormModal({
         </div>
 
         <TextField label="Room" placeholder="e.g. Room 4, Science Lab" error={errors.room?.message} {...register('room')} />
+
+        <div>
+          <label htmlFor="entry-status" className="mb-1.5 block text-sm font-medium text-content-primary">
+            Status
+          </label>
+          <select
+            id="entry-status"
+            className="focus-ring h-11 w-full rounded-lg border border-border-strong bg-surface-raised px-3.5 text-sm text-content-primary"
+            {...register('status')}
+          >
+            <option value="published">Published — visible to teachers and guardians now</option>
+            <option value="draft">Draft — only visible to timetable managers until published</option>
+          </select>
+        </div>
       </form>
     </Modal>
   );

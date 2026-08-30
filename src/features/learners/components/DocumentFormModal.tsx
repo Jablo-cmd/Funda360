@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { documentService, LEARNER_DOCUMENT_FILE_RULE } from '@/features/learners/services/documentService';
+import { DOCUMENT_TYPE_LABELS } from '@/features/learners/constants/documentTypeLabels';
 import { storage } from '@/lib/storage';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 import { documentSchema, documentDefaultValues, type DocumentFormValues } from '@/features/learners/schemas/documentSchema';
@@ -15,10 +16,12 @@ export interface DocumentFormModalProps {
   onClose: () => void;
   schoolId: string;
   learnerId: string;
+  /** This learner's other active documents — offered as "replaces" options so renewing a passport/permit archives the old one automatically. See learner_documents_archive_superseded(). */
+  existingDocuments: LearnerDocument[];
   onSaved: (document: LearnerDocument) => void;
 }
 
-export function DocumentFormModal({ isOpen, onClose, schoolId, learnerId, onSaved }: DocumentFormModalProps) {
+export function DocumentFormModal({ isOpen, onClose, schoolId, learnerId, existingDocuments, onSaved }: DocumentFormModalProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -63,6 +66,8 @@ export function DocumentFormModal({ isOpen, onClose, schoolId, learnerId, onSave
         documentType: values.documentType,
         file,
         notes: values.notes?.trim() || null,
+        expiryDate: values.expiryDate?.trim() || null,
+        supersedesDocumentId: values.supersedesDocumentId?.trim() || null,
       });
       onSaved(saved);
       onClose();
@@ -103,14 +108,11 @@ export function DocumentFormModal({ isOpen, onClose, schoolId, learnerId, onSave
             className="focus-ring h-11 w-full rounded-lg border border-border-strong bg-surface-raised px-3.5 text-sm text-content-primary"
             {...register('documentType')}
           >
-            <option value="birth_certificate">Birth certificate</option>
-            <option value="id_copy">ID copy</option>
-            <option value="passport">Passport</option>
-            <option value="permit">Permit</option>
-            <option value="transfer_letter">Transfer letter</option>
-            <option value="medical_certificate">Medical certificate</option>
-            <option value="report_card">Report card</option>
-            <option value="other">Other</option>
+            {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -128,6 +130,37 @@ export function DocumentFormModal({ isOpen, onClose, schoolId, learnerId, onSave
           <p className="mt-1.5 text-xs text-content-tertiary">PDF, JPEG, or PNG, up to 15MB.</p>
           {fileError && <p className="mt-1.5 text-xs font-medium text-danger-600">{fileError}</p>}
         </div>
+
+        <TextField
+          label="Expiry date"
+          type="date"
+          hint="Leave blank for a document type that doesn't expire (e.g. birth certificate)."
+          error={errors.expiryDate?.message}
+          {...register('expiryDate')}
+        />
+
+        {existingDocuments.some((document) => document.active) && (
+          <div>
+            <label htmlFor="document-supersedes" className="mb-1.5 block text-sm font-medium text-content-primary">
+              Replaces (optional)
+            </label>
+            <select
+              id="document-supersedes"
+              className="focus-ring h-11 w-full rounded-lg border border-border-strong bg-surface-raised px-3.5 text-sm text-content-primary"
+              {...register('supersedesDocumentId')}
+            >
+              <option value="">None — this is a new document</option>
+              {existingDocuments
+                .filter((document) => document.active)
+                .map((document) => (
+                  <option key={document.id} value={document.id}>
+                    {DOCUMENT_TYPE_LABELS[document.documentType]} ({document.fileName ?? 'uploaded'} {document.uploadedAt})
+                  </option>
+                ))}
+            </select>
+            <p className="mt-1.5 text-xs text-content-tertiary">Selecting one archives it automatically once this upload is saved.</p>
+          </div>
+        )}
 
         <TextField label="Notes" error={errors.notes?.message} {...register('notes')} />
       </form>

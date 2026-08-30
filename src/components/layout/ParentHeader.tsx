@@ -3,6 +3,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { MenuIcon } from '@/components/ui/icons';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { useSchool } from '@/features/school/hooks/useSchool';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 
 export interface ParentHeaderProps {
   onMenuClick: () => void;
@@ -37,6 +38,7 @@ export function ParentHeader({ onMenuClick }: ParentHeaderProps) {
           </span>
         )}
         <div className="hidden h-9 w-px bg-border sm:block" />
+        <NotificationBell to="/parent/notifications" />
         <ThemeToggle />
         <UserMenu />
       </div>

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { fetchAllRows } from '@/lib/pagination';
 import type { AttendanceRecordRow, AttendanceRecordInsert } from '@/lib/database.types';
 import type {
   AttendanceRecord,
@@ -116,16 +117,20 @@ async function getAttendanceInRange(
   endDate: string,
   classId?: string,
 ): Promise<AttendanceRecord[]> {
-  let query = supabase
-    .from('attendance_records')
-    .select('*')
-    .eq('school_id', schoolId)
-    .gte('attendance_date', startDate)
-    .lte('attendance_date', endDate);
-  if (classId) query = query.eq('class_id', classId);
-
-  const { data, error } = await query;
-  if (error) throw error;
+  // FND-QA-003: paged via fetchAllRows — a school-wide date range easily
+  // exceeds PostgREST's 1000-row default cap (e.g. a full term across
+  // every class), which would otherwise silently under-report this data.
+  const data = await fetchAllRows<AttendanceRecordRow>((from, to) => {
+    let query = supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('school_id', schoolId)
+      .gte('attendance_date', startDate)
+      .lte('attendance_date', endDate)
+      .range(from, to);
+    if (classId) query = query.eq('class_id', classId);
+    return query;
+  });
   return data.map(toAttendanceRecord);
 }
 

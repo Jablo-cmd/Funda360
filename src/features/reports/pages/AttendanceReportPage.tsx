@@ -5,6 +5,7 @@ import { useClasses } from '@/features/academic/hooks/useClasses';
 import { useAttendanceSummary } from '@/features/attendance/hooks/useAttendanceSummary';
 import { useAttendanceReport } from '@/features/reports/hooks/useAttendanceReport';
 import { SummaryCard } from '@/features/reports/components/SummaryCard';
+import { AttendanceTrendChart } from '@/features/reports/components/AttendanceTrendChart';
 import { ExportCsvButton } from '@/features/reports/components/ExportCsvButton';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -134,6 +135,13 @@ export function AttendanceReportPage() {
           value={isLoading ? '—' : data?.overallStats.attendanceRate === null || data?.overallStats.attendanceRate === undefined ? '—' : `${data.overallStats.attendanceRate}%`}
         />
       </dl>
+
+      {!isLoading && data && (
+        <section className="rounded-card border border-border bg-surface-raised p-4">
+          <h2 className="mb-3 text-base font-semibold text-content-primary">Attendance trend</h2>
+          <AttendanceTrendChart data={data.dailyRows} thresholdPercent={BELOW_THRESHOLD_PERCENT} />
+        </section>
+      )}
 
       {!isLoading && belowThresholdLearners.length > 0 && (
         <button

@@ -56,7 +56,20 @@ describe('deriveLearnerAlerts', () => {
   it('flags outstanding fees only when the caller can view financial info', () => {
     const alerts = deriveLearnerAlerts(
       baseInputs({
-        feeSummary: { totalCharged: 1000, totalPaid: 0, outstandingBalance: 1000, status: 'outstanding', lastPayment: null, charges: [], payments: [] },
+        feeSummary: {
+          totalCharged: 1000,
+          totalAdjustments: 0,
+          totalPaid: 0,
+          totalRefunded: 0,
+          netPaid: 0,
+          outstandingBalance: 1000,
+          status: 'outstanding',
+          lastPayment: null,
+          charges: [],
+          payments: [],
+          adjustments: [],
+          refunds: [],
+        },
       }),
     );
     expect(alerts.map((a) => a.id)).toContain('fees-outstanding');
@@ -65,7 +78,20 @@ describe('deriveLearnerAlerts', () => {
   it('does not flag a learner who has never been charged anything (deriveFeeStatus defaults to outstanding with zero data)', () => {
     const alerts = deriveLearnerAlerts(
       baseInputs({
-        feeSummary: { totalCharged: 0, totalPaid: 0, outstandingBalance: 0, status: 'outstanding', lastPayment: null, charges: [], payments: [] },
+        feeSummary: {
+          totalCharged: 0,
+          totalAdjustments: 0,
+          totalPaid: 0,
+          totalRefunded: 0,
+          netPaid: 0,
+          outstandingBalance: 0,
+          status: 'outstanding',
+          lastPayment: null,
+          charges: [],
+          payments: [],
+          adjustments: [],
+          refunds: [],
+        },
       }),
     );
     expect(alerts.map((a) => a.id)).not.toContain('fees-outstanding');
@@ -74,7 +100,20 @@ describe('deriveLearnerAlerts', () => {
   it('does not flag a fee status of paid', () => {
     const alerts = deriveLearnerAlerts(
       baseInputs({
-        feeSummary: { totalCharged: 1000, totalPaid: 1000, outstandingBalance: 0, status: 'paid', lastPayment: null, charges: [], payments: [] },
+        feeSummary: {
+          totalCharged: 1000,
+          totalAdjustments: 0,
+          totalPaid: 1000,
+          totalRefunded: 0,
+          netPaid: 1000,
+          outstandingBalance: 0,
+          status: 'paid',
+          lastPayment: null,
+          charges: [],
+          payments: [],
+          adjustments: [],
+          refunds: [],
+        },
       }),
     );
     expect(alerts.map((a) => a.id)).not.toContain('fees-outstanding');

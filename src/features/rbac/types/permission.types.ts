@@ -27,6 +27,8 @@ export type Permission =
   | 'learner.manage_financial'
   | 'learner.view_behaviour'
   | 'learner.manage_behaviour'
+  | 'learner.view_safeguarding'
+  | 'learner.manage_safeguarding'
   | 'guardian.view'
   | 'guardian.manage'
   | 'employee.view'

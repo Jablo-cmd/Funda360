@@ -2,14 +2,24 @@ import type { Page, Route } from '@playwright/test';
 
 export const MOCK_USER_ID = '11111111-1111-1111-1111-111111111111';
 
+interface MockFactor {
+  id: string;
+  factor_type: 'totp' | 'phone';
+  status: 'verified' | 'unverified';
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface MockUserOverrides {
   email?: string;
   emailConfirmed?: boolean;
   role?: string;
+  /** MFA factors on this session's user — see mfaService.listFactors(), which reads exactly this array (via getSession(), not a network call) to decide whether MfaRequiredBanner shows and whether MfaChallengePage has something to challenge. Omit for "no MFA enrolled" (the default for every other test). */
+  factors?: MockFactor[];
 }
 
 export function buildMockUser(overrides: MockUserOverrides = {}) {
-  const { email = 'admin@funda360.com', emailConfirmed = true, role = 'principal' } = overrides;
+  const { email = 'admin@funda360.com', emailConfirmed = true, role = 'principal', factors = [] } = overrides;
   return {
     id: MOCK_USER_ID,
     aud: 'authenticated',
@@ -20,6 +30,11 @@ export function buildMockUser(overrides: MockUserOverrides = {}) {
     app_metadata: { provider: 'email', providers: ['email'], role, tenant_id: 'tenant-demo' },
     user_metadata: {},
     identities: [],
+    factors: factors.map((factor) => ({
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      ...factor,
+    })),
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
   };

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import { documentService } from '@/features/learners/services/documentService';
+import { DOCUMENT_TYPE_LABELS } from '@/features/learners/constants/documentTypeLabels';
 import type { LearnerDocument } from '@/features/learners/types/learner.types';
 
 export interface DocumentsTableProps {
@@ -9,16 +10,23 @@ export interface DocumentsTableProps {
   onToggleActive: (document: LearnerDocument) => void;
 }
 
-const DOCUMENT_TYPE_LABELS: Record<LearnerDocument['documentType'], string> = {
-  birth_certificate: 'Birth certificate',
-  id_copy: 'ID copy',
-  passport: 'Passport',
-  permit: 'Permit',
-  transfer_letter: 'Transfer letter',
-  medical_certificate: 'Medical certificate',
-  report_card: 'Report card',
-  other: 'Other',
-};
+const EXPIRY_SOON_WINDOW_DAYS = 30;
+
+function getExpiryBadge(expiryDate: string | null): { label: string; className: string } | null {
+  if (!expiryDate) return null;
+  const daysUntil = Math.floor((new Date(`${expiryDate}T00:00:00`).getTime() - Date.now()) / 86_400_000);
+  if (daysUntil < 0) {
+    return { label: `Expired ${formatDate(expiryDate)}`, className: 'bg-danger-50 text-danger-600' };
+  }
+  if (daysUntil <= EXPIRY_SOON_WINDOW_DAYS) {
+    return { label: `Expires ${formatDate(expiryDate)}`, className: 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500' };
+  }
+  return { label: `Expires ${formatDate(expiryDate)}`, className: 'bg-surface-sunken text-content-tertiary' };
+}
+
+function formatDate(value: string): string {
+  return new Date(`${value}T00:00:00`).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 function DocumentLink({ document }: { document: LearnerDocument }) {
   const [isResolving, setIsResolving] = useState(false);
@@ -76,6 +84,9 @@ export function DocumentsTable({ documents, canManage, onToggleActive }: Documen
               Uploaded
             </th>
             <th scope="col" className="px-4 py-3 font-medium">
+              Expiry
+            </th>
+            <th scope="col" className="px-4 py-3 font-medium">
               Status
             </th>
             {canManage && (
@@ -95,6 +106,18 @@ export function DocumentsTable({ documents, canManage, onToggleActive }: Documen
                 <DocumentLink document={document} />
               </td>
               <td className="px-4 py-3 text-content-secondary">{document.uploadedAt}</td>
+              <td className="px-4 py-3">
+                {(() => {
+                  const badge = getExpiryBadge(document.expiryDate);
+                  return badge ? (
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-content-tertiary">—</span>
+                  );
+                })()}
+              </td>
               <td className="px-4 py-3">
                 <span
                   className={

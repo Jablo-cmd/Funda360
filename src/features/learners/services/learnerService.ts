@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { fetchAllRows } from '@/lib/pagination';
 import type { LearnerRow, LearnerInsert, LearnerUpdate, LearnerStatus } from '@/lib/database.types';
 import type { Learner, CreateLearnerInput, UpdateLearnerInput, LearnersListFilters, LearnersListPage } from '@/features/learners/types/learner.types';
 
@@ -72,6 +73,27 @@ async function getLearners(
     page,
     pageSize,
   };
+}
+
+/**
+ * Every learner currently in one of the given statuses, unpaginated — the
+ * admissions pipeline board's data source (FND-SIS-006). Deliberately not
+ * routed through getLearners's paginated path: a school's in-flight
+ * applicant pool (prospective/applied/accepted/enrolled) is a small,
+ * bounded working set, nothing like the full historical roster getLearners
+ * exists to page through. Ordered oldest-first (FIFO) so a stalled
+ * applicant surfaces at the top of their column rather than getting buried
+ * under newer ones.
+ */
+async function getLearnersByStatuses(schoolId: string, statuses: LearnerStatus[]): Promise<Learner[]> {
+  const { data, error } = await supabase
+    .from('learners')
+    .select('*')
+    .eq('school_id', schoolId)
+    .in('status', statuses)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data.map(toLearner);
 }
 
 async function getLearner(id: string): Promise<Learner | null> {
@@ -165,11 +187,34 @@ async function changeStatus(id: string, newStatus: LearnerStatus, reason: string
   return toLearner(data);
 }
 
+/** Every existing learner_number/admission_number at this school, for the CSV import's duplicate-detection pass — paged past the 1000-row default cap (see FND-QA-003 / src/lib/pagination.ts), since a school with a large roster is exactly where this check matters most. */
+async function getExistingNumbers(schoolId: string): Promise<{ learnerNumbers: Set<string>; admissionNumbers: Set<string> }> {
+  const data = await fetchAllRows<Pick<LearnerRow, 'learner_number' | 'admission_number'>>((from, to) =>
+    supabase.from('learners').select('learner_number, admission_number').eq('school_id', schoolId).range(from, to),
+  );
+  return {
+    learnerNumbers: new Set(data.map((row) => row.learner_number)),
+    admissionNumbers: new Set(data.map((row) => row.admission_number)),
+  };
+}
+
+/** Bulk-inserts already-validated rows in one request. Any single row failing a DB-level constraint (e.g. a race with another concurrent import) fails the whole batch — callers should treat a rejected import as "fix and retry", matching how a single createLearner failure is already handled, not attempt row-by-row partial commit. */
+async function bulkCreateLearners(schoolId: string, inputs: CreateLearnerInput[]): Promise<Learner[]> {
+  if (inputs.length === 0) return [];
+  const payload: LearnerInsert[] = inputs.map((input) => toInsertPayload(schoolId, input));
+  const { data, error } = await supabase.from('learners').insert(payload).select('*');
+  if (error) throw error;
+  return data.map(toLearner);
+}
+
 export const learnerService = {
   getLearners,
+  getLearnersByStatuses,
   getLearner,
   getMyLearners,
   createLearner,
   updateLearner,
   changeStatus,
+  getExistingNumbers,
+  bulkCreateLearners,
 };

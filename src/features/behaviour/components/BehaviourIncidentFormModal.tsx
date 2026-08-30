@@ -65,6 +65,7 @@ export function BehaviourIncidentFormModal({
         outcome: values.outcome?.trim() || null,
         followUpRequired: values.followUpRequired ?? false,
         followUpNotes: values.followUpNotes?.trim() || null,
+        guardianVisible: values.guardianVisible ?? false,
       });
       onSaved();
       onClose();
@@ -138,6 +139,14 @@ export function BehaviourIncidentFormModal({
         <TextField label="Outcome" error={errors.outcome?.message} {...register('outcome')} />
         <Checkbox label="Follow-up required" {...register('followUpRequired')} />
         <TextField label="Follow-up notes" error={errors.followUpNotes?.message} {...register('followUpNotes')} />
+
+        <div className="rounded-md border border-border bg-surface-sunken p-3">
+          <Checkbox label="Visible to the parent portal" {...register('guardianVisible')} />
+          <p className="mt-1.5 text-xs text-content-tertiary">
+            Guardians will see the type, category, date and description above. Action taken, outcome and follow-up
+            notes stay staff-only and are never shown to guardians.
+          </p>
+        </div>
       </form>
     </Modal>
   );

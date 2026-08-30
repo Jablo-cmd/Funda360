@@ -1,6 +1,6 @@
-import type { DayOfWeek } from '@/lib/database.types';
+import type { DayOfWeek, TimetableEntryStatus } from '@/lib/database.types';
 
-export type { DayOfWeek };
+export type { DayOfWeek, TimetableEntryStatus };
 
 export const DAYS_OF_WEEK: readonly DayOfWeek[] = [
   'monday',
@@ -37,6 +37,7 @@ export interface TimetableEntry {
   startTime: string;
   endTime: string;
   room: string | null;
+  status: TimetableEntryStatus;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +53,8 @@ export interface CreateTimetableEntryInput {
   startTime: string;
   endTime: string;
   room?: string | null;
+  /** Defaults to 'published' (the DB column's own default) when omitted — draft is an explicit opt-in for staging a batch of changes before revealing them (FND-TT-003). */
+  status?: TimetableEntryStatus;
 }
 
 export type UpdateTimetableEntryInput = Partial<CreateTimetableEntryInput>;

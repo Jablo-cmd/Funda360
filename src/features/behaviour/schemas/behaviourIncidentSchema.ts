@@ -10,6 +10,7 @@ export const behaviourIncidentSchema = z.object({
   outcome: z.string().trim().optional(),
   followUpRequired: z.boolean().optional(),
   followUpNotes: z.string().trim().optional(),
+  guardianVisible: z.boolean().optional(),
 });
 
 export type BehaviourIncidentFormValues = z.infer<typeof behaviourIncidentSchema>;
@@ -31,4 +32,5 @@ export const behaviourIncidentDefaultValues: BehaviourIncidentFormValues = {
   outcome: '',
   followUpRequired: false,
   followUpNotes: '',
+  guardianVisible: false,
 };

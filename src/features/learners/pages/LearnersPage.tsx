@@ -12,6 +12,7 @@ import { LearnersFiltersBar } from '@/features/learners/components/LearnersFilte
 import { LearnersTable } from '@/features/learners/components/LearnersTable';
 import { LearnersPagination } from '@/features/learners/components/LearnersPagination';
 import { LearnerFormModal } from '@/features/learners/components/LearnerFormModal';
+import { LearnerImportModal } from '@/features/learners/components/LearnerImportModal';
 
 export function LearnersPage() {
   const { can } = usePermissions();
@@ -32,6 +33,7 @@ export function LearnersPage() {
   } = useLearnersList(school?.id);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   return (
     <PageContainer>
@@ -41,10 +43,17 @@ export function LearnersPage() {
         action={
           canManage &&
           school && (
-            <div className="w-full sm:w-auto sm:min-w-[9rem]">
-              <Button type="button" onClick={() => setIsCreateOpen(true)}>
-                Add learner
-              </Button>
+            <div className="flex flex-wrap gap-3">
+              <div className="w-full sm:w-auto sm:min-w-[9rem]">
+                <Button type="button" variant="secondary" onClick={() => setIsImportOpen(true)}>
+                  Import CSV
+                </Button>
+              </div>
+              <div className="w-full sm:w-auto sm:min-w-[9rem]">
+                <Button type="button" onClick={() => setIsCreateOpen(true)}>
+                  Add learner
+                </Button>
+              </div>
             </div>
           )
         }
@@ -71,12 +80,20 @@ export function LearnersPage() {
       )}
 
       {school && (
-        <LearnerFormModal
-          isOpen={isCreateOpen}
-          onClose={() => setIsCreateOpen(false)}
-          schoolId={school.id}
-          onSaved={() => void refetch()}
-        />
+        <>
+          <LearnerFormModal
+            isOpen={isCreateOpen}
+            onClose={() => setIsCreateOpen(false)}
+            schoolId={school.id}
+            onSaved={() => void refetch()}
+          />
+          <LearnerImportModal
+            isOpen={isImportOpen}
+            onClose={() => setIsImportOpen(false)}
+            schoolId={school.id}
+            onImported={() => void refetch()}
+          />
+        </>
       )}
     </PageContainer>
   );

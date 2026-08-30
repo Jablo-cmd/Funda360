@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
 import { FullScreenNotice } from '@/components/ui/FullScreenNotice';
+import { Tabs } from '@/components/ui/Tabs';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useLearner } from '@/features/learners/hooks/useLearner';
@@ -15,6 +16,10 @@ import { LearnerGuardiansSection } from '@/features/learners/components/LearnerG
 import { LearnerEmergencyContactsSection } from '@/features/learners/components/LearnerEmergencyContactsSection';
 import { LearnerMedicalSection } from '@/features/learners/components/LearnerMedicalSection';
 import { LearnerDocumentsSection } from '@/features/learners/components/LearnerDocumentsSection';
+import { LearnerTransfersSection } from '@/features/learners/components/LearnerTransfersSection';
+import { LearnerInterventionsSection } from '@/features/learners/components/LearnerInterventionsSection';
+import { LearnerSafeguardingSection } from '@/features/safeguarding/components/LearnerSafeguardingSection';
+import { LearnerConsentSection } from '@/features/consent/components/LearnerConsentSection';
 import { LearnerAssessmentResultsSection } from '@/features/assessments/components/LearnerAssessmentResultsSection';
 import { LearnerFinancialSection } from '@/features/fees/components/LearnerFinancialSection';
 import { LearnerBehaviourSection } from '@/features/behaviour/components/LearnerBehaviourSection';
@@ -50,7 +55,11 @@ type TabKey =
   | 'behaviour'
   | 'medical'
   | 'documents'
-  | 'results';
+  | 'transfers'
+  | 'results'
+  | 'interventions'
+  | 'safeguarding'
+  | 'consent';
 
 function calculateAge(dateOfBirth: string): number {
   const dob = new Date(`${dateOfBirth}T00:00:00`);
@@ -75,6 +84,11 @@ export function LearnerProfilePage() {
   const canManageFinancial = can('learner.manage_financial');
   const canViewBehaviour = can('learner.view_behaviour');
   const canManageBehaviour = can('learner.manage_behaviour');
+  // Academic interventions reuse assessment.view/manage verbatim — an
+  // intervention is conceptually adjacent to assessment results, not a new
+  // permission (mirrors can_view_academic_intervention()'s own RLS reasoning).
+  const canManageIntervention = can('assessment.manage');
+  const canViewSafeguarding = can('learner.view_safeguarding');
 
   const { school } = useSchool();
   const { learner, isLoading, error, refetch } = useLearner(id);
@@ -237,11 +251,15 @@ export function LearnerProfilePage() {
     { key: 'enrollment', label: 'Enrollment' },
     { key: 'guardians', label: 'Guardians' },
     { key: 'emergency', label: 'Emergency contacts' },
+    { key: 'consent', label: 'Consent' },
     ...(canViewFinancial ? [{ key: 'financial' as const, label: 'Financial' }] : []),
     ...(canViewBehaviour ? [{ key: 'behaviour' as const, label: 'Behaviour' }] : []),
     { key: 'medical', label: 'Medical' },
     { key: 'documents', label: 'Documents' },
+    { key: 'transfers', label: 'Transfers' },
     ...(canViewResults ? [{ key: 'results' as const, label: 'Academic results' }] : []),
+    ...(canViewResults ? [{ key: 'interventions' as const, label: 'Interventions' }] : []),
+    ...(canViewSafeguarding ? [{ key: 'safeguarding' as const, label: 'Safeguarding' }] : []),
   ];
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
@@ -347,23 +365,7 @@ export function LearnerProfilePage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-border">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            aria-current={activeTab === tab.key ? 'page' : undefined}
-            className={`focus-ring rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
-              activeTab === tab.key
-                ? 'border-b-2 border-brand-600 text-brand-700 dark:text-brand-300'
-                : 'text-content-secondary hover:text-content-primary'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'overview' && (
         <>
@@ -442,13 +444,53 @@ export function LearnerProfilePage() {
       {activeTab === 'documents' && (
         <LearnerDocumentsSection schoolId={school.id} learnerId={learner.id} canManage={canManage} />
       )}
+      {activeTab === 'transfers' && (
+        <LearnerTransfersSection
+          schoolId={school.id}
+          learner={learner}
+          canManage={canManage}
+          letterContext={{
+            schoolName: school.name,
+            schoolAddress: school.physicalAddress,
+            learnerNumber: learner.learnerNumber,
+            admissionNumber: learner.admissionNumber,
+            gradeName: currentGrade?.name,
+          }}
+        />
+      )}
       {activeTab === 'results' && canViewResults && (
         <LearnerAssessmentResultsSection
           learnerId={learner.id}
           subjectsById={subjectsById}
           termsById={termsById}
           academicYearsById={academicYearsById}
+          reportCard={
+            school
+              ? {
+                  schoolName: school.name,
+                  schoolAddress: school.physicalAddress,
+                  learnerName: `${learner.firstName} ${learner.lastName}`,
+                  learnerNumber: learner.learnerNumber,
+                  gradeName: currentGrade?.name,
+                  className: currentClass?.name,
+                }
+              : undefined
+          }
         />
+      )}
+      {activeTab === 'interventions' && canViewResults && (
+        <LearnerInterventionsSection
+          schoolId={school.id}
+          learnerId={learner.id}
+          academicYearId={currentAcademicYear?.id}
+          subjects={subjects}
+          subjectsById={subjectsById}
+          canManage={canManageIntervention}
+        />
+      )}
+      {activeTab === 'consent' && <LearnerConsentSection schoolId={school.id} learnerId={learner.id} canManage={canManage} />}
+      {activeTab === 'safeguarding' && canViewSafeguarding && (
+        <LearnerSafeguardingSection schoolId={school.id} learnerId={learner.id} />
       )}
 
       <LearnerFormModal

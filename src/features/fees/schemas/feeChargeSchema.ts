@@ -6,6 +6,7 @@ export const feeChargeSchema = z.object({
   amount: z.coerce.number().positive('Amount must be greater than 0'),
   dueDate: z.string().trim().optional(),
   notes: z.string().trim().optional(),
+  feeStructureId: z.string().trim().optional(),
 });
 
 export type FeeChargeFormValues = z.infer<typeof feeChargeSchema>;
@@ -16,4 +17,5 @@ export const feeChargeDefaultValues: FeeChargeFormValues = {
   amount: 0,
   dueDate: '',
   notes: '',
+  feeStructureId: '',
 };

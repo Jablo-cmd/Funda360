@@ -77,6 +77,7 @@ export function LearnerDocumentsSection({
         onClose={() => setIsFormOpen(false)}
         schoolId={schoolId}
         learnerId={learnerId}
+        existingDocuments={documents}
         onSaved={() => void refetch()}
       />
     </div>

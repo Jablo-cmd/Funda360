@@ -21,7 +21,7 @@ export interface CreateSchoolModalProps {
 
 /** Onboarding is create-only — full profile details (contact info, address, logo) are edited afterwards on the School Profile page, once the new school is the active tenant. */
 export function CreateSchoolModal({ isOpen, onClose, onCreated }: CreateSchoolModalProps) {
-  const { createSchool } = useTenant();
+  const { createSchool, switchTenant } = useTenant();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
@@ -49,6 +49,11 @@ export function CreateSchoolModal({ isOpen, onClose, onCreated }: CreateSchoolMo
         status: values.status,
         province: values.province?.trim() || null,
       });
+      // createSchool() no longer switches the active tenant itself (see
+      // TenantContextValue's doc comment) — this modal's own established
+      // "creating implies selecting" behavior still holds, just as an
+      // explicit second step now.
+      await switchTenant(school.id);
       onCreated(school);
       onClose();
     } catch (error) {

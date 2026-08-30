@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { attendanceService } from '@/features/attendance/services/attendanceService';
 import { calculateAttendanceStats } from '@/features/attendance/utils/calculations';
 import type { AttendanceStats } from '@/features/attendance/utils/calculations';
-import type { AttendanceLearnerSummaryRow, AttendanceClassSummaryRow } from '@/features/reports/types/report.types';
+import type { AttendanceLearnerSummaryRow, AttendanceClassSummaryRow, AttendanceTrendRow } from '@/features/reports/types/report.types';
 import type { Class } from '@/features/academic/types/academic.types';
 
 export interface AttendanceReportFilters {
@@ -19,6 +19,8 @@ export interface AttendanceReport {
   overallStats: AttendanceStats;
   classRows: AttendanceClassSummaryRow[];
   learnerRows: AttendanceLearnerSummaryRow[];
+  /** School-wide rate per calendar day in the range, chronological — the trend chart's data (FND-AN-001). Only days that actually have a register taken appear; there is no zero-filled gap for a day nobody marked. */
+  dailyRows: AttendanceTrendRow[];
 }
 
 /**
@@ -81,7 +83,17 @@ async function getAttendanceReport(
     })
     .sort((a, b) => a.learnerName.localeCompare(b.learnerName));
 
-  return { overallStats, classRows, learnerRows };
+  const byDate = new Map<string, typeof records>();
+  for (const record of records) {
+    const dateGroup = byDate.get(record.attendanceDate) ?? [];
+    dateGroup.push(record);
+    byDate.set(record.attendanceDate, dateGroup);
+  }
+  const dailyRows: AttendanceTrendRow[] = [...byDate.entries()]
+    .map(([date, dateRecords]) => ({ date, attendanceRate: calculateAttendanceStats(dateRecords).attendanceRate }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  return { overallStats, classRows, learnerRows, dailyRows };
 }
 
 export const attendanceReportService = { getAttendanceReport };

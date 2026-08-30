@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { GridIcon, GraduationCapIcon, UsersIcon } from '@/components/ui/icons';
+import { GridIcon, GraduationCapIcon, MegaphoneIcon, UsersIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 
 export interface ParentNavProps {
@@ -9,13 +9,16 @@ export interface ParentNavProps {
 const NAV_ITEMS = [
   { label: 'Home', path: '/parent/dashboard', icon: GridIcon },
   { label: 'My Children', path: '/parent/children', icon: GraduationCapIcon },
+  { label: 'Announcements', path: '/parent/announcements', icon: MegaphoneIcon },
   { label: 'My Profile', path: '/parent/profile', icon: UsersIcon },
 ];
 
 /**
- * Deliberately three items only — the Parent Portal is not the staff
- * sidebar with sections hidden by permission, it is a purpose-built,
- * substantially simpler navigation (Phase 6).
+ * Deliberately few items — the Parent Portal is not the staff sidebar with
+ * sections hidden by permission, it is a purpose-built, substantially
+ * simpler navigation (Phase 6). Announcements earns a standalone nav item
+ * (unlike Notifications, reached only via the header bell) because it's a
+ * page a guardian browses on its own, not just a place a click lands them.
  */
 export function ParentNav({ onNavigate }: ParentNavProps) {
   return (

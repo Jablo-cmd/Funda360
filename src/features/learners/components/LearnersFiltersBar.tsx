@@ -1,22 +1,11 @@
 import { SearchIcon } from '@/components/ui/icons';
+import { LEARNER_STATUS_OPTIONS } from '@/features/learners/constants/learnerStatusLabels';
 import type { LearnersListFilters, LearnerStatus } from '@/features/learners/types/learner.types';
 
 export interface LearnersFiltersBarProps {
   filters: LearnersListFilters;
   onChange: (filters: LearnersListFilters) => void;
 }
-
-const STATUS_OPTIONS: { value: LearnerStatus; label: string }[] = [
-  { value: 'prospective', label: 'Prospective' },
-  { value: 'applied', label: 'Applied' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'enrolled', label: 'Enrolled' },
-  { value: 'active', label: 'Active' },
-  { value: 'suspended', label: 'Suspended' },
-  { value: 'transferred', label: 'Transferred' },
-  { value: 'graduated', label: 'Graduated' },
-  { value: 'withdrawn', label: 'Withdrawn' },
-];
 
 export function LearnersFiltersBar({ filters, onChange }: LearnersFiltersBarProps) {
   return (
@@ -42,7 +31,7 @@ export function LearnersFiltersBar({ filters, onChange }: LearnersFiltersBarProp
         className="focus-ring h-11 rounded-lg border border-border-strong bg-surface-raised px-3.5 text-sm text-content-primary sm:w-48"
       >
         <option value="">All statuses</option>
-        {STATUS_OPTIONS.map((option) => (
+        {LEARNER_STATUS_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>

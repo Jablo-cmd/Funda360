@@ -29,25 +29,16 @@ import {
  * Assessments) rather than every route in the app.
  */
 /**
- * `color-contrast` (and its contrast-derived cousin `link-in-text-block`)
- * is intentionally excluded from this gate, not silently — running the
- * full scan surfaced a genuine, systemic finding: the `content-tertiary`
- * design token (#94a3b8 on white, ~2.56:1) fails WCAG AA's 4.5:1 for
- * normal text everywhere it's used app-wide (uppercase labels, captions,
- * secondary metadata — dozens of sites), plus a related under-contrast
- * shade in the dark sidebar. That is a real, product-wide design-token
- * decision — raising it enough to pass AA collapses much of the
- * three-tier primary/secondary/tertiary text hierarchy into two visually
- * similar tiers — not a quick fix a security/reliability pass should push
- * through unreviewed. It's documented as a known finding rather than
- * fixed or hidden; see the final report. Every other rule (labels, ARIA,
- * roles, landmarks, keyboard/focus affordances, form structure) still
- * gates for real.
+ * FND-SEC-007: `color-contrast`/`link-in-text-block` were previously
+ * excluded here — the `content-tertiary` token measured ~2.56:1 against
+ * white (light mode) and ~3.62:1 (dark mode), both under WCAG AA's 4.5:1
+ * floor for normal text. The token itself has been fixed (see
+ * src/styles/index.css) to 4.667:1 / 4.925:1 respectively, so the
+ * exclusion is removed — every rule now gates for real, including
+ * contrast, not just labels/ARIA/roles/landmarks/keyboard affordances.
  */
-const KNOWN_SYSTEMIC_FINDING_RULES = ['color-contrast', 'link-in-text-block'];
-
 async function expectNoSeriousViolations(page: Page) {
-  const results = await new AxeBuilder({ page }).disableRules(KNOWN_SYSTEMIC_FINDING_RULES).analyze();
+  const results = await new AxeBuilder({ page }).analyze();
   const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   if (serious.length > 0) {
     console.log(JSON.stringify(serious, null, 2));

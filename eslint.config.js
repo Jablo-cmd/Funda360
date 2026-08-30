@@ -36,5 +36,16 @@ export default [
       'no-unused-vars': 'off',
     },
   },
+  {
+    // Standalone Node tooling scripts (e.g. supabase/load-tests/run.mjs) —
+    // plain Node runtime, not the browser/React app, so this gets Node
+    // globals instead of the browser block above.
+    files: ['**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: globals.node,
+    },
+  },
   prettierConfig,
 ];

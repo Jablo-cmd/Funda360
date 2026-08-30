@@ -7,7 +7,10 @@ import { useLearnerFees } from '@/features/fees/hooks/useLearnerFees';
 import { feeService } from '@/features/fees/services/feeService';
 import { FeeChargeFormModal } from '@/features/fees/components/FeeChargeFormModal';
 import { RecordPaymentFormModal } from '@/features/fees/components/RecordPaymentFormModal';
+import { FeeAdjustmentFormModal } from '@/features/fees/components/FeeAdjustmentFormModal';
+import { RefundFormModal } from '@/features/fees/components/RefundFormModal';
 import { getDbErrorMessage } from '@/lib/dbErrors';
+import type { LearnerFeePayment } from '@/features/fees/types/fee.types';
 
 export interface LearnerFinancialSectionProps {
   schoolId: string;
@@ -42,10 +45,31 @@ const METHOD_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
+const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
+  discount: 'Discount',
+  bursary: 'Bursary',
+  scholarship: 'Scholarship',
+  waiver: 'Waiver',
+};
+
+const REFUND_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  completed: 'Completed',
+  rejected: 'Rejected',
+};
+
+const REFUND_STATUS_CLASSES: Record<string, string> = {
+  pending: 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500',
+  completed: 'bg-success-500/15 text-success-500',
+  rejected: 'bg-danger-50 text-danger-600',
+};
+
 export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, canManage }: LearnerFinancialSectionProps) {
   const { summary, isLoading, error, refetch } = useLearnerFees(learnerId);
   const [isChargeOpen, setIsChargeOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
+  const [refundTarget, setRefundTarget] = useState<LearnerFeePayment | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const handleVoidCharge = async (id: string) => {
@@ -68,6 +92,16 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
     }
   };
 
+  const handleVoidAdjustment = async (id: string) => {
+    setActionError(null);
+    try {
+      await feeService.voidAdjustment(id);
+      await refetch();
+    } catch (err) {
+      setActionError(getDbErrorMessage(err, 'Failed to remove adjustment.'));
+    }
+  };
+
   if (isLoading) {
     return <LoadingBlock label="Loading fee information…" />;
   }
@@ -75,6 +109,27 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
   return (
     <div className="flex flex-col gap-6">
       <ErrorAlert message={error ?? actionError} />
+
+      {summary && (
+        <dl className="grid grid-cols-2 gap-4 rounded-card border border-border bg-surface-raised p-4 shadow-card sm:grid-cols-4 dark:shadow-card-dark">
+          <div>
+            <dt className="text-xs text-content-tertiary">Total charged</dt>
+            <dd className="font-mono font-medium text-content-primary">{formatCurrency(summary.totalCharged)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-content-tertiary">Net paid</dt>
+            <dd className="font-mono font-medium text-content-primary">{formatCurrency(summary.netPaid)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-content-tertiary">Discounts / bursaries</dt>
+            <dd className="font-mono font-medium text-content-primary">{formatCurrency(summary.totalAdjustments)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-content-tertiary">Outstanding balance</dt>
+            <dd className="font-mono font-semibold text-content-primary">{formatCurrency(summary.outstandingBalance)}</dd>
+          </div>
+        </dl>
+      )}
 
       {canManage && academicYearId && (
         <div className="flex flex-wrap gap-3">
@@ -86,6 +141,11 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
           <div className="w-full sm:w-auto sm:min-w-[9rem]">
             <Button type="button" variant="secondary" onClick={() => setIsPaymentOpen(true)}>
               Record payment
+            </Button>
+          </div>
+          <div className="w-full sm:w-auto sm:min-w-[9rem]">
+            <Button type="button" variant="secondary" onClick={() => setIsAdjustmentOpen(true)}>
+              Add discount / bursary
             </Button>
           </div>
         </div>
@@ -136,6 +196,48 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
       </div>
 
       <div>
+        <h3 className="mb-2 text-sm font-semibold text-content-primary">Discounts, bursaries &amp; scholarships</h3>
+        {!summary || summary.adjustments.length === 0 ? (
+          <p className="rounded-card border border-border bg-surface-raised px-4 py-8 text-center text-sm text-content-tertiary">
+            No adjustments recorded.
+          </p>
+        ) : (
+          <TableScrollContainer>
+            <table className="w-full min-w-[520px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
+                  <th scope="col" className="px-4 py-3 font-medium">Type</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Reason</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">Amount</th>
+                  {canManage && <th scope="col" className="px-4 py-3 text-right font-medium">Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {summary.adjustments.map((adjustment) => (
+                  <tr key={adjustment.id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 font-medium text-content-primary">{ADJUSTMENT_TYPE_LABELS[adjustment.adjustmentType]}</td>
+                    <td className="px-4 py-3 text-content-secondary">{adjustment.reason}</td>
+                    <td className="px-4 py-3 text-right font-mono text-content-primary">-{formatCurrency(adjustment.amount)}</td>
+                    {canManage && (
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => void handleVoidAdjustment(adjustment.id)}
+                          className="focus-ring rounded-md px-2 py-1 text-xs font-medium text-danger-600 hover:bg-danger-50"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScrollContainer>
+        )}
+      </div>
+
+      <div>
         <h3 className="mb-2 text-sm font-semibold text-content-primary">Payments</h3>
         {!summary || summary.payments.length === 0 ? (
           <p className="rounded-card border border-border bg-surface-raised px-4 py-8 text-center text-sm text-content-tertiary">
@@ -143,7 +245,7 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
           </p>
         ) : (
           <TableScrollContainer>
-            <table className="w-full min-w-[520px] text-left text-sm">
+            <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
                   <th scope="col" className="px-4 py-3 font-medium">Date</th>
@@ -162,13 +264,22 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
                     <td className="px-4 py-3 text-right font-mono text-content-primary">{formatCurrency(payment.amount)}</td>
                     {canManage && (
                       <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => void handleVoidPayment(payment.id)}
-                          className="focus-ring rounded-md px-2 py-1 text-xs font-medium text-danger-600 hover:bg-danger-50"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex justify-end gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setRefundTarget(payment)}
+                            className="focus-ring rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-300"
+                          >
+                            Refund
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleVoidPayment(payment.id)}
+                            className="focus-ring rounded-md px-2 py-1 text-xs font-medium text-danger-600 hover:bg-danger-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -178,6 +289,38 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
           </TableScrollContainer>
         )}
       </div>
+
+      {summary && summary.refunds.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-content-primary">Refunds</h3>
+          <TableScrollContainer>
+            <table className="w-full min-w-[520px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-content-tertiary">
+                  <th scope="col" className="px-4 py-3 font-medium">Date</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Reason</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Status</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.refunds.map((refund) => (
+                  <tr key={refund.id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 font-medium text-content-primary">{formatDate(refund.refundDate)}</td>
+                    <td className="px-4 py-3 text-content-secondary">{refund.reason}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${REFUND_STATUS_CLASSES[refund.status]}`}>
+                        {REFUND_STATUS_LABELS[refund.status]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-content-primary">-{formatCurrency(refund.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScrollContainer>
+        </div>
+      )}
 
       {academicYearId && (
         <>
@@ -195,6 +338,24 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
             schoolId={schoolId}
             learnerId={learnerId}
             academicYearId={academicYearId}
+            onSaved={() => void refetch()}
+          />
+          <FeeAdjustmentFormModal
+            isOpen={isAdjustmentOpen}
+            onClose={() => setIsAdjustmentOpen(false)}
+            schoolId={schoolId}
+            learnerId={learnerId}
+            academicYearId={academicYearId}
+            charges={summary?.charges ?? []}
+            onSaved={() => void refetch()}
+          />
+          <RefundFormModal
+            isOpen={refundTarget !== null}
+            onClose={() => setRefundTarget(null)}
+            schoolId={schoolId}
+            learnerId={learnerId}
+            academicYearId={academicYearId}
+            payment={refundTarget}
             onSaved={() => void refetch()}
           />
         </>

@@ -19,6 +19,7 @@ export const timetableEntrySchema = z
     startTime: z.string().trim().min(1, 'Start time is required'),
     endTime: z.string().trim().min(1, 'End time is required'),
     room: z.string().trim().optional(),
+    status: z.enum(['draft', 'published']),
   })
   .refine((values) => values.endTime > values.startTime, {
     message: 'End time must be after start time',
@@ -37,4 +38,5 @@ export const timetableEntryDefaultValues: TimetableEntryFormValues = {
   startTime: '',
   endTime: '',
   room: '',
+  status: 'published',
 };

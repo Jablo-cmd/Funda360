@@ -1,5 +1,4 @@
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
-import { FullScreenNotice } from '@/components/ui/FullScreenNotice';
 import { useMyEmployee } from '@/features/employees/hooks/useMyEmployee';
 import { EmployeeSelfSummary } from '@/features/employees/components/EmployeeSelfSummary';
 import { useMyLearners } from '@/features/learners/hooks/useMyLearners';
@@ -11,6 +10,8 @@ import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { MyClassesSummary } from '@/features/teaching/components/MyClassesSummary';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { usePermissions } from '@/hooks/usePermissions';
+import { MfaEnrollmentCard } from '@/features/mfa/components/MfaEnrollmentCard';
+import { MyLeaveSection } from '@/features/employees/components/MyLeaveSection';
 
 /**
  * Composition page only — layout, rendering order, and conditional
@@ -50,15 +51,10 @@ export function MyProfilePage() {
   // query itself.
   const hasLearners = !can('learner.view') && learners.data.length > 0;
   const hasMyClasses = myClasses.data.length > 0;
-
-  if (!hasEmployeeRecord && !hasLearners && !hasMyClasses) {
-    return (
-      <FullScreenNotice
-        title="My Profile"
-        message="There's nothing linked to your account yet."
-      />
-    );
-  }
+  // Security (two-factor authentication) is always relevant to every
+  // account, unlike the employee/learner/class sections below — so it
+  // alone is enough to keep this page from ever needing the old "nothing
+  // linked to your account yet" empty state.
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
@@ -80,6 +76,13 @@ export function MyProfilePage() {
           ) : (
             employee.data && <EmployeeSelfSummary employee={employee.data} />
           )}
+        </section>
+      )}
+
+      {hasEmployeeRecord && employee.data && school && (
+        <section className="flex flex-col gap-4">
+          <h2 className="text-base font-semibold text-content-primary">Leave</h2>
+          <MyLeaveSection schoolId={school.id} employeeId={employee.data.id} />
         </section>
       )}
 
@@ -122,6 +125,8 @@ export function MyProfilePage() {
           )}
         </section>
       )}
+
+      <MfaEnrollmentCard />
     </div>
   );
 }

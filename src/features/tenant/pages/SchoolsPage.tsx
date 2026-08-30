@@ -49,8 +49,13 @@ export function SchoolsPage() {
         title="Schools"
         description="Onboard a new school, or switch which school you're currently managing."
         action={
-          <div className="w-full sm:w-auto sm:min-w-[9rem]">
-            <Button type="button" onClick={() => setIsCreateOpen(true)}>
+          <div className="flex flex-wrap gap-3">
+            <div className="w-full sm:w-auto sm:min-w-[9rem]">
+              <Button type="button" onClick={() => navigate('/schools/onboard')}>
+                Onboard new school
+              </Button>
+            </div>
+            <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(true)}>
               Create school
             </Button>
           </div>
@@ -70,6 +75,10 @@ export function SchoolsPage() {
         />
       )}
 
+      {/* "Onboard new school" (FND-BIZ-001) is the recommended path — it also
+          walks through the new school's first admin account and first
+          academic year. This modal stays as a fast, bare-school-only path
+          for a platform admin who wants just the school row for now. */}
       <CreateSchoolModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}

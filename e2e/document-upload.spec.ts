@@ -42,6 +42,76 @@ test('a principal can upload a learner document and see it in the table', async 
   expect(insertedRow).toBeDefined();
 });
 
+test('a principal can set an expiry date, and an already-expired document shows an Expired badge', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'principal' });
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+  await installLearnerDetailMock(page, buildMockLearnerRow());
+  await installLearnerChildListMock(page, 'learner_documents', [
+    buildMockLearnerDocumentRow({ id: 'document-expired', documentType: 'permit', expiryDate: '2020-01-01' }),
+  ]);
+  await installStorageUploadMock(page, 'learner-documents');
+
+  let insertedRow: Record<string, unknown> | undefined;
+  await page.route('**/rest/v1/learner_documents*', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    insertedRow = buildMockLearnerDocumentRow({ id: 'document-new', documentType: 'passport', expiryDate: '2030-06-15' });
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(insertedRow) });
+  });
+
+  await page.goto('/learners/learner-1');
+  await page.getByRole('button', { name: 'Documents' }).click();
+
+  // The pre-existing expired permit shows an Expired badge.
+  await expect(page.getByText(/Expired 01 Jan 2020/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Add document' }).click();
+  await page.getByLabel('Document type').selectOption('passport');
+  await page.getByLabel('Expiry date').fill('2030-06-15');
+  await page.getByLabel('File').setInputFiles({
+    name: 'passport.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4 mock content'),
+  });
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Add document' })).toHaveCount(0);
+  expect((insertedRow as Record<string, unknown> | undefined)?.expiry_date).toBe('2030-06-15');
+});
+
+test('a principal can mark an upload as replacing an existing document, and the old one becomes Archived', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'principal' });
+  await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });
+  await installLearnerDetailMock(page, buildMockLearnerRow());
+  await installLearnerChildListMock(page, 'learner_documents', [
+    buildMockLearnerDocumentRow({ id: 'document-old', documentType: 'passport' }),
+  ]);
+  await installStorageUploadMock(page, 'learner-documents');
+
+  let insertedRow: Record<string, unknown> | undefined;
+  await page.route('**/rest/v1/learner_documents*', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    insertedRow = buildMockLearnerDocumentRow({ id: 'document-new', documentType: 'passport', supersedesDocumentId: 'document-old' });
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(insertedRow) });
+  });
+
+  await page.goto('/learners/learner-1');
+  await page.getByRole('button', { name: 'Documents' }).click();
+  await page.getByRole('button', { name: 'Add document' }).click();
+
+  await page.getByLabel('Document type').selectOption('passport');
+  await expect(page.getByLabel('Replaces (optional)')).toBeVisible();
+  await page.getByLabel('Replaces (optional)').selectOption('document-old');
+  await page.getByLabel('File').setInputFiles({
+    name: 'passport.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4 mock content'),
+  });
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Add document' })).toHaveCount(0);
+  expect((insertedRow as Record<string, unknown> | undefined)?.supersedes_document_id).toBe('document-old');
+});
+
 test('an unsupported file type is rejected before any upload request is made', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'principal' });
   await installDataMocks(page, { profile: buildMockProfileRow(), school: buildMockSchoolRow() });

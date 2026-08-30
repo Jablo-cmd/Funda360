@@ -1,9 +1,11 @@
 import { supabase } from '@/lib/supabase';
-import type { BehaviourIncidentRow, BehaviourIncidentInsert } from '@/lib/database.types';
+import type { BehaviourIncidentRow, BehaviourIncidentInsert, BehaviourIncidentUpdate } from '@/lib/database.types';
 import type {
   BehaviourIncident,
   CreateBehaviourIncidentInput,
+  UpdateFollowUpInput,
   LearnerBehaviourSummary,
+  GuardianVisibleBehaviourIncident,
 } from '@/features/behaviour/types/behaviour.types';
 
 /** Negative incidents within this many days count toward "attention required" — outside this window a resolved history no longer flags the learner as a current concern. */
@@ -24,6 +26,11 @@ function toIncident(row: BehaviourIncidentRow): BehaviourIncident {
     outcome: row.outcome,
     followUpRequired: row.follow_up_required,
     followUpNotes: row.follow_up_notes,
+    followUpStatus: row.follow_up_status,
+    followUpAssignedTo: row.follow_up_assigned_to,
+    followUpTargetDate: row.follow_up_target_date,
+    followUpResolvedAt: row.follow_up_resolved_at,
+    guardianVisible: row.guardian_visible,
     active: row.active,
     createdBy: row.created_by,
     createdAt: row.created_at,
@@ -74,6 +81,9 @@ async function createIncident(
     outcome: input.outcome || null,
     follow_up_required: input.followUpRequired ?? false,
     follow_up_notes: input.followUpNotes || null,
+    follow_up_assigned_to: input.followUpAssignedTo || null,
+    follow_up_target_date: input.followUpTargetDate || null,
+    guardian_visible: input.guardianVisible ?? false,
   };
   const { data, error } = await supabase.from('behaviour_incidents').insert(payload).select('*').single();
   if (error) throw error;
@@ -92,9 +102,51 @@ async function voidIncident(id: string): Promise<BehaviourIncident> {
   return toIncident(data);
 }
 
+/** follow_up_resolved_at is never sent here — the server always derives it from follow_up_status (behaviour_incidents_sync_follow_up_resolved_at()). */
+async function updateFollowUp(id: string, input: UpdateFollowUpInput): Promise<BehaviourIncident> {
+  const payload: BehaviourIncidentUpdate = {
+    follow_up_status: input.followUpStatus,
+    follow_up_assigned_to: input.followUpAssignedTo,
+    follow_up_target_date: input.followUpTargetDate,
+  };
+  const { data, error } = await supabase.from('behaviour_incidents').update(payload).eq('id', id).select('*').single();
+  if (error) throw error;
+  return toIncident(data);
+}
+
+async function setGuardianVisible(id: string, guardianVisible: boolean): Promise<BehaviourIncident> {
+  const { data, error } = await supabase
+    .from('behaviour_incidents')
+    .update({ guardian_visible: guardianVisible })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return toIncident(data);
+}
+
+/** The learner's own guardian-visible incidents, column-narrowed server-side — see get_guardian_visible_behaviour_incidents(). Used by the Parent Portal only. */
+async function getGuardianVisibleIncidents(learnerId: string): Promise<GuardianVisibleBehaviourIncident[]> {
+  const { data, error } = await supabase.rpc('get_guardian_visible_behaviour_incidents', { p_learner_id: learnerId });
+  if (error) throw error;
+  return data.map((row) => ({
+    id: row.id,
+    learnerId: row.learner_id,
+    incidentType: row.incident_type,
+    severity: row.severity,
+    category: row.category,
+    occurredAt: row.occurred_at,
+    description: row.description,
+    followUpRequired: row.follow_up_required,
+  }));
+}
+
 export const behaviourService = {
   getIncidents,
   getLearnerBehaviourSummary,
   createIncident,
   voidIncident,
+  updateFollowUp,
+  setGuardianVisible,
+  getGuardianVisibleIncidents,
 };

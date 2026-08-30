@@ -4,9 +4,17 @@ import type {
   LearnerEnrollmentStatus,
   GuardianRelationshipType,
   LearnerDocumentType,
+  LearnerTransferDirection,
 } from '@/lib/database.types';
 
-export type { LearnerStatus, BoardingType, LearnerEnrollmentStatus, GuardianRelationshipType, LearnerDocumentType };
+export type {
+  LearnerStatus,
+  BoardingType,
+  LearnerEnrollmentStatus,
+  GuardianRelationshipType,
+  LearnerDocumentType,
+  LearnerTransferDirection,
+};
 
 export interface Learner {
   id: string;
@@ -106,6 +114,8 @@ export interface LearnerDocument {
   fileName: string | null;
   uploadedAt: string;
   notes: string | null;
+  expiryDate: string | null;
+  supersedesDocumentId: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -181,6 +191,31 @@ export interface UpdateLearnerMedicalInformationInput {
 export interface CreateLearnerDocumentInput {
   documentType: LearnerDocumentType;
   file: File;
+  notes?: string | null;
+  expiryDate?: string | null;
+  /** This upload is a renewal/replacement of an existing document — the referenced document is auto-archived server-side (see learner_documents_archive_superseded()). */
+  supersedesDocumentId?: string | null;
+}
+
+export interface LearnerTransfer {
+  id: string;
+  schoolId: string;
+  learnerId: string;
+  direction: LearnerTransferDirection;
+  otherSchoolName: string;
+  otherSchoolContact: string | null;
+  transferDate: string;
+  reason: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface CreateLearnerTransferInput {
+  direction: LearnerTransferDirection;
+  otherSchoolName: string;
+  otherSchoolContact?: string | null;
+  transferDate: string;
+  reason?: string | null;
   notes?: string | null;
 }
 

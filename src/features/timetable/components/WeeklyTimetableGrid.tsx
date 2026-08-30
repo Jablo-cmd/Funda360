@@ -106,11 +106,16 @@ export function WeeklyTimetableGrid({
                           type="button"
                           disabled={!canManage}
                           onClick={() => onEdit(entry)}
-                          className={`focus-ring rounded-lg border border-brand-500/30 bg-brand-50 px-2.5 py-2 text-left dark:bg-brand-500/10 ${
-                            canManage ? 'hover:bg-brand-100 dark:hover:bg-brand-500/20' : 'cursor-default'
-                          }`}
+                          className={`focus-ring rounded-lg border px-2.5 py-2 text-left ${
+                            entry.status === 'draft'
+                              ? 'border-dashed border-content-tertiary/50 bg-surface-sunken'
+                              : 'border-brand-500/30 bg-brand-50 dark:bg-brand-500/10'
+                          } ${canManage ? (entry.status === 'draft' ? 'hover:bg-surface-hover' : 'hover:bg-brand-100 dark:hover:bg-brand-500/20') : 'cursor-default'}`}
                         >
-                          <p className="text-xs font-semibold text-brand-700 dark:text-brand-300">
+                          {entry.status === 'draft' && (
+                            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-tertiary">Draft</p>
+                          )}
+                          <p className={`text-xs font-semibold ${entry.status === 'draft' ? 'text-content-secondary' : 'text-brand-700 dark:text-brand-300'}`}>
                             {subjectsById[entry.subjectId]?.name ?? 'Subject'}
                           </p>
                           {showClassLabel && (
