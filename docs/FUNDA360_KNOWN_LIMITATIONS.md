@@ -42,6 +42,25 @@ _Last verified against code 2026-08-29 — see `docs/product/FUNDA360-TOP-TIER-K
 ## Technical debt
 
 - **`AssessmentReportPage.tsx` has a known class-name-resolution race condition,** the same pattern that was found and fixed on the Attendance Report. It has not caused a visible defect in verification, but should be fixed with the same approach before a wider rollout.
+- **A handful of Playwright specs are flaky under maximum parallelism** — the local Vite dev server occasionally drops a route match when many workers hit it at once (`playwright.config.ts` already documents this for the academic-years list). Confirmed unrelated to any specific feature: `school-profile.spec.ts` (logo upload / regional settings) flakes identically on a clean `d9d8103` checkout; `academic.spec.ts`, `assessments.spec.ts:136`, and `timetable.spec.ts:14` all pass in isolation and in serial (`--workers=1`). CI runs with `retries: 1`, which absorbs them. The Finance suite (`fees.spec.ts`, 10 tests) is not affected and passes cleanly in serial. Do not "fix" a feature to accommodate one of these — investigate the dev-server route handling instead.
+- **Finance domain — explicitly deferred, non-blocking** (Finance was accepted at the invoicing/gateway stage): recurring-billing automation (a scheduler that auto-generates monthly/termly charges — today "a payment plan is several charges with different due dates"); advanced Finance-dashboard breakdowns/series (grade-level, payment-method, daily/monthly/term — collection rate, outstanding, arrears, ageing and the debtor list already exist); dedicated fee-category enum values beyond `tuition/transport/boarding/uniform/activity/other` (registration/application/meals/trips/technology/exam fees use `other` + a description).
+
+## Finance domain acceptance gate (2026-09-03)
+
+Verified before moving on:
+
+1. **Additive & reversible** — all 3 Finance migrations are `add column if not exists` / `create table` / `create type` / `create or replace function` only; no data rewrites, no destructive DDL.
+2. **No unsafe direct client mutation of protected state** — `invoices` status/number/totals/lifecycle columns are trigger-locked to the RPCs; `learner_fee_payment_allocations`, `fee_receipts`, `fee_document_counters`, `payment_intents`, `payment_webhook_events` have **no client write policy at all** (RPC-only).
+3. **FORCE RLS + fail-closed** — all 7 new tables: `relrowsecurity = t`, `relforcerowsecurity = t`; every policy is an explicit allow, default-deny.
+4. **Guardian visibility = own children, issued only** — `invoices_select_for_guardians` requires `is_learner_guardian(learner_id) AND status <> 'draft'`; allocations/receipts scoped through `is_learner_guardian`. RLS-tested.
+5. **Drafts / gateway config / webhook events / secrets invisible to guardians** — RLS-tested for each; secrets are not in the database at all.
+6. **Allocation atomic, no over-allocation under concurrency** — `allocate_fee_payment` / `settle_payment_intent` lock the payment and each target invoice `FOR UPDATE` (invoice-id order, deadlock-free). Verified with a real two-session interleave: the second transaction blocks, then fails the total check; final allocation = 800 on a 1000 invoice, not 1600. (`20260903110000_finance_gate_hardening.sql`)
+7. **Numbering not client-manipulable** — `next_fee_document_number` / `expire_stale_payment_intents` are `revoke execute … from public` **and** `from authenticated`; RLS-tested (`permission denied for function`).
+8. **Webhook idempotent** — duplicate `provider_event_id` → `duplicate_ignored` (unique constraint + `on conflict do nothing`); concurrent delivery serialised by `select … for update` on the intent + already-terminal check. RLS-tested.
+9. **Secrets** — repo-wide grep confirms no secret values in `src/`, migrations, or logs; adapters read `ctx.secrets.*` sourced only from `Deno.env`.
+10. **PDFs** — generated client-side from data already fetched under the caller's RLS; nothing crosses the tenant/guardian boundary.
+11. **Finance E2E serial** — `fees.spec.ts` + `parent-portal.spec.ts` = 21/21 with `--workers=1`.
+12. Pre-existing Playwright flakes documented above rather than worked around.
 
 ## Local-development behavior
 

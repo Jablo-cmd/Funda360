@@ -67,13 +67,16 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 2. Over-allocation rejected.
+-- 2. Over-allocation rejected — single payment, and cross-payment (proves
+-- the check counts allocations from OTHER payments; the FOR UPDATE locks in
+-- 20260903110000 make that same check concurrency-safe).
 do $$
-declare v_error text;
+declare v_error text; v_error2 text; v_p2 uuid := 'f1110000-0000-0000-0000-0000000000d6';
 begin
   perform set_config('request.jwt.claims',
     test_util.jwt_claims('17171717-1717-1717-1717-171717171717', 'finance_manager', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
   execute 'set local role authenticated';
+
   begin
     perform public.allocate_fee_payment('f1110000-0000-0000-0000-0000000000d5',
       jsonb_build_array(jsonb_build_object('invoice_id', 'f1110000-0000-0000-0000-0000000000d1', 'amount', 99999)));
@@ -81,6 +84,39 @@ begin
   exception when others then
     get stacked diagnostics v_error = message_text;
     call test_util.record('allocation exceeding the invoice total is rejected', true, v_error);
+  end;
+
+  -- d5 already has 900 allocated to invoice d1 (total 1500) from test 1.
+  -- A second payment trying to add 700 more (900 + 700 > 1500) must fail.
+  insert into public.learner_fee_payments (id, school_id, learner_id, academic_year_id, amount, payment_date, method)
+  values (v_p2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f1110000-0000-0000-0000-0000000000e1', 'aaaa1111-0000-0000-0000-000000000001', 700, current_date, 'eft');
+  begin
+    perform public.allocate_fee_payment(v_p2,
+      jsonb_build_array(jsonb_build_object('invoice_id', 'f1110000-0000-0000-0000-0000000000d1', 'amount', 700)));
+    call test_util.record('a second payment cannot push total invoice allocation over the invoice total', false, 'call succeeded');
+  exception when others then
+    get stacked diagnostics v_error2 = message_text;
+    call test_util.record('a second payment cannot push total invoice allocation over the invoice total', true, v_error2);
+  end;
+
+  execute 'reset role';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 2b. Gate 7: next_fee_document_number() is internal-only — an
+-- authenticated client cannot call it directly (20260903110000).
+do $$
+declare v_error text;
+begin
+  perform set_config('request.jwt.claims',
+    test_util.jwt_claims('17171717-1717-1717-1717-171717171717', 'finance_manager', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
+  execute 'set local role authenticated';
+  begin
+    perform public.next_fee_document_number('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'invoice');
+    call test_util.record('an authenticated client cannot call next_fee_document_number', false, 'call succeeded');
+  exception when others then
+    get stacked diagnostics v_error = message_text;
+    call test_util.record('an authenticated client cannot call next_fee_document_number', true, v_error);
   end;
   execute 'reset role';
 end $$;

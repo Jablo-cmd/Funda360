@@ -5,7 +5,9 @@ Describes the **actual implementation** of the finance domain:
 `…20260828090000_fees_adjustments_and_refunds.sql`,
 `…20260829290000_bank_reconciliation.sql`,
 `…20260903090000_fees_invoicing.sql`, `…20260903100000_payment_gateway.sql`,
-and `src/features/fees`.
+`…20260903110000_finance_gate_hardening.sql` (concurrency locks on
+allocation/settlement + `revoke … from authenticated` on the internal
+numbering/cron functions), and `src/features/fees`.
 
 ## Ledger model
 
