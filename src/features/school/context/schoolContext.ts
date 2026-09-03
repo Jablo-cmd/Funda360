@@ -3,6 +3,7 @@ import type { School } from '@/types/school.types';
 import type {
   SchoolProfileUpdateInput,
   SchoolSettingsUpdateInput,
+  SchoolBillingUpdateInput,
 } from '@/features/school/types/school.types';
 
 export interface SchoolContextValue {
@@ -12,6 +13,7 @@ export interface SchoolContextValue {
   refresh: () => Promise<void>;
   updateSchool: (updates: SchoolProfileUpdateInput) => Promise<void>;
   updateSchoolSettings: (updates: SchoolSettingsUpdateInput) => Promise<void>;
+  updateSchoolBilling: (updates: SchoolBillingUpdateInput) => Promise<void>;
   uploadLogo: (file: File) => Promise<void>;
 }
 

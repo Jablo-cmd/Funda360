@@ -16,3 +16,15 @@ export interface SchoolSettingsUpdateInput {
   currency?: string;
   language?: string;
 }
+
+/** Billing/invoicing configuration — the Finance domain's per-school settings (spec 4.D / 51). */
+export interface SchoolBillingUpdateInput {
+  vatRegistered?: boolean;
+  vatNumber?: string | null;
+  vatRate?: number;
+  invoiceNumberPrefix?: string;
+  receiptNumberPrefix?: string;
+  invoiceDueDays?: number;
+  invoiceFooterNote?: string | null;
+  bankingDetails?: string | null;
+}

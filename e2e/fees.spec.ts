@@ -68,6 +68,14 @@ async function installFeesBaseMocks(page: import('@playwright/test').Page) {
     if (route.request().method() !== 'GET') return route.fallback();
     await fulfillJson(route, []);
   });
+  await page.route('**/rest/v1/invoices*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, []);
+  });
+  await page.route('**/rest/v1/learner_fee_payment_allocations*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, []);
+  });
 }
 
 test("a finance_manager can view a learner's financial summary with the correct outstanding balance", async ({ page }) => {
@@ -334,4 +342,159 @@ test('a role without learner.view_financial does not see the Financial tab', asy
 
   await page.goto('/learners/learner-1');
   await expect(page.getByRole('button', { name: 'Financial' })).toHaveCount(0);
+});
+
+test('a finance_manager can create a draft invoice and issue it', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'finance_manager' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow({ role: 'finance_manager' }),
+    school: buildMockSchoolRow(),
+    academicYears: [buildMockAcademicYearRow()],
+  });
+  await installLearnerDetailMock(page, buildMockLearnerRow());
+  await installFeesBaseMocks(page);
+  await page.route('**/rest/v1/learner_fee_adjustments*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, []);
+  });
+
+  const draftInvoice = {
+    id: 'invoice-1',
+    school_id: MOCK_TENANT_ID,
+    learner_id: 'learner-1',
+    academic_year_id: 'year-2026',
+    invoice_number: null,
+    status: 'draft',
+    issue_date: null,
+    due_date: null,
+    notes: 'Term 1',
+    vat_rate: 0,
+    subtotal: 0,
+    vat_amount: 0,
+    total: 0,
+    issued_at: null,
+    issued_by: null,
+    voided_at: null,
+    voided_by: null,
+    void_reason: null,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-02-01T00:00:00Z',
+    updated_at: '2026-02-01T00:00:00Z',
+  };
+  const issuedInvoice = {
+    ...draftInvoice,
+    invoice_number: 'INV-2026-00001',
+    status: 'issued',
+    issue_date: '2026-09-01',
+    due_date: '2099-12-31',
+    subtotal: 1200,
+    total: 1200,
+    issued_at: '2026-09-01T00:00:00Z',
+  };
+
+  let invoiceCreated = false;
+  let invoiceIssued = false;
+
+  // The line-item charges are inserted after the draft invoice.
+  await page.unroute('**/rest/v1/learner_fee_charges*');
+  await page.route('**/rest/v1/learner_fee_charges*', async (route) => {
+    const method = route.request().method();
+    if (method === 'POST') return fulfillJson(route, [{ ...CHARGE_ROW, id: 'charge-inv-1', invoice_id: 'invoice-1', amount: 1200 }]);
+    if (method !== 'GET') return route.fallback();
+    await fulfillJson(route, invoiceCreated ? [{ ...CHARGE_ROW, id: 'charge-inv-1', invoice_id: 'invoice-1', amount: 1200 }] : [CHARGE_ROW]);
+  });
+
+  // invoices GET reflects the current state; POST creates the draft.
+  await page.unroute('**/rest/v1/invoices*');
+  await page.route('**/rest/v1/invoices*', async (route) => {
+    const method = route.request().method();
+    if (method === 'POST') {
+      invoiceCreated = true;
+      await fulfillJson(route, draftInvoice);
+      return;
+    }
+    if (method !== 'GET') return route.fallback();
+    if (!invoiceCreated) return fulfillJson(route, []);
+    await fulfillJson(route, [invoiceIssued ? issuedInvoice : draftInvoice]);
+  });
+  await page.route('**/rest/v1/rpc/issue_fee_invoice', async (route) => {
+    invoiceIssued = true;
+    await fulfillJson(route, issuedInvoice);
+  });
+
+  await page.goto('/learners/learner-1');
+  await page.getByRole('button', { name: 'Financial' }).click();
+
+  await page.getByRole('button', { name: 'New invoice' }).click();
+  await expect(page.getByRole('heading', { name: 'New invoice (draft)' })).toBeVisible();
+
+  await page.getByLabel('Description').first().fill('Term 1 tuition');
+  await page.getByLabel('Amount').first().fill('1200');
+  await page.getByRole('button', { name: 'Create draft' }).click();
+
+  await expect(page.getByRole('heading', { name: 'New invoice (draft)' })).toHaveCount(0);
+  expect(invoiceCreated).toBe(true);
+
+  await page.getByRole('button', { name: 'Issue', exact: true }).click();
+  await expect(page.getByRole('row', { name: /INV-2026-00001/ })).toContainText('Issued');
+  expect(invoiceIssued).toBe(true);
+});
+
+test('a guardian sees an issued invoice with a Pay button on the family Fees page', async ({ page }) => {
+  await seedAuthenticatedSession(page, { role: 'guardian' });
+  await installDataMocks(page, {
+    profile: buildMockProfileRow({ role: 'guardian' }),
+    school: buildMockSchoolRow(),
+    academicYears: [buildMockAcademicYearRow()],
+  });
+
+  await page.route('**/rest/v1/learners*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, [{ ...buildMockLearnerRow(), id: 'learner-1', first_name: 'Naledi', last_name: 'Dube' }]);
+  });
+  await installFeesBaseMocks(page);
+  await page.route('**/rest/v1/learner_fee_adjustments*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, []);
+  });
+  await page.route('**/rest/v1/fee_receipts*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, []);
+  });
+
+  const issuedInvoice = {
+    id: 'invoice-1',
+    school_id: MOCK_TENANT_ID,
+    learner_id: 'learner-1',
+    academic_year_id: 'year-2026',
+    invoice_number: 'INV-2026-00001',
+    status: 'issued',
+    issue_date: '2026-02-01',
+    due_date: '2026-03-03',
+    notes: null,
+    vat_rate: 0,
+    subtotal: 900,
+    vat_amount: 0,
+    total: 900,
+    issued_at: '2026-02-01T00:00:00Z',
+    issued_by: null,
+    voided_at: null,
+    voided_by: null,
+    void_reason: null,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-02-01T00:00:00Z',
+    updated_at: '2026-02-01T00:00:00Z',
+  };
+  await page.unroute('**/rest/v1/invoices*');
+  await page.route('**/rest/v1/invoices*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await fulfillJson(route, [issuedInvoice]);
+  });
+
+  await page.goto('/parent/fees');
+  await expect(page.getByRole('heading', { name: 'Fees' })).toBeVisible();
+  await expect(page.getByText('INV-2026-00001')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Pay/ })).toBeVisible();
 });

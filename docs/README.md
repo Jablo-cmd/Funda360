@@ -17,6 +17,11 @@
 13. Business Continuity & Disaster Recovery Plan  
 14. Implementation & Rollout Strategy  
 
+## Domain implementation notes
+
+- [FINANCE.md](./FINANCE.md) — fee ledger, invoicing, allocation, statements, receipts, bank reconciliation
+- [PAYMENT_GATEWAY.md](./PAYMENT_GATEWAY.md) — provider-agnostic online payment architecture + go-live checklist
+
 ---
 
 These documents form the **official engineering and business foundation** for the Funda360 platform. They provide a comprehensive blueprint covering:

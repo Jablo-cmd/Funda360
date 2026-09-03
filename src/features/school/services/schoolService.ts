@@ -7,6 +7,7 @@ import type { School } from '@/types/school.types';
 import type {
   SchoolProfileUpdateInput,
   SchoolSettingsUpdateInput,
+  SchoolBillingUpdateInput,
 } from '@/features/school/types/school.types';
 
 const LOGO_BUCKET = 'school-logos';
@@ -64,6 +65,19 @@ function toSettingsUpdatePayload(updates: SchoolSettingsUpdateInput): SchoolUpda
   return payload;
 }
 
+function toBillingUpdatePayload(updates: SchoolBillingUpdateInput): SchoolUpdate {
+  const payload: SchoolUpdate = {};
+  if (updates.vatRegistered !== undefined) payload.vat_registered = updates.vatRegistered;
+  if (updates.vatNumber !== undefined) payload.vat_number = updates.vatNumber;
+  if (updates.vatRate !== undefined) payload.vat_rate = updates.vatRate;
+  if (updates.invoiceNumberPrefix !== undefined) payload.invoice_number_prefix = updates.invoiceNumberPrefix;
+  if (updates.receiptNumberPrefix !== undefined) payload.receipt_number_prefix = updates.receiptNumberPrefix;
+  if (updates.invoiceDueDays !== undefined) payload.invoice_due_days = updates.invoiceDueDays;
+  if (updates.invoiceFooterNote !== undefined) payload.invoice_footer_note = updates.invoiceFooterNote;
+  if (updates.bankingDetails !== undefined) payload.banking_details = updates.bankingDetails;
+  return payload;
+}
+
 async function applyUpdate(id: string, payload: SchoolUpdate): Promise<School> {
   const { data, error } = await supabase.from('schools').update(payload).eq('id', id).select('*').single();
   if (error) throw error;
@@ -78,6 +92,11 @@ async function updateSchool(id: string, updates: SchoolProfileUpdateInput): Prom
 /** Updates regional/config settings (timezone, currency, language). Same RLS gate as updateSchool. */
 async function updateSchoolSettings(id: string, updates: SchoolSettingsUpdateInput): Promise<School> {
   return applyUpdate(id, toSettingsUpdatePayload(updates));
+}
+
+/** Updates billing/invoicing configuration (VAT, numbering prefixes, due days, banking details). Same RLS gate as updateSchool. */
+async function updateSchoolBilling(id: string, updates: SchoolBillingUpdateInput): Promise<School> {
+  return applyUpdate(id, toBillingUpdatePayload(updates));
 }
 
 /**
@@ -106,6 +125,7 @@ export const schoolService = {
   getCurrentSchool,
   updateSchool,
   updateSchoolSettings,
+  updateSchoolBilling,
   uploadLogo,
   getLogoSignedUrl,
 };

@@ -16,15 +16,16 @@ begin
   execute 'set local role authenticated';
 
   select count(*) into v_count from public.learners where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  -- 11, not 2: Learner A3 (11110000...0004) was added by
+  -- 12, not 2: Learner A3 (11110000...0004) was added by
   -- 12_guardian_management_fixtures.sql for the multiple-learners-per-guardian
   -- case (+1 = 3), attendance_alerts.test.sql adds its own 2 dedicated
   -- learners (+2 = 5), document_expiry_alerts.test.sql adds its own 3
-  -- dedicated learners (+3 = 8), and fee_overdue_reminders.test.sql adds
-  -- its own 3 dedicated learners (+3 = 11) — all of those test files run
-  -- before this one alphabetically, so every one is already present by the
-  -- time this assertion runs.
-  call test_util.record('school owner can view own school learner directory', v_count = 11, 'rows visible: ' || v_count);
+  -- dedicated learners (+3 = 8), fee_overdue_reminders.test.sql adds its
+  -- own 3 dedicated learners (+3 = 11), and fees_invoicing.test.sql adds
+  -- its own 1 dedicated School A learner (+1 = 12) — all of those test
+  -- files run before this one alphabetically, so every one is already
+  -- present by the time this assertion runs.
+  call test_util.record('school owner can view own school learner directory', v_count = 12, 'rows visible: ' || v_count);
 
   execute 'reset role';
 end;

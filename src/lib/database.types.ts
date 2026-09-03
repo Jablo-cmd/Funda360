@@ -55,6 +55,10 @@ export type BehaviourSeverity = 'low' | 'medium' | 'high';
 export type FeeAdjustmentType = 'discount' | 'bursary' | 'scholarship' | 'waiver';
 export type FeeAdjustmentMethod = 'percentage' | 'fixed_amount';
 export type FeeRefundStatus = 'pending' | 'completed' | 'rejected';
+export type InvoiceStatus = 'draft' | 'issued' | 'void';
+export type PaymentProvider = 'payfast' | 'ozow' | 'peach' | 'yoco' | 'netcash';
+export type PaymentMode = 'test' | 'live';
+export type PaymentIntentStatus = 'created' | 'processing' | 'succeeded' | 'failed' | 'cancelled' | 'expired';
 export type NotificationEmailStatus = 'not_sent' | 'sent' | 'failed';
 export type AnnouncementAudience = 'all_staff' | 'all_guardians' | 'everyone';
 export type LearnerTransferDirection = 'outgoing' | 'incoming';
@@ -86,6 +90,14 @@ export type SchoolRow = {
   currency: string;
   language: string;
   status: SchoolStatus;
+  vat_registered: boolean;
+  vat_number: string | null;
+  vat_rate: number;
+  invoice_number_prefix: string;
+  receipt_number_prefix: string;
+  invoice_due_days: number;
+  invoice_footer_note: string | null;
+  banking_details: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -110,6 +122,14 @@ export type SchoolInsert = {
   currency?: string;
   language?: string;
   status?: SchoolStatus;
+  vat_registered?: boolean;
+  vat_number?: string | null;
+  vat_rate?: number;
+  invoice_number_prefix?: string;
+  receipt_number_prefix?: string;
+  invoice_due_days?: number;
+  invoice_footer_note?: string | null;
+  banking_details?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -134,6 +154,14 @@ export type SchoolUpdate = {
   currency?: string;
   language?: string;
   status?: SchoolStatus;
+  vat_registered?: boolean;
+  vat_number?: string | null;
+  vat_rate?: number;
+  invoice_number_prefix?: string;
+  receipt_number_prefix?: string;
+  invoice_due_days?: number;
+  invoice_footer_note?: string | null;
+  banking_details?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -839,6 +867,7 @@ export type LearnerFeeChargeRow = {
   learner_id: string;
   academic_year_id: string;
   fee_structure_id: string | null;
+  invoice_id: string | null;
   description: string;
   category: FeeCategory;
   amount: number;
@@ -857,6 +886,7 @@ export type LearnerFeeChargeInsert = {
   learner_id: string;
   academic_year_id: string;
   fee_structure_id?: string | null;
+  invoice_id?: string | null;
   description: string;
   category?: FeeCategory;
   amount: number;
@@ -875,6 +905,7 @@ export type LearnerFeeChargeUpdate = {
   learner_id?: string;
   academic_year_id?: string;
   fee_structure_id?: string | null;
+  invoice_id?: string | null;
   description?: string;
   category?: FeeCategory;
   amount?: number;
@@ -1122,6 +1153,151 @@ export type LearnerFeeRefundUpdate = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type InvoiceRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  invoice_number: string | null;
+  status: InvoiceStatus;
+  issue_date: string | null;
+  due_date: string | null;
+  notes: string | null;
+  vat_rate: number;
+  subtotal: number;
+  vat_amount: number;
+  total: number;
+  issued_at: string | null;
+  issued_by: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoiceInsert = {
+  id?: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  notes?: string | null;
+  due_date?: string | null;
+  issue_date?: string | null;
+};
+
+export type InvoiceUpdate = {
+  notes?: string | null;
+  due_date?: string | null;
+  issue_date?: string | null;
+};
+
+export type LearnerFeePaymentAllocationRow = {
+  id: string;
+  school_id: string;
+  payment_id: string;
+  invoice_id: string;
+  amount: number;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type LearnerFeePaymentAllocationInsert = never;
+export type LearnerFeePaymentAllocationUpdate = never;
+
+export type FeeReceiptRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  payment_id: string;
+  receipt_number: string;
+  issued_at: string;
+  issued_by: string | null;
+};
+
+export type FeeReceiptInsert = never;
+export type FeeReceiptUpdate = never;
+
+export type PaymentGatewayConfigRow = {
+  id: string;
+  school_id: string;
+  provider: PaymentProvider;
+  mode: PaymentMode;
+  enabled: boolean;
+  merchant_config: Json;
+  secret_last_set_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PaymentGatewayConfigInsert = {
+  id?: string;
+  school_id: string;
+  provider: PaymentProvider;
+  mode?: PaymentMode;
+  enabled?: boolean;
+  merchant_config?: Json;
+  secret_last_set_at?: string | null;
+};
+
+export type PaymentGatewayConfigUpdate = {
+  provider?: PaymentProvider;
+  mode?: PaymentMode;
+  enabled?: boolean;
+  merchant_config?: Json;
+  secret_last_set_at?: string | null;
+};
+
+export type PaymentIntentRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  invoice_id: string | null;
+  provider: PaymentProvider;
+  mode: PaymentMode;
+  amount: number;
+  currency: string;
+  status: PaymentIntentStatus;
+  reference: string;
+  provider_reference: string | null;
+  idempotency_key: string;
+  return_url: string | null;
+  cancel_url: string | null;
+  payment_id: string | null;
+  failure_reason: string | null;
+  raw_request: Json | null;
+  raw_result: Json | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+};
+
+export type PaymentIntentInsert = never;
+export type PaymentIntentUpdate = never;
+
+export type PaymentWebhookEventRow = {
+  id: string;
+  provider: PaymentProvider;
+  mode: PaymentMode;
+  provider_event_id: string;
+  school_id: string | null;
+  intent_id: string | null;
+  signature_valid: boolean;
+  status_reported: string | null;
+  payload: Json;
+  processing_error: string | null;
+  received_at: string;
+  processed_at: string | null;
+};
+
+export type PaymentWebhookEventInsert = never;
+export type PaymentWebhookEventUpdate = never;
 
 export type BehaviourIncidentRow = {
   id: string;
@@ -2066,6 +2242,36 @@ export type Database = {
         Insert: LearnerFeeRefundInsert;
         Update: LearnerFeeRefundUpdate;
       };
+      invoices: {
+        Row: InvoiceRow;
+        Insert: InvoiceInsert;
+        Update: InvoiceUpdate;
+      };
+      learner_fee_payment_allocations: {
+        Row: LearnerFeePaymentAllocationRow;
+        Insert: LearnerFeePaymentAllocationInsert;
+        Update: LearnerFeePaymentAllocationUpdate;
+      };
+      fee_receipts: {
+        Row: FeeReceiptRow;
+        Insert: FeeReceiptInsert;
+        Update: FeeReceiptUpdate;
+      };
+      payment_gateway_configs: {
+        Row: PaymentGatewayConfigRow;
+        Insert: PaymentGatewayConfigInsert;
+        Update: PaymentGatewayConfigUpdate;
+      };
+      payment_intents: {
+        Row: PaymentIntentRow;
+        Insert: PaymentIntentInsert;
+        Update: PaymentIntentUpdate;
+      };
+      payment_webhook_events: {
+        Row: PaymentWebhookEventRow;
+        Insert: PaymentWebhookEventInsert;
+        Update: PaymentWebhookEventUpdate;
+      };
       behaviour_incidents: {
         Row: BehaviourIncidentRow;
         Insert: BehaviourIncidentInsert;
@@ -2297,6 +2503,36 @@ export type Database = {
       unreconcile_bank_statement_line: {
         Args: { p_line_id: string };
         Returns: void;
+      };
+      issue_fee_invoice: {
+        Args: { p_invoice_id: string; p_issue_date?: string | null; p_due_date?: string | null };
+        Returns: InvoiceRow;
+      };
+      void_fee_invoice: {
+        Args: { p_invoice_id: string; p_reason: string };
+        Returns: InvoiceRow;
+      };
+      allocate_fee_payment: {
+        Args: { p_payment_id: string; p_allocations: Json };
+        Returns: void;
+      };
+      issue_fee_receipt: {
+        Args: { p_payment_id: string };
+        Returns: FeeReceiptRow;
+      };
+      create_payment_intent: {
+        Args: {
+          p_learner_id: string;
+          p_amount: number;
+          p_invoice_id?: string | null;
+          p_return_url?: string | null;
+          p_cancel_url?: string | null;
+        };
+        Returns: PaymentIntentRow;
+      };
+      mark_payment_intent_processing: {
+        Args: { p_intent_id: string };
+        Returns: PaymentIntentRow;
       };
     };
   };

@@ -55,6 +55,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const canViewAttendance = hasPermission(role, 'attendance.view');
   const canViewAssessments = hasPermission(role, 'assessment.view');
   const canViewFinance = hasPermission(role, 'learner.view_financial');
+  const canManageFinance = hasPermission(role, 'learner.manage_financial');
   const canViewSafeguarding = hasPermission(role, 'learner.view_safeguarding');
   const canSwitchSchool = hasPermission(role, 'tenant.switch');
 
@@ -135,6 +136,8 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewFinance
           ? { label: 'Fees', path: '/fees', icon: WalletIcon }
           : { label: 'Fees', icon: WalletIcon },
+        ...(canViewFinance ? [{ label: 'Invoices', path: '/fees/invoices', icon: WalletIcon }] : []),
+        ...(canManageFinance ? [{ label: 'Payment Settings', path: '/fees/settings', icon: GearIcon }] : []),
         canViewSafeguarding
           ? { label: 'Safeguarding', path: '/safeguarding', icon: ShieldIcon }
           : { label: 'Safeguarding', icon: ShieldIcon },

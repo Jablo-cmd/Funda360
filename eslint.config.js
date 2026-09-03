@@ -8,7 +8,13 @@ import tsParser from '@typescript-eslint/parser';
 import prettierConfig from 'eslint-config-prettier';
 
 export default [
-  { ignores: ['dist', 'node_modules', 'supabase/.temp', 'supabase/.branches'] },
+  {
+    // `supabase/functions` is Deno, not Node/browser — it has its own
+    // toolchain (deno check + deno lint, run by the `edge-functions` CI
+    // job and configured in supabase/functions/deno.json). Linting it here
+    // only produces false `'Deno' is not defined` errors.
+    ignores: ['dist', 'node_modules', 'supabase/.temp', 'supabase/.branches', 'supabase/functions'],
+  },
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],

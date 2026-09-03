@@ -42,6 +42,24 @@ jobs:
         # browser runtime (src/lib/supabase.ts), not at build time.
         run: npm run build
 
+  edge-functions:
+    name: Edge Function (Deno) tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check Edge Functions
+        working-directory: supabase/functions
+        run: deno check payments-initiate/index.ts payments-webhook/index.ts _shared/providers/providers.test.ts
+      - name: Lint Edge Functions
+        working-directory: supabase/functions
+        run: deno lint
+      - name: Payment provider adapter tests
+        working-directory: supabase/functions
+        run: deno test --allow-env --allow-net _shared/providers/providers.test.ts
+
   rls-tests:
     name: RLS / trigger / SECURITY DEFINER regression suite
     runs-on: ubuntu-latest

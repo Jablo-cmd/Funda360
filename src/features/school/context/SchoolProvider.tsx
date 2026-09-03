@@ -8,6 +8,7 @@ import { getDbErrorMessage } from '@/lib/dbErrors';
 import type {
   SchoolProfileUpdateInput,
   SchoolSettingsUpdateInput,
+  SchoolBillingUpdateInput,
 } from '@/features/school/types/school.types';
 import type { School } from '@/types/school.types';
 
@@ -77,6 +78,24 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     [localSchool],
   );
 
+  const updateSchoolBilling = useCallback(
+    async (updates: SchoolBillingUpdateInput) => {
+      if (!localSchool) throw new Error('No active school to update.');
+      setIsMutating(true);
+      setMutationError(null);
+      try {
+        const updated = await schoolService.updateSchoolBilling(localSchool.id, updates);
+        setLocalSchool(updated);
+      } catch (err) {
+        setMutationError(getDbErrorMessage(err, 'Failed to update billing settings.'));
+        throw err;
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [localSchool],
+  );
+
   const uploadLogo = useCallback(
     async (file: File) => {
       if (!localSchool) throw new Error('No active school to update.');
@@ -103,6 +122,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       refresh: refetch,
       updateSchool,
       updateSchoolSettings,
+      updateSchoolBilling,
       uploadLogo,
     }),
     [
@@ -114,6 +134,7 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       refetch,
       updateSchool,
       updateSchoolSettings,
+      updateSchoolBilling,
       uploadLogo,
     ],
   );

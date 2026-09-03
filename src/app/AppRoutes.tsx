@@ -135,6 +135,19 @@ const FeeStructuresPage = named(
   () => import('@/features/fees/pages/FeeStructuresPage'),
   'FeeStructuresPage',
 );
+const InvoicesRegisterPage = named(
+  () => import('@/features/fees/pages/InvoicesRegisterPage'),
+  'InvoicesRegisterPage',
+);
+const PaymentSettingsPage = named(
+  () => import('@/features/fees/pages/PaymentSettingsPage'),
+  'PaymentSettingsPage',
+);
+const ParentFeesPage = named(() => import('@/features/parentPortal/pages/ParentFeesPage'), 'ParentFeesPage');
+const PaymentReturnPage = named(
+  () => import('@/features/fees/pages/PaymentReturnPage'),
+  'PaymentReturnPage',
+);
 const NotificationsPage = named(
   () => import('@/features/notifications/pages/NotificationsPage'),
   'NotificationsPage',
@@ -288,10 +301,12 @@ export function AppRoutes() {
 
               <Route element={<RequirePermission permission="learner.view_financial" />}>
                 <Route path="/fees" element={<FinanceOverviewPage />} />
+                <Route path="/fees/invoices" element={<InvoicesRegisterPage />} />
                 <Route path="/fees/reconciliation" element={<BankReconciliationPage />} />
               </Route>
               <Route element={<RequirePermission permission="learner.manage_financial" />}>
                 <Route path="/fees/structures" element={<FeeStructuresPage />} />
+                <Route path="/fees/settings" element={<PaymentSettingsPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="reports.view" />}>
@@ -309,6 +324,8 @@ export function AppRoutes() {
                 <Route path="/parent/dashboard" element={<ParentDashboardPage />} />
                 <Route path="/parent/children" element={<ParentChildrenPage />} />
                 <Route path="/parent/children/:learnerId" element={<ParentChildProfilePage />} />
+                <Route path="/parent/fees" element={<ParentFeesPage />} />
+                <Route path="/parent/payment-return" element={<PaymentReturnPage />} />
                 <Route path="/parent/profile" element={<ParentProfilePage />} />
                 <Route path="/parent/notifications" element={<NotificationsPage />} />
                 <Route path="/parent/announcements" element={<AnnouncementsPage />} />

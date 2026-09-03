@@ -5,16 +5,25 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { TableScrollContainer } from '@/components/ui/TableScrollContainer';
 import { useLearnerFees } from '@/features/fees/hooks/useLearnerFees';
 import { feeService } from '@/features/fees/services/feeService';
+import { invoiceService } from '@/features/fees/services/invoiceService';
 import { FeeChargeFormModal } from '@/features/fees/components/FeeChargeFormModal';
 import { RecordPaymentFormModal } from '@/features/fees/components/RecordPaymentFormModal';
 import { FeeAdjustmentFormModal } from '@/features/fees/components/FeeAdjustmentFormModal';
 import { RefundFormModal } from '@/features/fees/components/RefundFormModal';
+import { InvoicesPanel } from '@/features/fees/components/InvoicesPanel';
+import {
+  generateReceiptPdf,
+  generateStatementPdf,
+  type SchoolBillingInfo,
+} from '@/features/fees/utils/generateFeeDocumentPdf';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 import type { LearnerFeePayment } from '@/features/fees/types/fee.types';
 
 export interface LearnerFinancialSectionProps {
   schoolId: string;
   learnerId: string;
+  learnerName: string;
+  school: SchoolBillingInfo;
   academicYearId: string | undefined;
   canManage: boolean;
 }
@@ -64,13 +73,55 @@ const REFUND_STATUS_CLASSES: Record<string, string> = {
   rejected: 'bg-danger-50 text-danger-600',
 };
 
-export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, canManage }: LearnerFinancialSectionProps) {
+export function LearnerFinancialSection({
+  schoolId,
+  learnerId,
+  learnerName,
+  school,
+  academicYearId,
+  canManage,
+}: LearnerFinancialSectionProps) {
   const { summary, isLoading, error, refetch } = useLearnerFees(learnerId);
   const [isChargeOpen, setIsChargeOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
   const [refundTarget, setRefundTarget] = useState<LearnerFeePayment | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleDownloadStatement = async () => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      const asOf = new Date().toISOString().slice(0, 10);
+      const statement = await invoiceService.getLearnerStatement(learnerId, asOf);
+      const doc = await generateStatementPdf(statement, school, learnerName, asOf);
+      doc.save(`statement-${learnerName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+    } catch (err) {
+      setActionError(getDbErrorMessage(err, 'Failed to generate the statement.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReceipt = async (payment: LearnerFeePayment) => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      const receipt = await invoiceService.issueReceipt(payment.id);
+      const doc = await generateReceiptPdf(receipt, school, learnerName, {
+        amount: payment.amount,
+        paymentDate: payment.paymentDate,
+        method: payment.method,
+        reference: payment.reference,
+      });
+      doc.save(`receipt-${receipt.receiptNumber}.pdf`);
+    } catch (err) {
+      setActionError(getDbErrorMessage(err, 'Failed to generate the receipt.'));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleVoidCharge = async (id: string) => {
     setActionError(null);
@@ -131,24 +182,43 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
         </dl>
       )}
 
-      {canManage && academicYearId && (
-        <div className="flex flex-wrap gap-3">
-          <div className="w-full sm:w-auto sm:min-w-[9rem]">
-            <Button type="button" onClick={() => setIsChargeOpen(true)}>
-              Add charge
-            </Button>
-          </div>
-          <div className="w-full sm:w-auto sm:min-w-[9rem]">
-            <Button type="button" variant="secondary" onClick={() => setIsPaymentOpen(true)}>
-              Record payment
-            </Button>
-          </div>
-          <div className="w-full sm:w-auto sm:min-w-[9rem]">
-            <Button type="button" variant="secondary" onClick={() => setIsAdjustmentOpen(true)}>
-              Add discount / bursary
-            </Button>
-          </div>
+      <div className="flex flex-wrap gap-3">
+        {canManage && academicYearId && (
+          <>
+            <div className="w-full sm:w-auto sm:min-w-[9rem]">
+              <Button type="button" onClick={() => setIsChargeOpen(true)}>
+                Add charge
+              </Button>
+            </div>
+            <div className="w-full sm:w-auto sm:min-w-[9rem]">
+              <Button type="button" variant="secondary" onClick={() => setIsPaymentOpen(true)}>
+                Record payment
+              </Button>
+            </div>
+            <div className="w-full sm:w-auto sm:min-w-[9rem]">
+              <Button type="button" variant="secondary" onClick={() => setIsAdjustmentOpen(true)}>
+                Add discount / bursary
+              </Button>
+            </div>
+          </>
+        )}
+        <div className="w-full sm:w-auto sm:min-w-[9rem]">
+          <Button type="button" variant="secondary" onClick={() => void handleDownloadStatement()} isLoading={busy}>
+            Download statement
+          </Button>
         </div>
+      </div>
+
+      {academicYearId && (
+        <InvoicesPanel
+          schoolId={schoolId}
+          learnerId={learnerId}
+          academicYearId={academicYearId}
+          canManage={canManage}
+          learnerName={learnerName}
+          school={school}
+          onChanged={() => void refetch()}
+        />
       )}
 
       <div>
@@ -265,6 +335,14 @@ export function LearnerFinancialSection({ schoolId, learnerId, academicYearId, c
                     {canManage && (
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-3">
+                          <button
+                            type="button"
+                            onClick={() => void handleReceipt(payment)}
+                            disabled={busy}
+                            className="focus-ring rounded-md px-2 py-1 text-xs font-medium text-content-secondary hover:bg-surface-sunken disabled:opacity-50"
+                          >
+                            Receipt
+                          </button>
                           <button
                             type="button"
                             onClick={() => setRefundTarget(payment)}

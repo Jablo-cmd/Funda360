@@ -421,6 +421,16 @@ export function LearnerProfilePage() {
         <LearnerFinancialSection
           schoolId={school.id}
           learnerId={learner.id}
+          learnerName={`${learner.firstName} ${learner.lastName}`}
+          school={{
+            name: school.name,
+            address: school.physicalAddress,
+            email: school.email,
+            phone: school.phone,
+            vatNumber: school.vatNumber,
+            bankingDetails: school.bankingDetails,
+            footerNote: school.invoiceFooterNote,
+          }}
           academicYearId={currentAcademicYear?.id}
           canManage={canManageFinancial}
         />

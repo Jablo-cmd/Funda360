@@ -24,6 +24,14 @@ export interface School {
   currency: string;
   language: string;
   status: SchoolStatus;
+  vatRegistered: boolean;
+  vatNumber: string | null;
+  vatRate: number;
+  invoiceNumberPrefix: string;
+  receiptNumberPrefix: string;
+  invoiceDueDays: number;
+  invoiceFooterNote: string | null;
+  bankingDetails: string | null;
   createdAt: string;
   updatedAt: string;
 }
