@@ -37,9 +37,8 @@ jobs:
         run: npm run test
 
       - name: Production build
-        # No Supabase credentials required: this is a static build (tsc +
-        # vite build) — the app only reads VITE_SUPABASE_URL/ANON_KEY at
-        # browser runtime (src/lib/supabase.ts), not at build time.
+        # This build is a quality gate only. The deploy job below performs the
+        # real production build with the hosted Supabase configuration.
         run: npm run build
 
   rls-tests:
@@ -59,13 +58,8 @@ jobs:
     name: Playwright end-to-end suite
     runs-on: ubuntu-latest
     env:
-      # The e2e suite is fully network-mocked (e2e/utils/mockAuth.ts,
-      # mockData.ts intercept every Supabase call) and never reaches a real
-      # project. The dev server only needs these two variables to be
-      # *present* to boot — src/lib/supabase.ts checks they're non-empty,
-      # it never validates them — so plain placeholders are correct here,
-      # not a secret. See .env.example and the handover document's e2e
-      # discovery note for the same finding this job relies on.
+      # The e2e suite is fully network-mocked and never reaches a real
+      # Supabase project. The dev server only needs these variables present.
       VITE_SUPABASE_URL: http://localhost:54321
       VITE_SUPABASE_ANON_KEY: ci-dummy-anon-key-not-a-real-secret
     steps:
@@ -79,18 +73,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # --with-deps also installs the OS-level libraries headless Chromium
-      # needs on a bare Ubuntu runner (not just the browser binary itself).
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: Run e2e suite
         run: npx playwright test
 
-      # playwright.config.ts uses the 'list' reporter (console only, no HTML
-      # report generated) and `trace: 'retain-on-failure'`, so the useful
-      # artifact on failure is the per-test trace under test-results/, not
-      # a playwright-report/ directory (which this config never produces).
       - name: Upload failure traces
         if: failure()
         uses: actions/upload-artifact@v4
@@ -121,21 +109,46 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify production Supabase configuration
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ]; then
+            echo "::error::Missing GitHub Actions secret VITE_SUPABASE_URL in the github-pages environment."
+            exit 1
+          fi
+          if [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "::error::Missing GitHub Actions secret VITE_SUPABASE_ANON_KEY in the github-pages environment."
+            exit 1
+          fi
+          case "$VITE_SUPABASE_URL" in
+            https://*.supabase.co) ;;
+            *)
+              echo "::error::VITE_SUPABASE_URL must be the hosted Supabase Project URL (https://<project-ref>.supabase.co)."
+              exit 1
+              ;;
+          esac
+
       - name: Build production site
         env:
-          # Temporary non-secret values allow the static UI to be deployed.
-          # Replace these with the hosted Funda360 Supabase project values
-          # before using authentication/data in production.
-          VITE_SUPABASE_URL: https://placeholder.supabase.co
-          VITE_SUPABASE_ANON_KEY: github-pages-placeholder-anon-key
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_APP_NAME: Funda360
         run: npm run build
+
+      - name: Verify Pages entrypoint
+        run: |
+          test -f dist/index.html
+          # Funda360 uses BrowserRouter. GitHub Pages needs an SPA fallback
+          # so direct visits/refreshes of application routes do not 404.
+          cp dist/index.html dist/404.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
 
