@@ -53,6 +53,18 @@ export type FeePaymentMethod = 'cash' | 'eft' | 'card' | 'debit_order' | 'cheque
 export type BehaviourIncidentType = 'positive' | 'negative';
 export type ReportCardStatus = 'draft' | 'teacher_review' | 'hod_review' | 'approved' | 'published' | 'archived';
 export type ReportCardPromotion = 'promoted' | 'promoted_conditionally' | 'retained' | 'not_applicable';
+export type AdmissionApplicationStatus =
+  | 'draft'
+  | 'submitted'
+  | 'under_review'
+  | 'incomplete'
+  | 'interview_required'
+  | 'assessment_required'
+  | 'waitlisted'
+  | 'accepted'
+  | 'rejected'
+  | 'withdrawn'
+  | 'enrolled';
 export type BehaviourSeverity = 'low' | 'medium' | 'high';
 export type FeeAdjustmentType = 'discount' | 'bursary' | 'scholarship' | 'waiver';
 export type FeeAdjustmentMethod = 'percentage' | 'fixed_amount';
@@ -2348,6 +2360,131 @@ export type ReportCardSubjectRow = {
 export type ReportCardSubjectInsert = never;
 export type ReportCardSubjectUpdate = never;
 
+export type AdmissionDocumentRequirementRow = {
+  id: string;
+  school_id: string;
+  grade_id: string | null;
+  label: string;
+  description: string | null;
+  required: boolean;
+  active: boolean;
+  sort_order: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type AdmissionDocumentRequirementInsert = {
+  id?: string;
+  school_id: string;
+  grade_id?: string | null;
+  label: string;
+  description?: string | null;
+  required?: boolean;
+  active?: boolean;
+  sort_order?: number;
+};
+export type AdmissionDocumentRequirementUpdate = Partial<Omit<AdmissionDocumentRequirementInsert, 'id' | 'school_id'>>;
+
+export type AdmissionApplicationRow = {
+  id: string;
+  school_id: string;
+  academic_year_id: string | null;
+  requested_grade_id: string | null;
+  reference_number: string | null;
+  status: AdmissionApplicationStatus;
+  resume_token: string;
+  applicant_first_name: string | null;
+  applicant_last_name: string | null;
+  applicant_email: string;
+  applicant_phone: string | null;
+  applicant_relationship: string | null;
+  learner_first_name: string | null;
+  learner_last_name: string | null;
+  learner_date_of_birth: string | null;
+  learner_gender: string | null;
+  learner_id_number: string | null;
+  learner_nationality: string | null;
+  learner_home_language: string | null;
+  prior_school: string | null;
+  additional_notes: string | null;
+  interview_at: string | null;
+  assessment_at: string | null;
+  decision_at: string | null;
+  decision_by: string | null;
+  decision_reason: string | null;
+  converted_learner_id: string | null;
+  submitted_at: string | null;
+  is_public_submission: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type AdmissionApplicationInsert = {
+  id?: string;
+  school_id: string;
+  academic_year_id?: string | null;
+  requested_grade_id?: string | null;
+  applicant_email: string;
+  applicant_first_name?: string | null;
+  applicant_last_name?: string | null;
+  applicant_phone?: string | null;
+  applicant_relationship?: string | null;
+  learner_first_name?: string | null;
+  learner_last_name?: string | null;
+  learner_date_of_birth?: string | null;
+  learner_gender?: string | null;
+  learner_id_number?: string | null;
+  learner_nationality?: string | null;
+  learner_home_language?: string | null;
+  prior_school?: string | null;
+  additional_notes?: string | null;
+  interview_at?: string | null;
+  assessment_at?: string | null;
+};
+export type AdmissionApplicationUpdate = Partial<Omit<AdmissionApplicationInsert, 'id' | 'school_id' | 'applicant_email'>>;
+
+export type AdmissionApplicationDocumentRow = {
+  id: string;
+  application_id: string;
+  school_id: string;
+  requirement_id: string | null;
+  label: string;
+  storage_path: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  verified: boolean;
+  verified_by: string | null;
+  verified_at: string | null;
+  uploaded_at: string;
+};
+export type AdmissionApplicationDocumentInsert = {
+  id?: string;
+  application_id: string;
+  school_id: string;
+  requirement_id?: string | null;
+  label: string;
+  storage_path: string;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+};
+export type AdmissionApplicationDocumentUpdate = { verified?: boolean; verified_by?: string | null; verified_at?: string | null };
+
+export type AdmissionApplicationEventRow = {
+  id: string;
+  application_id: string;
+  school_id: string;
+  event_type: string;
+  from_status: AdmissionApplicationStatus | null;
+  to_status: AdmissionApplicationStatus | null;
+  note: string | null;
+  actor_profile_id: string | null;
+  created_at: string;
+};
+export type AdmissionApplicationEventInsert = never;
+export type AdmissionApplicationEventUpdate = never;
+
 export type Database = {
   public: {
     Tables: {
@@ -2611,6 +2748,26 @@ export type Database = {
         Insert: ReportCardSubjectInsert;
         Update: ReportCardSubjectUpdate;
       };
+      admission_document_requirements: {
+        Row: AdmissionDocumentRequirementRow;
+        Insert: AdmissionDocumentRequirementInsert;
+        Update: AdmissionDocumentRequirementUpdate;
+      };
+      admission_applications: {
+        Row: AdmissionApplicationRow;
+        Insert: AdmissionApplicationInsert;
+        Update: AdmissionApplicationUpdate;
+      };
+      admission_application_documents: {
+        Row: AdmissionApplicationDocumentRow;
+        Insert: AdmissionApplicationDocumentInsert;
+        Update: AdmissionApplicationDocumentUpdate;
+      };
+      admission_application_events: {
+        Row: AdmissionApplicationEventRow;
+        Insert: AdmissionApplicationEventInsert;
+        Update: AdmissionApplicationEventUpdate;
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -2812,6 +2969,38 @@ export type Database = {
       publish_report_card_batch: {
         Args: { p_batch_id: string };
         Returns: number;
+      };
+      create_admission_application: {
+        Args: {
+          p_school_id: string;
+          p_applicant_email: string;
+          p_applicant_first_name: string;
+          p_applicant_last_name: string;
+          p_learner_first_name: string;
+          p_learner_last_name: string;
+          p_academic_year_id?: string | null;
+          p_requested_grade_id?: string | null;
+          p_applicant_phone?: string | null;
+          p_applicant_relationship?: string | null;
+          p_learner_date_of_birth?: string | null;
+        };
+        Returns: AdmissionApplicationRow;
+      };
+      submit_admission_application: {
+        Args: { p_application_id: string };
+        Returns: AdmissionApplicationRow;
+      };
+      transition_admission_application: {
+        Args: { p_application_id: string; p_to: AdmissionApplicationStatus; p_note?: string | null };
+        Returns: AdmissionApplicationRow;
+      };
+      add_admission_application_note: {
+        Args: { p_application_id: string; p_note: string };
+        Returns: undefined;
+      };
+      convert_admission_application: {
+        Args: { p_application_id: string; p_class_id?: string | null; p_provision_guardian_account?: boolean };
+        Returns: AdmissionApplicationRow;
       };
     };
   };

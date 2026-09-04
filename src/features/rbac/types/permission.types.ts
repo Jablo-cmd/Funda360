@@ -21,6 +21,8 @@ export type Permission =
   | 'reportcard.view'
   | 'reportcard.manage'
   | 'reportcard.approve'
+  | 'admission.view'
+  | 'admission.manage'
   | 'learner.view'
   | 'learner.manage'
   | 'learner.view_sensitive'

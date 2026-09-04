@@ -10,7 +10,7 @@ No artificial sprints or milestones inside a domain. A domain is implemented com
 
 Statuses: `QUEUED` · `IN_PROGRESS` · `BLOCKED` · `CLOSED`
 
-Last updated: 2026-09-04 — Domain 2 (Report Cards) CLOSED.
+Last updated: 2026-09-04 — Domain 3 (Admissions) CLOSED.
 
 ---
 
@@ -109,7 +109,7 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 | -- | ------ | ------ | ------------------ |
 | 1  | **Finance** | **CLOSED** | Complete. See the Finance record below. Do not reopen. |
 | 2  | **Report Cards** | **CLOSED** | 2026-09-04. See the Domain 2 record below. Grading scales, templates, the `report_cards` entity, the Draft→Teacher Review→HOD Review→Approved→Published→Archived workflow, locking, versioning/reissue, weighted aggregation, attendance + conduct snapshots, individual + bulk PDF, publication-gated guardian/learner visibility. The old ad-hoc `buildReportCardData()` transcript on the learner Results tab is left in place (a lightweight "academic results" export, distinct from a governed report card). |
-| 3  | **Admissions** | **QUEUED** | Partial: an internal staff Kanban ("Admissions Pipeline", `/admissions`, `useAdmissionsPipeline`) that moves a `learners.status` through `prospective → applied → accepted → enrolled`. **Missing:** parent-facing application portal (start/save/resume/submit, document upload), a real `applications` entity with the full status set (Draft/Submitted/Under Review/Incomplete/Interview/Assessment/Waitlisted/Accepted/Rejected/Withdrawn/Enrolled), configurable document requirements, admissions dashboard, and conversion (application → learner + guardian + enrolment + user accounts, no duplicates). Reconcile the existing pipeline into the new model — do not run two. |
+| 3  | **Admissions** | **CLOSED** | 2026-09-04. See the Domain 3 record below. `admission_applications` entity + full workflow + configurable document requirements + admissions dashboard + `convert_admission_application` (→ learner + guardian + enrolment, deduped) + a public intake form (`/apply`) served by the `admissions-public` Edge Function. The old learner-status Kanban is removed (enum unchanged). |
 | 4  | **Communication & Notifications** | **QUEUED** | Partial: `announcements` (school_owner/principal → staff/guardians/everyone) + in-app `notifications` (inbox, unread badge, real producers: guardian invitations, attendance alerts, fee reminders, document expiry) both exist with migrations. **Missing:** two-way threaded messaging / conversations (parent↔school, teacher↔parent, staff↔staff), read status + attachments + unread counts + search + archive, per-user notification preferences, email/SMS/WhatsApp delivery architecture (in-app only today), and additional automated triggers (report published, behaviour incident, application status change, event). |
 | 5  | **Homework / Learning** | **QUEUED** | None. `assessment_type` includes `assignment`/`examination` but there is no homework-distribution / submission / return workflow distinct from the gradebook. Build assignments (class+subject+due+instructions+attachments+links+rubric), learner submission/resubmission, teacher review/mark/return/missing-tracking, statuses (Assigned/Submitted/Late/Returned/Reviewed), parent visibility. Reuse `assessments` linkage where a homework is also gradebook-scored; reuse storage + `class_teacher_assignments`. |
 | 6  | **Teacher Workspace** | **QUEUED** | None (the "My Classes" nav item points at `/my-profile`). Build a unified teacher dashboard: today's timetable, classes, attendance status, upcoming assessments, homework, messages, notifications, learner alerts, outstanding marking, events; quick actions (take attendance, enter marks, create assignment, message parents, record behaviour, view learner). Pure composition over existing domains — **depends on 2, 4, 5, 16** for full content; a first pass can ship over timetable/attendance/assessments/behaviour and be extended. |
@@ -131,6 +131,23 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 ---
 
 ## Closed domains
+
+### Domain 3 — Admissions — `CLOSED` (2026-09-04)
+
+**Do not reopen** unless a later domain exposes a genuine security or dependency defect.
+
+- **Branch:** `feat/admissions`
+- **Migration:** `20260905090000_admissions.sql` (5 new tables, 1 enum, 14 RPCs, a private storage bucket + policies; additive — no change to `learners.status` or its transitions).
+- **Removed:** the learner-status Kanban (`useAdmissionsPipeline`, `AdmissionsPipelineBoard`, `AdmissionsPipelinePage`, `ADMISSIONS_PIPELINE_STAGES`/`ADMISSIONS_NEXT_STATUS`). `/admissions` now renders the application dashboard.
+- **Scope delivered:** `admission_applications` + `admission_application_documents` + `admission_application_events` + `admission_document_requirements` + `admission_counters`; the `draft → submitted → under_review → {incomplete, interview_required, assessment_required, waitlisted} → accepted → enrolled` (+ rejected/withdrawn) workflow via 5 staff RPCs (`create` / `submit` / `transition` / `add_note` / `convert`); `convert_admission_application` — one transaction producing a `learners` row (minted `LRN-/ADM-` numbers), a de-duped `learner_guardians` link (reuse existing profile, else `admin_create_guardian`, optional `send_guardian_invitation`), and a `learner_enrollments` row; a public intake form at **`/apply?school=<id>`** + **`/apply/resume`** served by the **`admissions-public` Edge Function** (service-role; `public_*` RPCs granted to `service_role` only; no anon RLS anywhere); staff routes `/admissions`, `/admissions/:id`, `/admissions/requirements`; signed-URL document viewing + staff verification; per-application timeline + internal notes.
+- **RBAC:** new `admission.view` (school_owner / principal / vice_principal / admissions_officer / receptionist / platform) and `admission.manage` (school_owner / principal / admissions_officer / platform); SQL helpers `can_view_admissions()` / `can_manage_admissions()` mirror them.
+- **Verification (2026-09-04):** `tsc -b --noEmit` PASS · `eslint .` PASS · `vitest` 214 PASS · RLS harness **577** PASS (21 new) · `vite build` PASS · admissions E2E **4/4** + learners/parent-portal/report-cards/fees regression **37/37** serial. `admissions-public/index.ts` added to the CI `deno check` list (`deno` not installed on the local dev box; the `edge-functions` CI job runs it).
+- **Security notes:** all 5 new tables `FORCE ROW LEVEL SECURITY`, fail-closed; `admission_applications` status/decision/reference/conversion columns trigger-guarded (`app.allow_admission_write`) so even a manager's direct `UPDATE` can't forge a decision (RLS-tested); `admission_application_events` write-only via RPC; `next_admission_reference` + all `public_*` RPCs `revoke … from public` **and** `from authenticated` / `service_role`-only (RLS-tested); private `admission-documents` bucket gated by `can_view/manage_admissions` on the path's school id; cross-tenant isolation RLS-tested; every transition + conversion writes `audit_log`.
+- **Docs:** `docs/ADMISSIONS.md`.
+- **Deferred (non-blocking):** emailing applicants (draft link / decision letters — Domain 19); configurable per-school application forms; CAPTCHA / rate-limiting on the public form (the Edge Function is the ready choke point); interview/assessment scheduling UI (columns + statuses exist, no calendar).
+- **Production activation:** deploy `supabase functions deploy admissions-public --no-verify-jwt` — needs only the existing `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`, **no third-party credentials**. Each school shares its own `/apply?school=<id>` link.
+
+---
 
 ### Domain 2 — Report Cards — `CLOSED` (2026-09-04)
 

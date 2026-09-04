@@ -51,6 +51,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const canViewAcademic = hasPermission(role, 'academic.view');
   const canViewTimetable = hasPermission(role, 'timetable.view');
   const canViewLearners = hasPermission(role, 'learner.view');
+  const canViewAdmissions = hasPermission(role, 'admission.view');
   const canViewReports = hasPermission(role, 'reports.view');
   const canViewAttendance = hasPermission(role, 'attendance.view');
   const canViewAssessments = hasPermission(role, 'assessment.view');
@@ -72,7 +73,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewLearners
           ? { label: 'Learners', path: '/learners', icon: GraduationCapIcon }
           : { label: 'Learners', icon: GraduationCapIcon },
-        canViewLearners
+        canViewAdmissions
           ? { label: 'Admissions', path: '/admissions', icon: ClipboardListIcon }
           : { label: 'Admissions', icon: ClipboardListIcon },
         canViewLearners

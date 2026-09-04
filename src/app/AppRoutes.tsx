@@ -82,11 +82,21 @@ const LearnerProfilePage = named(
   () => import('@/features/learners/pages/LearnerProfilePage'),
   'LearnerProfilePage',
 );
-const AdmissionsPipelinePage = named(
-  () => import('@/features/learners/pages/AdmissionsPipelinePage'),
-  'AdmissionsPipelinePage',
-);
 const AlumniPage = named(() => import('@/features/learners/pages/AlumniPage'), 'AlumniPage');
+const AdmissionsPage = named(() => import('@/features/admissions/pages/AdmissionsPage'), 'AdmissionsPage');
+const AdmissionApplicationDetailPage = named(
+  () => import('@/features/admissions/pages/AdmissionApplicationDetailPage'),
+  'AdmissionApplicationDetailPage',
+);
+const AdmissionRequirementsPage = named(
+  () => import('@/features/admissions/pages/AdmissionRequirementsPage'),
+  'AdmissionRequirementsPage',
+);
+const PublicApplyPage = named(() => import('@/features/admissions/pages/PublicApplyPage'), 'PublicApplyPage');
+const PublicApplyResumePage = named(
+  () => import('@/features/admissions/pages/PublicApplyResumePage'),
+  'PublicApplyResumePage',
+);
 const GuardiansPage = named(
   () => import('@/features/guardians/pages/GuardiansPage'),
   'GuardiansPage',
@@ -238,6 +248,8 @@ export function AppRoutes() {
         <Route path="/activate-account" element={<ActivateAccountPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/mfa-challenge" element={<MfaChallengePage />} />
+        <Route path="/apply" element={<PublicApplyPage />} />
+        <Route path="/apply/resume" element={<PublicApplyResumePage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<TenantGate />}>
@@ -293,8 +305,13 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="learner.view" />}>
                 <Route path="/learners" element={<LearnersPage />} />
                 <Route path="/learners/:id" element={<LearnerProfilePage />} />
-                <Route path="/admissions" element={<AdmissionsPipelinePage />} />
                 <Route path="/alumni" element={<AlumniPage />} />
+              </Route>
+
+              <Route element={<RequirePermission permission="admission.view" />}>
+                <Route path="/admissions" element={<AdmissionsPage />} />
+                <Route path="/admissions/requirements" element={<AdmissionRequirementsPage />} />
+                <Route path="/admissions/:id" element={<AdmissionApplicationDetailPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="timetable.view" />}>
