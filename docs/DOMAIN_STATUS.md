@@ -10,7 +10,7 @@ No artificial sprints or milestones inside a domain. A domain is implemented com
 
 Statuses: `QUEUED` · `IN_PROGRESS` · `BLOCKED` · `CLOSED`
 
-Last updated: 2026-09-03 — tracker established.
+Last updated: 2026-09-04 — Domain 2 (Report Cards) CLOSED.
 
 ---
 
@@ -108,7 +108,7 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 | #  | Domain | Status | Repo state / notes |
 | -- | ------ | ------ | ------------------ |
 | 1  | **Finance** | **CLOSED** | Complete. See the Finance record below. Do not reopen. |
-| 2  | **Report Cards** | **QUEUED** | Partial: `buildReportCardData()` + `generateReportCardPdf()` (`src/features/assessments/utils/`) produce an ad-hoc PDF transcript from `assessment_results` on the learner Results tab. **Missing:** report-card entity, grading scales / achievement bands, templates + configurable sections, per-subject weighting (the `assessments` migration explicitly reserved a nullable `weight` column as the extension path), mark aggregation snapshot, teacher/class-teacher/principal comments, attendance + conduct summaries, Draft→Teacher Review→HOD Review→Approved→Published→Archived workflow with role-gated transitions, locking after approval, versioning + reissue, individual + bulk PDF, publication-gated parent/learner visibility, history, audit. Reuse `assessments`/`assessment_results`, `terms`, `class_teacher_assignments`, `attendance_records`, `behaviour_incidents`, `learner_enrollments`, `can_manage_assessment`. **← next session.** |
+| 2  | **Report Cards** | **CLOSED** | 2026-09-04. See the Domain 2 record below. Grading scales, templates, the `report_cards` entity, the Draft→Teacher Review→HOD Review→Approved→Published→Archived workflow, locking, versioning/reissue, weighted aggregation, attendance + conduct snapshots, individual + bulk PDF, publication-gated guardian/learner visibility. The old ad-hoc `buildReportCardData()` transcript on the learner Results tab is left in place (a lightweight "academic results" export, distinct from a governed report card). |
 | 3  | **Admissions** | **QUEUED** | Partial: an internal staff Kanban ("Admissions Pipeline", `/admissions`, `useAdmissionsPipeline`) that moves a `learners.status` through `prospective → applied → accepted → enrolled`. **Missing:** parent-facing application portal (start/save/resume/submit, document upload), a real `applications` entity with the full status set (Draft/Submitted/Under Review/Incomplete/Interview/Assessment/Waitlisted/Accepted/Rejected/Withdrawn/Enrolled), configurable document requirements, admissions dashboard, and conversion (application → learner + guardian + enrolment + user accounts, no duplicates). Reconcile the existing pipeline into the new model — do not run two. |
 | 4  | **Communication & Notifications** | **QUEUED** | Partial: `announcements` (school_owner/principal → staff/guardians/everyone) + in-app `notifications` (inbox, unread badge, real producers: guardian invitations, attendance alerts, fee reminders, document expiry) both exist with migrations. **Missing:** two-way threaded messaging / conversations (parent↔school, teacher↔parent, staff↔staff), read status + attachments + unread counts + search + archive, per-user notification preferences, email/SMS/WhatsApp delivery architecture (in-app only today), and additional automated triggers (report published, behaviour incident, application status change, event). |
 | 5  | **Homework / Learning** | **QUEUED** | None. `assessment_type` includes `assignment`/`examination` but there is no homework-distribution / submission / return workflow distinct from the gradebook. Build assignments (class+subject+due+instructions+attachments+links+rubric), learner submission/resubmission, teacher review/mark/return/missing-tracking, statuses (Assigned/Submitted/Late/Returned/Reviewed), parent visibility. Reuse `assessments` linkage where a homework is also gradebook-scored; reuse storage + `class_teacher_assignments`. |
@@ -131,6 +131,21 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 ---
 
 ## Closed domains
+
+### Domain 2 — Report Cards — `CLOSED` (2026-09-04)
+
+**Do not reopen** unless a later domain exposes a genuine security or dependency defect.
+
+- **Branch:** `feat/report-cards`
+- **Migrations:** `20260904090000_grading_scales.sql`, `20260904100000_report_cards.sql` (additive: `create table` / `create type` / one `add column if not exists` — `assessments.weight`, the extension the assessments migration itself named).
+- **Scope delivered:** reusable grading scales + non-overlapping achievement bands + `resolve_achievement()`; configurable report-card templates (section toggles, optional HOD-review step, grading scale); the `report_cards` + `report_card_subjects` entity; per-assessment weighting; `assessments.weight`-weighted subject aggregation + subject-weighted overall; term-range attendance + conduct snapshots; the **Draft → Teacher Review → HOD Review → Approved → Published → Archived** workflow (13 SECURITY-DEFINER RPCs, role-derived authority, no client-writable state); approval/publication locking; versioning + `reissue` (archive old, new v+1 draft); one-live-card partial unique index; bulk generate-for-class + bulk publish + one multi-page bulk PDF; individual client-side PDF; per-guardian `report_card_published` notification; staff routes `/report-cards`, `/report-cards/:id`, `/academic/grading-scales`, `/academic/report-templates`; learner-profile **Report cards** tab; Parent Portal child-profile **Report cards** tab (published only + PDF).
+- **RBAC:** new permissions `reportcard.view` / `reportcard.manage` / `reportcard.approve` wired into `ROLE_PERMISSIONS`; SQL helpers `can_view_report_cards()` / `can_manage_report_card()` mirror them. `department_head` gained `reportcard.view` + `reportcard.manage` for the HOD-review step.
+- **Verification (2026-09-04):** `tsc -b --noEmit` PASS · `eslint .` PASS · `vitest` **214** PASS (11 new) · RLS harness **556** PASS (39 new) · `vite build` PASS · report-card E2E **4/4** + fees/parent-portal/assessments regression **32/32** serial (`--workers=1`).
+- **Security notes:** all 6 new tenant-scoped tables `ENABLE` + `FORCE ROW LEVEL SECURITY`, fail-closed; `report_cards` / `report_card_subjects` have **no** client INSERT/UPDATE/DELETE policy (workflow RPCs only) + `report_cards_protect` trigger backstop; guardian & learner see `status = 'published'` for their own child/record **only** (RLS-tested, incl. cross-learner and cross-tenant); locked-card edits raise `report_card_locked` (RLS-tested); reissue concurrency-safe via the one-live-card index; every transition writes `audit_log`. FK-doesn't-respect-RLS closed by `*_validate_tenant` triggers on every new table.
+- **Docs:** `docs/REPORT_CARDS.md`.
+- **Deferred (non-blocking):** WYSIWYG template designer (templates are toggles + notes); cross-term / year-end aggregate cards (each card is one term); emailing the PDF to guardians (in-app `report_card_published` is the hand-off; email delivery is Domain 19).
+
+---
 
 ### Domain 1 — Finance — `CLOSED` (2026-09-03)
 

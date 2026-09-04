@@ -54,6 +54,8 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const canViewReports = hasPermission(role, 'reports.view');
   const canViewAttendance = hasPermission(role, 'attendance.view');
   const canViewAssessments = hasPermission(role, 'assessment.view');
+  const canViewReportCards = hasPermission(role, 'reportcard.view');
+  const canManageReportCards = hasPermission(role, 'reportcard.manage');
   const canViewFinance = hasPermission(role, 'learner.view_financial');
   const canManageFinance = hasPermission(role, 'learner.manage_financial');
   const canViewSafeguarding = hasPermission(role, 'learner.view_safeguarding');
@@ -115,6 +117,15 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewAssessments
           ? { label: 'Assessments', path: '/academic/assessments', icon: ChartIcon }
           : { label: 'Assessments', icon: ChartIcon },
+        canViewReportCards
+          ? { label: 'Report Cards', path: '/report-cards', icon: ClipboardListIcon }
+          : { label: 'Report Cards', icon: ClipboardListIcon },
+        ...(canManageReportCards
+          ? [
+              { label: 'Grading Scales', path: '/academic/grading-scales', icon: LayersIcon },
+              { label: 'Report Templates', path: '/academic/report-templates', icon: BookIcon },
+            ]
+          : []),
         canViewTimetable
           ? { label: 'Timetable', path: '/timetable', icon: CalendarIcon }
           : { label: 'Timetable', icon: CalendarIcon },

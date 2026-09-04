@@ -17,6 +17,7 @@ import { LearnerEmergencyContactsSection } from '@/features/learners/components/
 import { LearnerMedicalSection } from '@/features/learners/components/LearnerMedicalSection';
 import { LearnerDocumentsSection } from '@/features/learners/components/LearnerDocumentsSection';
 import { LearnerTransfersSection } from '@/features/learners/components/LearnerTransfersSection';
+import { LearnerReportCardsSection } from '@/features/reportCards/components/LearnerReportCardsSection';
 import { LearnerInterventionsSection } from '@/features/learners/components/LearnerInterventionsSection';
 import { LearnerSafeguardingSection } from '@/features/safeguarding/components/LearnerSafeguardingSection';
 import { LearnerConsentSection } from '@/features/consent/components/LearnerConsentSection';
@@ -57,6 +58,7 @@ type TabKey =
   | 'documents'
   | 'transfers'
   | 'results'
+  | 'reportCards'
   | 'interventions'
   | 'safeguarding'
   | 'consent';
@@ -80,6 +82,7 @@ export function LearnerProfilePage() {
   const canViewMedical = can('learner.view_medical');
   const canManageMedical = can('learner.manage_medical');
   const canViewResults = can('assessment.view');
+  const canViewReportCards = can('reportcard.view');
   const canViewFinancial = can('learner.view_financial');
   const canManageFinancial = can('learner.manage_financial');
   const canViewBehaviour = can('learner.view_behaviour');
@@ -258,6 +261,7 @@ export function LearnerProfilePage() {
     { key: 'documents', label: 'Documents' },
     { key: 'transfers', label: 'Transfers' },
     ...(canViewResults ? [{ key: 'results' as const, label: 'Academic results' }] : []),
+    ...(canViewReportCards ? [{ key: 'reportCards' as const, label: 'Report cards' }] : []),
     ...(canViewResults ? [{ key: 'interventions' as const, label: 'Interventions' }] : []),
     ...(canViewSafeguarding ? [{ key: 'safeguarding' as const, label: 'Safeguarding' }] : []),
   ];
@@ -486,6 +490,16 @@ export function LearnerProfilePage() {
                 }
               : undefined
           }
+        />
+      )}
+      {activeTab === 'reportCards' && canViewReportCards && (
+        <LearnerReportCardsSection
+          learnerId={learner.id}
+          variant="staff"
+          schoolName={school.name}
+          schoolAddress={school.physicalAddress}
+          gradeName={currentGrade?.name}
+          className={currentClass?.name}
         />
       )}
       {activeTab === 'interventions' && canViewResults && (

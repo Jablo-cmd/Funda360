@@ -192,6 +192,22 @@ const AttendanceReportPage = named(
   () => import('@/features/reports/pages/AttendanceReportPage'),
   'AttendanceReportPage',
 );
+const GradingScalesPage = named(
+  () => import('@/features/reportCards/pages/GradingScalesPage'),
+  'GradingScalesPage',
+);
+const ReportCardTemplatesPage = named(
+  () => import('@/features/reportCards/pages/ReportCardTemplatesPage'),
+  'ReportCardTemplatesPage',
+);
+const ReportCardsPage = named(
+  () => import('@/features/reportCards/pages/ReportCardsPage'),
+  'ReportCardsPage',
+);
+const ReportCardDetailPage = named(
+  () => import('@/features/reportCards/pages/ReportCardDetailPage'),
+  'ReportCardDetailPage',
+);
 const ParentDashboardPage = named(
   () => import('@/features/parentPortal/pages/ParentDashboardPage'),
   'ParentDashboardPage',
@@ -265,6 +281,13 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="assessment.view" />}>
                 <Route path="/academic/assessments" element={<AssessmentsPage />} />
                 <Route path="/academic/assessments/:id" element={<AssessmentDetailPage />} />
+              </Route>
+
+              <Route element={<RequirePermission permission="reportcard.view" />}>
+                <Route path="/report-cards" element={<ReportCardsPage />} />
+                <Route path="/report-cards/:id" element={<ReportCardDetailPage />} />
+                <Route path="/academic/grading-scales" element={<GradingScalesPage />} />
+                <Route path="/academic/report-templates" element={<ReportCardTemplatesPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="learner.view" />}>

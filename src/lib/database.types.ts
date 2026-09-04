@@ -51,6 +51,8 @@ export type LearnerDocumentType =
 export type FeeCategory = 'tuition' | 'transport' | 'boarding' | 'uniform' | 'activity' | 'other';
 export type FeePaymentMethod = 'cash' | 'eft' | 'card' | 'debit_order' | 'cheque' | 'other';
 export type BehaviourIncidentType = 'positive' | 'negative';
+export type ReportCardStatus = 'draft' | 'teacher_review' | 'hod_review' | 'approved' | 'published' | 'archived';
+export type ReportCardPromotion = 'promoted' | 'promoted_conditionally' | 'retained' | 'not_applicable';
 export type BehaviourSeverity = 'low' | 'medium' | 'high';
 export type FeeAdjustmentType = 'discount' | 'bursary' | 'scholarship' | 'waiver';
 export type FeeAdjustmentMethod = 'percentage' | 'fixed_amount';
@@ -734,6 +736,7 @@ export type AssessmentRow = {
   assessment_type: AssessmentType;
   assessment_date: string;
   max_mark: number;
+  weight: number;
   active: boolean;
   created_by: string | null;
   updated_by: string | null;
@@ -752,6 +755,7 @@ export type AssessmentInsert = {
   assessment_type: AssessmentType;
   assessment_date: string;
   max_mark: number;
+  weight?: number;
   active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
@@ -770,6 +774,7 @@ export type AssessmentUpdate = {
   assessment_type?: AssessmentType;
   assessment_date?: string;
   max_mark?: number;
+  weight?: number;
   active?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
@@ -2159,6 +2164,190 @@ export type AnnouncementUpdate = {
   updated_at?: string;
 };
 
+export type GradingScaleRow = {
+  id: string;
+  school_id: string;
+  name: string;
+  description: string | null;
+  is_default: boolean;
+  active: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type GradingScaleInsert = {
+  id?: string;
+  school_id: string;
+  name: string;
+  description?: string | null;
+  is_default?: boolean;
+  active?: boolean;
+};
+export type GradingScaleUpdate = {
+  name?: string;
+  description?: string | null;
+  is_default?: boolean;
+  active?: boolean;
+};
+
+export type GradingScaleBandRow = {
+  id: string;
+  grading_scale_id: string;
+  school_id: string;
+  code: string;
+  label: string;
+  descriptor: string | null;
+  min_percentage: number;
+  max_percentage: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+export type GradingScaleBandInsert = {
+  id?: string;
+  grading_scale_id: string;
+  school_id: string;
+  code: string;
+  label: string;
+  descriptor?: string | null;
+  min_percentage: number;
+  max_percentage: number;
+  sort_order?: number;
+};
+export type GradingScaleBandUpdate = {
+  code?: string;
+  label?: string;
+  descriptor?: string | null;
+  min_percentage?: number;
+  max_percentage?: number;
+  sort_order?: number;
+};
+
+export type ReportCardTemplateRow = {
+  id: string;
+  school_id: string;
+  name: string;
+  grading_scale_id: string;
+  is_default: boolean;
+  active: boolean;
+  show_attendance: boolean;
+  show_conduct: boolean;
+  show_class_teacher_comment: boolean;
+  show_principal_comment: boolean;
+  show_subject_comments: boolean;
+  show_promotion: boolean;
+  requires_hod_review: boolean;
+  header_note: string | null;
+  footer_note: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type ReportCardTemplateInsert = {
+  id?: string;
+  school_id: string;
+  name: string;
+  grading_scale_id: string;
+  is_default?: boolean;
+  active?: boolean;
+  show_attendance?: boolean;
+  show_conduct?: boolean;
+  show_class_teacher_comment?: boolean;
+  show_principal_comment?: boolean;
+  show_subject_comments?: boolean;
+  show_promotion?: boolean;
+  requires_hod_review?: boolean;
+  header_note?: string | null;
+  footer_note?: string | null;
+};
+export type ReportCardTemplateUpdate = Partial<Omit<ReportCardTemplateInsert, 'id' | 'school_id'>>;
+
+export type ReportCardBatchRow = {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  term_id: string;
+  class_id: string;
+  template_id: string;
+  generated_count: number;
+  skipped_count: number;
+  created_by: string | null;
+  created_at: string;
+};
+export type ReportCardBatchInsert = never;
+export type ReportCardBatchUpdate = never;
+
+export type ReportCardRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  academic_year_id: string;
+  term_id: string;
+  grade_id: string;
+  class_id: string;
+  template_id: string;
+  batch_id: string | null;
+  version: number;
+  status: ReportCardStatus;
+  superseded_by: string | null;
+  learner_name: string;
+  learner_number: string;
+  class_teacher_comment: string | null;
+  principal_comment: string | null;
+  conduct_summary: string | null;
+  promotion_status: ReportCardPromotion;
+  overall_average_percentage: number | null;
+  overall_achievement_code: string | null;
+  overall_achievement_label: string | null;
+  attendance_present: number;
+  attendance_absent: number;
+  attendance_late: number;
+  attendance_excused: number;
+  attendance_total_days: number;
+  conduct_positive_count: number;
+  conduct_negative_count: number;
+  generated_at: string;
+  submitted_at: string | null;
+  submitted_by: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  published_at: string | null;
+  published_by: string | null;
+  archived_at: string | null;
+  locked_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type ReportCardInsert = never;
+export type ReportCardUpdate = never;
+
+export type ReportCardSubjectRow = {
+  id: string;
+  report_card_id: string;
+  school_id: string;
+  subject_id: string;
+  subject_name: string;
+  teacher_profile_id: string | null;
+  teacher_name: string | null;
+  weight: number;
+  average_percentage: number | null;
+  achievement_code: string | null;
+  achievement_label: string | null;
+  teacher_comment: string | null;
+  assessment_count: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+export type ReportCardSubjectInsert = never;
+export type ReportCardSubjectUpdate = never;
+
 export type Database = {
   public: {
     Tables: {
@@ -2392,6 +2581,36 @@ export type Database = {
         Insert: AnnouncementInsert;
         Update: AnnouncementUpdate;
       };
+      grading_scales: {
+        Row: GradingScaleRow;
+        Insert: GradingScaleInsert;
+        Update: GradingScaleUpdate;
+      };
+      grading_scale_bands: {
+        Row: GradingScaleBandRow;
+        Insert: GradingScaleBandInsert;
+        Update: GradingScaleBandUpdate;
+      };
+      report_card_templates: {
+        Row: ReportCardTemplateRow;
+        Insert: ReportCardTemplateInsert;
+        Update: ReportCardTemplateUpdate;
+      };
+      report_card_batches: {
+        Row: ReportCardBatchRow;
+        Insert: ReportCardBatchInsert;
+        Update: ReportCardBatchUpdate;
+      };
+      report_cards: {
+        Row: ReportCardRow;
+        Insert: ReportCardInsert;
+        Update: ReportCardUpdate;
+      };
+      report_card_subjects: {
+        Row: ReportCardSubjectRow;
+        Insert: ReportCardSubjectInsert;
+        Update: ReportCardSubjectUpdate;
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -2533,6 +2752,66 @@ export type Database = {
       mark_payment_intent_processing: {
         Args: { p_intent_id: string };
         Returns: PaymentIntentRow;
+      };
+      resolve_achievement: {
+        Args: { p_scale_id: string; p_percentage: number };
+        Returns: { code: string; label: string }[];
+      };
+      generate_report_card: {
+        Args: { p_learner_id: string; p_term_id: string; p_template_id: string };
+        Returns: ReportCardRow;
+      };
+      generate_report_cards_for_class: {
+        Args: { p_class_id: string; p_term_id: string; p_template_id: string };
+        Returns: ReportCardBatchRow;
+      };
+      recalculate_report_card: {
+        Args: { p_report_card_id: string };
+        Returns: ReportCardRow;
+      };
+      set_report_card_subject_comment: {
+        Args: { p_subject_row_id: string; p_comment: string };
+        Returns: ReportCardSubjectRow;
+      };
+      set_report_card_comment: {
+        Args: { p_report_card_id: string; p_field: string; p_text: string };
+        Returns: ReportCardRow;
+      };
+      set_report_card_promotion: {
+        Args: { p_report_card_id: string; p_status: ReportCardPromotion };
+        Returns: ReportCardRow;
+      };
+      submit_report_card: {
+        Args: { p_report_card_id: string };
+        Returns: ReportCardRow;
+      };
+      review_report_card: {
+        Args: { p_report_card_id: string; p_approve: boolean; p_note?: string | null };
+        Returns: ReportCardRow;
+      };
+      approve_report_card: {
+        Args: { p_report_card_id: string };
+        Returns: ReportCardRow;
+      };
+      unapprove_report_card: {
+        Args: { p_report_card_id: string; p_reason: string };
+        Returns: ReportCardRow;
+      };
+      publish_report_card: {
+        Args: { p_report_card_id: string };
+        Returns: ReportCardRow;
+      };
+      archive_report_card: {
+        Args: { p_report_card_id: string };
+        Returns: ReportCardRow;
+      };
+      reissue_report_card: {
+        Args: { p_report_card_id: string; p_reason: string };
+        Returns: ReportCardRow;
+      };
+      publish_report_card_batch: {
+        Args: { p_batch_id: string };
+        Returns: number;
       };
     };
   };

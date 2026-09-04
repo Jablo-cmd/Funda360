@@ -8,6 +8,7 @@ import { useLearner } from '@/features/learners/hooks/useLearner';
 import { ChildOverviewTab } from '@/features/parentPortal/components/ChildOverviewTab';
 import { ChildAttendanceTab } from '@/features/parentPortal/components/ChildAttendanceTab';
 import { ChildAcademicsTab } from '@/features/parentPortal/components/ChildAcademicsTab';
+import { LearnerReportCardsSection } from '@/features/reportCards/components/LearnerReportCardsSection';
 import { ChildFeesTab } from '@/features/parentPortal/components/ChildFeesTab';
 import { ChildBehaviourTab } from '@/features/parentPortal/components/ChildBehaviourTab';
 import { ChildTimetableTab } from '@/features/parentPortal/components/ChildTimetableTab';
@@ -16,13 +17,14 @@ import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAuth } from '@/features/auth/context/authContext';
 import { MyConsentSection } from '@/features/consent/components/MyConsentSection';
 
-type TabKey = 'overview' | 'attendance' | 'timetable' | 'academics' | 'fees' | 'behaviour' | 'documents' | 'consent';
+type TabKey = 'overview' | 'attendance' | 'timetable' | 'academics' | 'reportCards' | 'fees' | 'behaviour' | 'documents' | 'consent';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'attendance', label: 'Attendance' },
   { key: 'timetable', label: 'Timetable' },
   { key: 'academics', label: 'Academics' },
+  { key: 'reportCards', label: 'Report cards' },
   { key: 'fees', label: 'Fees' },
   { key: 'behaviour', label: 'Behaviour' },
   { key: 'documents', label: 'Documents' },
@@ -92,6 +94,14 @@ export function ParentChildProfilePage() {
       {activeTab === 'attendance' && <ChildAttendanceTab learnerId={learner.id} />}
       {activeTab === 'timetable' && school && <ChildTimetableTab learnerId={learner.id} schoolId={school.id} />}
       {activeTab === 'academics' && <ChildAcademicsTab learnerId={learner.id} />}
+      {activeTab === 'reportCards' && (
+        <LearnerReportCardsSection
+          learnerId={learner.id}
+          variant="family"
+          schoolName={school?.name ?? 'School'}
+          schoolAddress={school?.physicalAddress}
+        />
+      )}
       {activeTab === 'fees' && <ChildFeesTab learnerId={learner.id} />}
       {activeTab === 'behaviour' && <ChildBehaviourTab learnerId={learner.id} />}
       {activeTab === 'documents' && <ChildDocumentsTab learnerId={learner.id} />}
