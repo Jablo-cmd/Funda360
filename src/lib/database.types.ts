@@ -3393,6 +3393,10 @@ export type Database = {
         Returns: AssignmentSubmissionFileRow;
       };
       is_learner_self: { Args: { p_learner_id: string }; Returns: boolean };
+      provision_learner_login: {
+        Args: { p_learner_id: string; p_email: string; p_phone?: string | null };
+        Returns: { user_id: string; temporary_password: string }[];
+      };
       get_my_admission_applications: {
         Args: Record<string, never>;
         Returns: {

@@ -10,7 +10,7 @@ No artificial sprints or milestones inside a domain. A domain is implemented com
 
 Statuses: `QUEUED` · `IN_PROGRESS` · `BLOCKED` · `CLOSED`
 
-Last updated: 2026-09-07 — Domain 7 (Parent Portal Completion) CLOSED.
+Last updated: 2026-09-07 — Domains 4–8 CLOSED (Communication, Homework, Teacher Workspace, Parent Portal Completion, Learner Portal).
 
 ---
 
@@ -114,7 +114,7 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 | 5  | **Homework / Learning** | **CLOSED** | 2026-09-07. See the Domain 5 record below. `assignments` (class+subject+due+instructions+rubric+resources) with a draft→published→closed lifecycle, `assignment_submissions` (one 'assigned' row per enrolled learner at publish, RPC-only state), submit / resubmit (learner-self, guardian-on-behalf, or staff), teacher mark/return/excuse with missing-tracking, gradebook (`assessment_results`) sync when linked to an `assessment_id`, guardian/learner visibility, guardian notifications. New `is_learner_self()` helper (Domain 8 groundwork). Reuses `class_teacher_assignments` / `assessments` / storage. |
 | 6  | **Teacher Workspace** | **CLOSED** | 2026-09-07. See the Domain 6 record below. `/my-classes` (the "My Classes" nav item, was `/my-profile`) — a composed teacher dashboard: today's published lessons (in-progress highlighted), per-class register-taken status, homework awaiting marking, upcoming assessments, my classes, unread messages/notifications, quick actions. **No migration** — pure RLS-scoped composition. First pass per the tracker; extends for Events (16) + learner alerts. |
 | 7  | **Parent Portal Completion** | **CLOSED** | 2026-09-07. See the Domain 7 record below. The consolidation pass: messaging (dep 4) + report cards (dep 2) + homework (dep 5) guardian surfaces were shipped by those domains; Domain 7 adds the per-child **Homework** tab, the dashboard "Homework to do" + "Your applications" roll-ups, and `get_my_admission_applications()` (a narrow SECURITY DEFINER guardian read of the application they filed, dep 3). Events (dep 16) deferred until events exist. |
-| 8  | **Learner Portal** | **QUEUED** | None — no learner self-service login (`KNOWN_LIMITATIONS.md`). Groundwork exists: `learners.profile_id`, a disposable learner fixture, `learner` role in the union. Build a role-scoped learner experience (dashboard, timetable, subjects, assignments, results, attendance, documents, events, announcements, notifications) — **no admin surface**. Reuse the guardian-portal patterns and RLS shape (`learners.profile_id = auth.uid()`). Depends on 2, 5, 16 for full content. |
+| 8  | **Learner Portal** | **CLOSED** | 2026-09-07. See the Domain 8 record below. `provision_learner_login` (staff, `can_manage_learners`, one-time temp password), `/learner/*` under `RequireLearnerRole` + `LearnerLayout` — dashboard, timetable, homework (view + submit), results, report cards, attendance, documents, announcements, notifications, profile — all read-only, self-scoped by `is_learner_self(learner_id)` via one additive SELECT policy per table (the `parent_portal_v1` pattern). `announcements` `all_staff` audience fixed to exclude the `learner` role. No admin surface; no behaviour/medical; messaging + events deferred. |
 | 9  | **Transport** | **QUEUED** | None (two free-text fields on a learner record only). Build vehicles, drivers, routes, stops, learner assignments, schedules, transport fees (into the existing fee ledger — `fee_category` already has `transport`), transport attendance, pickup/dropoff records, parent notifications. Architecture to allow future GPS. |
 | 10 | **Boarding / Hostel** | **QUEUED** | None. Groundwork: `learners.boarding_type` (`day_scholar`/`boarder`), `learner_enrollments.house` (free text). Build hostels/houses/rooms/beds/allocations, boarding attendance, house masters, boarding incidents (reuse `behaviour_incidents` where possible), check-in/out, leave permissions, boarding fees (fee ledger — `fee_category.boarding`). |
 | 11 | **Library** | **QUEUED** | None. Build catalogue (books/ISBN/authors/publishers/categories), copies/locations, borrowing/returns/renewals/reservations, overdue tracking, lost/damaged, fines (fee ledger), learner borrowing history. |
@@ -131,6 +131,22 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 ---
 
 ## Closed domains
+
+### Domain 8 — Learner Portal — `CLOSED` (2026-09-07)
+
+**Do not reopen** unless a later domain exposes a genuine security or dependency defect.
+
+- **Branch:** `feat/learner-portal`
+- **Migration:** `20260910090000_learner_portal.sql` (1 provisioning RPC, 1 helper, ~11 additive SELECT policies, `announcements` policy + trigger re-declared; additive).
+- **Scope delivered:** `provision_learner_login(learner_id, email, phone?)` — `can_manage_learners`-gated, creates `auth.users` + `auth.identities` + `profiles` (role `learner`) + links `learners.profile_id`, returns a one-time temp password (the `provision_employee_login` shape), writes `audit_log`; "Provision login" button on the staff learner profile (hidden once linked). Learner read access: `can_view_academic_reference_as_learner()` for reference data (`grades` / `classes` / `subjects` / `class_teacher_assignments` / `timetable_entries`) and `is_learner_self(learner_id)` for personal data (`learner_enrollments` / `attendance_records` / `assessment_results` / `assessments` via EXISTS / `learner_documents` + storage). Homework + Report Cards already carried self clauses. `announcements` `all_staff` audience + fan-out re-declared to exclude `'learner'`; learner announcement `link_path` → `/learner/announcements`. Frontend: `/learner/*` under `RequireLearnerRole` + `LearnerLayout` / `LearnerNav`; dashboard, timetable, homework (submit / resubmit), results, report cards, attendance, documents, announcements, notifications, profile — the tab pages reuse the Parent Portal `Child*` components via `useMyLearnerRecord`. `RedirectGuardiansToParentPortal` extended to send learners to `/learner/dashboard`.
+- **RBAC:** no new permission. `learner` role capabilities are entirely RLS-self-scoped (`is_learner_self`), like the guardian model. `ROLE_PERMISSIONS['learner']` stays `[]`.
+- **Verification (2026-09-07):** `tsc -b --noEmit` PASS · `eslint .` PASS · `vitest` **240** PASS (unchanged) · RLS harness **640** PASS (13 new — `learner_portal.test.sql`) · `vite build` PASS · `learner-portal.spec.ts` E2E **3/3** + parent-portal / learners / login regression **28/28** serial.
+- **Security notes:** every new policy is SELECT-only and self-scoped; no learner write capability anywhere. Behaviour + medical deliberately excluded (no per-row visibility tier — same call `parent_portal_v1` made for guardians). RLS-tested: a learner sees exactly the rows a manager sees for their own record and zero rows for another learner; `provision_learner_login` rejects double-provisioning and non-managers; a learner is neither notified of nor can see an `all_staff` announcement, and does see `everyone` announcements routed to `/learner/announcements`.
+- **Docs:** `docs/LEARNER_PORTAL.md`; `docs/FUNDA360_KNOWN_LIMITATIONS.md` updated (learner login + homework entries).
+- **Deferred (non-blocking):** learner ↔ staff messaging (Domain 4's `send_message` needs a `/learner/messages` route + `learner`-role link routing), a "Today's events" surface (Domain 16), a learner-facing subjects catalogue page (reference data is visible; no dedicated page).
+- **Production activation:** no new credentials. Staff provision each learner login from the learner profile; the learner activates via the normal password flow.
+
+---
 
 ### Domain 7 — Parent Portal Completion — `CLOSED` (2026-09-07)
 

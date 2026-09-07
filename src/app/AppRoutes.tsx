@@ -5,9 +5,11 @@ import { PublicOnlyRoute } from '@/routes/PublicOnlyRoute';
 import { TenantGate } from '@/routes/TenantGate';
 import { RequirePermission } from '@/routes/RequirePermission';
 import { RequireGuardianRole } from '@/routes/RequireGuardianRole';
+import { RequireLearnerRole } from '@/routes/RequireLearnerRole';
 import { RedirectGuardiansToParentPortal } from '@/routes/RedirectGuardiansToParentPortal';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ParentLayout } from '@/components/layout/ParentLayout';
+import { LearnerLayout } from '@/components/layout/LearnerLayout';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
 
 /**
@@ -187,6 +189,38 @@ const ParentHomeworkPage = named(
 const TeacherWorkspacePage = named(
   () => import('@/features/teacherWorkspace/pages/TeacherWorkspacePage'),
   'TeacherWorkspacePage',
+);
+const LearnerDashboardPage = named(
+  () => import('@/features/learnerPortal/pages/LearnerDashboardPage'),
+  'LearnerDashboardPage',
+);
+const LearnerHomeworkPage = named(
+  () => import('@/features/learnerPortal/pages/LearnerHomeworkPage'),
+  'LearnerHomeworkPage',
+);
+const LearnerTimetablePage = named(
+  () => import('@/features/learnerPortal/pages/LearnerSectionPages'),
+  'LearnerTimetablePage',
+);
+const LearnerResultsPage = named(
+  () => import('@/features/learnerPortal/pages/LearnerSectionPages'),
+  'LearnerResultsPage',
+);
+const LearnerAttendancePage = named(
+  () => import('@/features/learnerPortal/pages/LearnerSectionPages'),
+  'LearnerAttendancePage',
+);
+const LearnerDocumentsPage = named(
+  () => import('@/features/learnerPortal/pages/LearnerSectionPages'),
+  'LearnerDocumentsPage',
+);
+const LearnerReportCardsPage = named(
+  () => import('@/features/learnerPortal/pages/LearnerSectionPages'),
+  'LearnerReportCardsPage',
+);
+const MyLearnerProfilePage = named(
+  () => import('@/features/learnerPortal/pages/LearnerSectionPages'),
+  'LearnerProfilePage',
 );
 const LearnerReportPage = named(
   () => import('@/features/reports/pages/LearnerReportPage'),
@@ -409,6 +443,22 @@ export function AppRoutes() {
                 />
                 <Route path="/parent/homework" element={<ParentHomeworkPage />} />
                 <Route path="/parent/homework/:assignmentId" element={<ParentHomeworkPage />} />
+              </Route>
+            </Route>
+
+            <Route element={<RequireLearnerRole />}>
+              <Route element={<LearnerLayout />}>
+                <Route path="/learner/dashboard" element={<LearnerDashboardPage />} />
+                <Route path="/learner/timetable" element={<LearnerTimetablePage />} />
+                <Route path="/learner/homework" element={<LearnerHomeworkPage />} />
+                <Route path="/learner/homework/:assignmentId" element={<LearnerHomeworkPage />} />
+                <Route path="/learner/results" element={<LearnerResultsPage />} />
+                <Route path="/learner/report-cards" element={<LearnerReportCardsPage />} />
+                <Route path="/learner/attendance" element={<LearnerAttendancePage />} />
+                <Route path="/learner/documents" element={<LearnerDocumentsPage />} />
+                <Route path="/learner/announcements" element={<AnnouncementsPage />} />
+                <Route path="/learner/notifications" element={<NotificationsPage />} />
+                <Route path="/learner/profile" element={<MyLearnerProfilePage />} />
               </Route>
             </Route>
           </Route>

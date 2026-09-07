@@ -8,6 +8,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useLearner } from '@/features/learners/hooks/useLearner';
 import { LearnerFormModal } from '@/features/learners/components/LearnerFormModal';
+import { LearnerLoginModal } from '@/features/learners/components/LearnerLoginModal';
 import { ChangeLearnerStatusDialog } from '@/features/learners/components/ChangeLearnerStatusDialog';
 import { LearnerOverviewSection } from '@/features/learners/components/LearnerOverviewSection';
 import { LearnerOverviewDashboard } from '@/features/learners/components/LearnerOverviewDashboard';
@@ -271,6 +272,7 @@ export function LearnerProfilePage() {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isIncidentOpen, setIsIncidentOpen] = useState(false);
+  const [isLearnerLoginOpen, setIsLearnerLoginOpen] = useState(false);
 
   if (isLoading) {
     return <FullScreenSpinner label="Loading learner…" />;
@@ -350,6 +352,13 @@ export function LearnerProfilePage() {
                   Change status
                 </Button>
               </div>
+              {!learner.profileId && (
+                <div className="w-full sm:w-auto sm:min-w-[8rem]">
+                  <Button type="button" variant="secondary" onClick={() => setIsLearnerLoginOpen(true)}>
+                    Provision login
+                  </Button>
+                </div>
+              )}
             </>
           )}
           {canManageFinancial && (
@@ -548,6 +557,14 @@ export function LearnerProfilePage() {
           learnerId={learner.id}
           academicYearId={currentAcademicYear.id}
           onSaved={() => void refetchBehaviour()}
+        />
+      )}
+      {isLearnerLoginOpen && (
+        <LearnerLoginModal
+          learnerId={learner.id}
+          learnerFirstName={learner.firstName}
+          onClose={() => setIsLearnerLoginOpen(false)}
+          onProvisioned={() => void refetch()}
         />
       )}
     </div>

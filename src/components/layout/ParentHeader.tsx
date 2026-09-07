@@ -7,6 +7,8 @@ import { NotificationBell } from '@/features/notifications/components/Notificati
 
 export interface ParentHeaderProps {
   onMenuClick: () => void;
+  /** Where the notification bell links. Defaults to the Parent Portal inbox. */
+  notificationsPath?: string;
 }
 
 /**
@@ -14,7 +16,7 @@ export interface ParentHeaderProps {
  * no tenant switcher, no academic-year label. A parent should never feel
  * like they're looking at the school's admin backend.
  */
-export function ParentHeader({ onMenuClick }: ParentHeaderProps) {
+export function ParentHeader({ onMenuClick, notificationsPath = '/parent/notifications' }: ParentHeaderProps) {
   const { school } = useSchool();
 
   return (
@@ -38,7 +40,7 @@ export function ParentHeader({ onMenuClick }: ParentHeaderProps) {
           </span>
         )}
         <div className="hidden h-9 w-px bg-border sm:block" />
-        <NotificationBell to="/parent/notifications" />
+        <NotificationBell to={notificationsPath} />
         <ThemeToggle />
         <UserMenu />
       </div>

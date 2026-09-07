@@ -19,6 +19,9 @@ export function RedirectGuardiansToParentPortal() {
   if (user && GUARDIAN_ROLES.has(user.role ?? '')) {
     return <Navigate to="/parent/dashboard" replace />;
   }
+  if (user && user.role === 'learner') {
+    return <Navigate to="/learner/dashboard" replace />;
+  }
 
   return <Outlet />;
 }
