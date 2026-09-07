@@ -175,6 +175,15 @@ const MessagingSettingsPage = named(
   () => import('@/features/notifications/pages/MessagingSettingsPage'),
   'MessagingSettingsPage',
 );
+const HomeworkPage = named(() => import('@/features/homework/pages/HomeworkPage'), 'HomeworkPage');
+const HomeworkDetailPage = named(
+  () => import('@/features/homework/pages/HomeworkDetailPage'),
+  'HomeworkDetailPage',
+);
+const ParentHomeworkPage = named(
+  () => import('@/features/homework/pages/ParentHomeworkPage'),
+  'ParentHomeworkPage',
+);
 const LearnerReportPage = named(
   () => import('@/features/reports/pages/LearnerReportPage'),
   'LearnerReportPage',
@@ -309,6 +318,8 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="assessment.view" />}>
                 <Route path="/academic/assessments" element={<AssessmentsPage />} />
                 <Route path="/academic/assessments/:id" element={<AssessmentDetailPage />} />
+                <Route path="/homework" element={<HomeworkPage />} />
+                <Route path="/homework/:id" element={<HomeworkDetailPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="reportcard.view" />}>
@@ -391,6 +402,8 @@ export function AppRoutes() {
                   path="/parent/messages/:conversationId"
                   element={<MessagesPage basePath="/parent/messages" />}
                 />
+                <Route path="/parent/homework" element={<ParentHomeworkPage />} />
+                <Route path="/parent/homework/:assignmentId" element={<ParentHomeworkPage />} />
               </Route>
             </Route>
           </Route>

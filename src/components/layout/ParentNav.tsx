@@ -1,5 +1,13 @@
 import { NavLink } from 'react-router-dom';
-import { ChatIcon, GridIcon, GraduationCapIcon, MegaphoneIcon, UsersIcon, WalletIcon } from '@/components/ui/icons';
+import {
+  BookIcon,
+  ChatIcon,
+  GridIcon,
+  GraduationCapIcon,
+  MegaphoneIcon,
+  UsersIcon,
+  WalletIcon,
+} from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 
 export interface ParentNavProps {
@@ -9,6 +17,7 @@ export interface ParentNavProps {
 const NAV_ITEMS = [
   { label: 'Home', path: '/parent/dashboard', icon: GridIcon },
   { label: 'My Children', path: '/parent/children', icon: GraduationCapIcon },
+  { label: 'Homework', path: '/parent/homework', icon: BookIcon },
   { label: 'Fees', path: '/parent/fees', icon: WalletIcon },
   { label: 'Messages', path: '/parent/messages', icon: ChatIcon },
   { label: 'Announcements', path: '/parent/announcements', icon: MegaphoneIcon },

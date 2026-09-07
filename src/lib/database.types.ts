@@ -2615,6 +2615,106 @@ export type MessageAttachmentRow = {
 export type MessageAttachmentInsert = never;
 export type MessageAttachmentUpdate = never;
 
+// --- Homework / Learning domain (20260908090000_homework.sql) ---
+
+export type AssignmentStatus = 'draft' | 'published' | 'closed';
+export type AssignmentSubmissionStatus =
+  | 'assigned'
+  | 'submitted'
+  | 'late'
+  | 'returned'
+  | 'reviewed'
+  | 'excused';
+
+export type AssignmentRow = {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  term_id: string | null;
+  class_id: string;
+  subject_id: string;
+  assessment_id: string | null;
+  title: string;
+  instructions: string | null;
+  due_at: string | null;
+  max_points: number | null;
+  allow_resubmission: boolean;
+  status: AssignmentStatus;
+  rubric: Json;
+  published_at: string | null;
+  closed_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type AssignmentInsert = never;
+export type AssignmentUpdate = {
+  title?: string;
+  instructions?: string | null;
+  due_at?: string | null;
+  max_points?: number | null;
+  allow_resubmission?: boolean;
+  rubric?: Json;
+  subject_id?: string;
+  term_id?: string | null;
+  assessment_id?: string | null;
+};
+
+export type AssignmentResourceRow = {
+  id: string;
+  assignment_id: string;
+  school_id: string;
+  label: string;
+  url: string | null;
+  storage_path: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_by: string | null;
+  created_at: string;
+};
+export type AssignmentResourceInsert = never;
+export type AssignmentResourceUpdate = never;
+
+export type AssignmentSubmissionRow = {
+  id: string;
+  assignment_id: string;
+  school_id: string;
+  learner_id: string;
+  status: AssignmentSubmissionStatus;
+  submission_text: string | null;
+  submitted_at: string | null;
+  submitted_by: string | null;
+  is_late: boolean;
+  attempt_count: number;
+  points_awarded: number | null;
+  rubric_scores: Json;
+  teacher_feedback: string | null;
+  marked_by: string | null;
+  marked_at: string | null;
+  returned_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type AssignmentSubmissionInsert = never;
+export type AssignmentSubmissionUpdate = never;
+
+export type AssignmentSubmissionFileRow = {
+  id: string;
+  submission_id: string;
+  assignment_id: string;
+  school_id: string;
+  learner_id: string;
+  label: string;
+  storage_path: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  uploaded_by: string | null;
+  uploaded_at: string;
+};
+export type AssignmentSubmissionFileInsert = never;
+export type AssignmentSubmissionFileUpdate = never;
+
 export type Database = {
   public: {
     Tables: {
@@ -2933,6 +3033,26 @@ export type Database = {
         Insert: MessageAttachmentInsert;
         Update: MessageAttachmentUpdate;
       };
+      assignments: {
+        Row: AssignmentRow;
+        Insert: AssignmentInsert;
+        Update: AssignmentUpdate;
+      };
+      assignment_resources: {
+        Row: AssignmentResourceRow;
+        Insert: AssignmentResourceInsert;
+        Update: AssignmentResourceUpdate;
+      };
+      assignment_submissions: {
+        Row: AssignmentSubmissionRow;
+        Insert: AssignmentSubmissionInsert;
+        Update: AssignmentSubmissionUpdate;
+      };
+      assignment_submission_files: {
+        Row: AssignmentSubmissionFileRow;
+        Insert: AssignmentSubmissionFileInsert;
+        Update: AssignmentSubmissionFileUpdate;
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -3214,6 +3334,65 @@ export type Database = {
         Args: { p_target_profile_id: string };
         Returns: boolean;
       };
+      create_assignment: {
+        Args: {
+          p_school_id: string;
+          p_class_id: string;
+          p_subject_id: string;
+          p_academic_year_id: string;
+          p_title: string;
+          p_instructions?: string | null;
+          p_due_at?: string | null;
+          p_max_points?: number | null;
+          p_term_id?: string | null;
+          p_allow_resubmission?: boolean;
+          p_rubric?: Json;
+          p_assessment_id?: string | null;
+        };
+        Returns: AssignmentRow;
+      };
+      publish_assignment: { Args: { p_assignment_id: string }; Returns: AssignmentRow };
+      close_assignment: { Args: { p_assignment_id: string }; Returns: AssignmentRow };
+      submit_assignment: {
+        Args: { p_assignment_id: string; p_learner_id: string; p_submission_text?: string | null };
+        Returns: AssignmentSubmissionRow;
+      };
+      mark_assignment_submission: {
+        Args: {
+          p_submission_id: string;
+          p_points?: number | null;
+          p_feedback?: string | null;
+          p_rubric_scores?: Json;
+          p_finalise?: boolean;
+        };
+        Returns: AssignmentSubmissionRow;
+      };
+      excuse_assignment_submission: {
+        Args: { p_submission_id: string; p_reason?: string | null };
+        Returns: AssignmentSubmissionRow;
+      };
+      register_assignment_resource: {
+        Args: {
+          p_assignment_id: string;
+          p_label: string;
+          p_url?: string | null;
+          p_storage_path?: string | null;
+          p_mime_type?: string | null;
+          p_size_bytes?: number | null;
+        };
+        Returns: AssignmentResourceRow;
+      };
+      register_submission_file: {
+        Args: {
+          p_submission_id: string;
+          p_label: string;
+          p_storage_path: string;
+          p_mime_type?: string | null;
+          p_size_bytes?: number | null;
+        };
+        Returns: AssignmentSubmissionFileRow;
+      };
+      is_learner_self: { Args: { p_learner_id: string }; Returns: boolean };
     };
   };
 };

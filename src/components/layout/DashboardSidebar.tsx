@@ -123,6 +123,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewReportCards
           ? { label: 'Report Cards', path: '/report-cards', icon: ClipboardListIcon }
           : { label: 'Report Cards', icon: ClipboardListIcon },
+        canViewAssessments
+          ? { label: 'Homework', path: '/homework', icon: BookIcon }
+          : { label: 'Homework', icon: BookIcon },
         ...(canManageReportCards
           ? [
               { label: 'Grading Scales', path: '/academic/grading-scales', icon: LayersIcon },
