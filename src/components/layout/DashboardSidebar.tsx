@@ -10,6 +10,7 @@ import {
   BuildingIcon,
   CalendarIcon,
   ChalkboardIcon,
+  ChatIcon,
   CheckIcon,
   ChartIcon,
   ClipboardListIcon,
@@ -61,6 +62,7 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const canManageFinance = hasPermission(role, 'learner.manage_financial');
   const canViewSafeguarding = hasPermission(role, 'learner.view_safeguarding');
   const canSwitchSchool = hasPermission(role, 'tenant.switch');
+  const canManageSchool = hasPermission(role, 'school.manage');
 
   const sections: NavSection[] = [
     {
@@ -153,7 +155,17 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewSafeguarding
           ? { label: 'Safeguarding', path: '/safeguarding', icon: ShieldIcon }
           : { label: 'Safeguarding', icon: ShieldIcon },
+      ],
+    },
+    {
+      label: 'Communication',
+      items: [
+        { label: 'Messages', path: '/messages', icon: ChatIcon, end: true },
         { label: 'Announcements', path: '/announcements', icon: MegaphoneIcon },
+        { label: 'Notification Preferences', path: '/notifications/settings', icon: GearIcon },
+        ...(canManageSchool
+          ? [{ label: 'Messaging & Delivery', path: '/settings/messaging', icon: GearIcon }]
+          : []),
       ],
     },
     {

@@ -2485,6 +2485,136 @@ export type AdmissionApplicationEventRow = {
 export type AdmissionApplicationEventInsert = never;
 export type AdmissionApplicationEventUpdate = never;
 
+// --- Communication & Notifications domain (20260907090000_communication.sql) ---
+
+export type ConversationKind = 'direct' | 'group';
+export type MessageDeliveryChannel = 'in_app' | 'email' | 'sms' | 'whatsapp';
+export type MessageDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped';
+
+export type NotificationPreferenceRow = {
+  profile_id: string;
+  school_id: string | null;
+  email_enabled: boolean;
+  sms_enabled: boolean;
+  whatsapp_enabled: boolean;
+  type_overrides: Json;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+  updated_at: string;
+};
+export type NotificationPreferenceInsert = {
+  profile_id: string;
+  email_enabled?: boolean;
+  sms_enabled?: boolean;
+  whatsapp_enabled?: boolean;
+  type_overrides?: Json;
+  quiet_hours_start?: string | null;
+  quiet_hours_end?: string | null;
+};
+export type NotificationPreferenceUpdate = Partial<Omit<NotificationPreferenceInsert, 'profile_id'>>;
+
+export type SchoolMessagingSettingsRow = {
+  school_id: string;
+  email_enabled: boolean;
+  sms_enabled: boolean;
+  whatsapp_enabled: boolean;
+  email_from_name: string | null;
+  email_reply_to: string | null;
+  sms_sender_id: string | null;
+  email_provider: string | null;
+  sms_provider: string | null;
+  whatsapp_provider: string | null;
+  updated_by: string | null;
+  updated_at: string;
+};
+export type SchoolMessagingSettingsInsert = {
+  school_id: string;
+  email_enabled?: boolean;
+  sms_enabled?: boolean;
+  whatsapp_enabled?: boolean;
+  email_from_name?: string | null;
+  email_reply_to?: string | null;
+  sms_sender_id?: string | null;
+  email_provider?: string | null;
+  sms_provider?: string | null;
+  whatsapp_provider?: string | null;
+};
+export type SchoolMessagingSettingsUpdate = Partial<Omit<SchoolMessagingSettingsInsert, 'school_id'>>;
+
+export type NotificationDeliveryRow = {
+  id: string;
+  notification_id: string;
+  school_id: string | null;
+  recipient_profile_id: string;
+  channel: MessageDeliveryChannel;
+  status: MessageDeliveryStatus;
+  provider: string | null;
+  destination: string | null;
+  provider_message_id: string | null;
+  error: string | null;
+  attempts: number;
+  scheduled_for: string;
+  sent_at: string | null;
+  created_at: string;
+};
+export type NotificationDeliveryInsert = never;
+export type NotificationDeliveryUpdate = never;
+
+export type ConversationRow = {
+  id: string;
+  school_id: string;
+  kind: ConversationKind;
+  subject: string | null;
+  created_by: string | null;
+  last_message_at: string;
+  message_count: number;
+  created_at: string;
+};
+export type ConversationInsert = never;
+export type ConversationUpdate = never;
+
+export type ConversationParticipantRow = {
+  id: string;
+  conversation_id: string;
+  school_id: string;
+  profile_id: string;
+  last_read_at: string | null;
+  archived: boolean;
+  muted: boolean;
+  added_by: string | null;
+  added_at: string;
+};
+export type ConversationParticipantInsert = never;
+export type ConversationParticipantUpdate = { last_read_at?: string | null; archived?: boolean; muted?: boolean };
+
+export type MessageRow = {
+  id: string;
+  conversation_id: string;
+  school_id: string;
+  sender_profile_id: string;
+  body: string;
+  edited_at: string | null;
+  deleted_at: string | null;
+  created_at: string;
+};
+export type MessageInsert = never;
+export type MessageUpdate = never;
+
+export type MessageAttachmentRow = {
+  id: string;
+  message_id: string;
+  conversation_id: string;
+  school_id: string;
+  label: string;
+  storage_path: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  uploaded_by: string | null;
+  uploaded_at: string;
+};
+export type MessageAttachmentInsert = never;
+export type MessageAttachmentUpdate = never;
+
 export type Database = {
   public: {
     Tables: {
@@ -2768,6 +2898,41 @@ export type Database = {
         Insert: AdmissionApplicationEventInsert;
         Update: AdmissionApplicationEventUpdate;
       };
+      notification_preferences: {
+        Row: NotificationPreferenceRow;
+        Insert: NotificationPreferenceInsert;
+        Update: NotificationPreferenceUpdate;
+      };
+      school_messaging_settings: {
+        Row: SchoolMessagingSettingsRow;
+        Insert: SchoolMessagingSettingsInsert;
+        Update: SchoolMessagingSettingsUpdate;
+      };
+      notification_deliveries: {
+        Row: NotificationDeliveryRow;
+        Insert: NotificationDeliveryInsert;
+        Update: NotificationDeliveryUpdate;
+      };
+      conversations: {
+        Row: ConversationRow;
+        Insert: ConversationInsert;
+        Update: ConversationUpdate;
+      };
+      conversation_participants: {
+        Row: ConversationParticipantRow;
+        Insert: ConversationParticipantInsert;
+        Update: ConversationParticipantUpdate;
+      };
+      messages: {
+        Row: MessageRow;
+        Insert: MessageInsert;
+        Update: MessageUpdate;
+      };
+      message_attachments: {
+        Row: MessageAttachmentRow;
+        Insert: MessageAttachmentInsert;
+        Update: MessageAttachmentUpdate;
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -3001,6 +3166,53 @@ export type Database = {
       convert_admission_application: {
         Args: { p_application_id: string; p_class_id?: string | null; p_provision_guardian_account?: boolean };
         Returns: AdmissionApplicationRow;
+      };
+      start_conversation: {
+        Args: {
+          p_participant_profile_ids: string[];
+          p_body: string;
+          p_subject?: string | null;
+          p_kind?: ConversationKind;
+        };
+        Returns: ConversationRow;
+      };
+      send_message: {
+        Args: { p_conversation_id: string; p_body: string };
+        Returns: MessageRow;
+      };
+      edit_message: {
+        Args: { p_message_id: string; p_body: string };
+        Returns: MessageRow;
+      };
+      delete_message: {
+        Args: { p_message_id: string };
+        Returns: MessageRow;
+      };
+      mark_conversation_read: {
+        Args: { p_conversation_id: string };
+        Returns: undefined;
+      };
+      set_conversation_flags: {
+        Args: { p_conversation_id: string; p_archived?: boolean | null; p_muted?: boolean | null };
+        Returns: undefined;
+      };
+      add_conversation_participants: {
+        Args: { p_conversation_id: string; p_profile_ids: string[] };
+        Returns: ConversationRow;
+      };
+      register_message_attachment: {
+        Args: {
+          p_message_id: string;
+          p_label: string;
+          p_storage_path: string;
+          p_mime_type?: string | null;
+          p_size_bytes?: number | null;
+        };
+        Returns: MessageAttachmentRow;
+      };
+      can_message_profile: {
+        Args: { p_target_profile_id: string };
+        Returns: boolean;
       };
     };
   };

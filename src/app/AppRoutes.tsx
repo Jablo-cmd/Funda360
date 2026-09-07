@@ -166,6 +166,15 @@ const AnnouncementsPage = named(
   () => import('@/features/announcements/pages/AnnouncementsPage'),
   'AnnouncementsPage',
 );
+const MessagesPage = named(() => import('@/features/messaging/pages/MessagesPage'), 'MessagesPage');
+const NotificationSettingsPage = named(
+  () => import('@/features/notifications/pages/NotificationSettingsPage'),
+  'NotificationSettingsPage',
+);
+const MessagingSettingsPage = named(
+  () => import('@/features/notifications/pages/MessagingSettingsPage'),
+  'MessagingSettingsPage',
+);
 const LearnerReportPage = named(
   () => import('@/features/reports/pages/LearnerReportPage'),
   'LearnerReportPage',
@@ -264,7 +273,14 @@ export function AppRoutes() {
                 <Route path="/my-profile" element={<MyProfilePage />} />
                 <Route path="/school/profile" element={<SchoolProfilePage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/notifications/settings" element={<NotificationSettingsPage />} />
                 <Route path="/announcements" element={<AnnouncementsPage />} />
+                <Route path="/messages" element={<MessagesPage basePath="/messages" />} />
+                <Route path="/messages/:conversationId" element={<MessagesPage basePath="/messages" />} />
+              </Route>
+
+              <Route element={<RequirePermission permission="school.manage" />}>
+                <Route path="/settings/messaging" element={<MessagingSettingsPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="tenant.switch" />}>
@@ -368,7 +384,13 @@ export function AppRoutes() {
                 <Route path="/parent/payment-return" element={<PaymentReturnPage />} />
                 <Route path="/parent/profile" element={<ParentProfilePage />} />
                 <Route path="/parent/notifications" element={<NotificationsPage />} />
+                <Route path="/parent/notifications/settings" element={<NotificationSettingsPage />} />
                 <Route path="/parent/announcements" element={<AnnouncementsPage />} />
+                <Route path="/parent/messages" element={<MessagesPage basePath="/parent/messages" />} />
+                <Route
+                  path="/parent/messages/:conversationId"
+                  element={<MessagesPage basePath="/parent/messages" />}
+                />
               </Route>
             </Route>
           </Route>
