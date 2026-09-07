@@ -10,7 +10,7 @@ No artificial sprints or milestones inside a domain. A domain is implemented com
 
 Statuses: `QUEUED` · `IN_PROGRESS` · `BLOCKED` · `CLOSED`
 
-Last updated: 2026-09-07 — Domain 6 (Teacher Workspace) CLOSED.
+Last updated: 2026-09-07 — Domain 7 (Parent Portal Completion) CLOSED.
 
 ---
 
@@ -113,7 +113,7 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 | 4  | **Communication & Notifications** | **CLOSED** | 2026-09-07. See the Domain 4 record below. Threaded messaging (`conversations` / `conversation_participants` / `messages` / `message_attachments`, direct + group, RPC-only writes, per-user read cursor / archive / mute, `can_message_profile` staff↔anyone / guardian↔staff-only), per-user `notification_preferences` (email/SMS/WhatsApp opt-in + per-type overrides + quiet hours; in-app always on), the multi-channel delivery outbox (`notification_deliveries` + `school_messaging_settings` + `enqueue_notification_deliveries` inside `create_notification` + the `notifications-dispatch` Edge Function with real Resend/Twilio adapters, activated only on provider secrets), and a new `behaviour_incident` guardian-notification producer. |
 | 5  | **Homework / Learning** | **CLOSED** | 2026-09-07. See the Domain 5 record below. `assignments` (class+subject+due+instructions+rubric+resources) with a draft→published→closed lifecycle, `assignment_submissions` (one 'assigned' row per enrolled learner at publish, RPC-only state), submit / resubmit (learner-self, guardian-on-behalf, or staff), teacher mark/return/excuse with missing-tracking, gradebook (`assessment_results`) sync when linked to an `assessment_id`, guardian/learner visibility, guardian notifications. New `is_learner_self()` helper (Domain 8 groundwork). Reuses `class_teacher_assignments` / `assessments` / storage. |
 | 6  | **Teacher Workspace** | **CLOSED** | 2026-09-07. See the Domain 6 record below. `/my-classes` (the "My Classes" nav item, was `/my-profile`) — a composed teacher dashboard: today's published lessons (in-progress highlighted), per-class register-taken status, homework awaiting marking, upcoming assessments, my classes, unread messages/notifications, quick actions. **No migration** — pure RLS-scoped composition. First pass per the tracker; extends for Events (16) + learner alerts. |
-| 7  | **Parent Portal Completion** | **QUEUED** | Substantially done: `src/features/parentPortal/` — multi-child dashboard, per-child Attendance / Timetable / Academics / Fees / Behaviour / Documents / Consent tabs, Announcements, Notifications, and the new family Fees page (`/parent/fees`, invoices + receipts + Pay-now + statements). **Remaining:** messaging (dep 4), events (dep 16), report cards (dep 2), homework (dep 5), applications (dep 3). Final consolidation pass **after** its dependency domains close. |
+| 7  | **Parent Portal Completion** | **CLOSED** | 2026-09-07. See the Domain 7 record below. The consolidation pass: messaging (dep 4) + report cards (dep 2) + homework (dep 5) guardian surfaces were shipped by those domains; Domain 7 adds the per-child **Homework** tab, the dashboard "Homework to do" + "Your applications" roll-ups, and `get_my_admission_applications()` (a narrow SECURITY DEFINER guardian read of the application they filed, dep 3). Events (dep 16) deferred until events exist. |
 | 8  | **Learner Portal** | **QUEUED** | None — no learner self-service login (`KNOWN_LIMITATIONS.md`). Groundwork exists: `learners.profile_id`, a disposable learner fixture, `learner` role in the union. Build a role-scoped learner experience (dashboard, timetable, subjects, assignments, results, attendance, documents, events, announcements, notifications) — **no admin surface**. Reuse the guardian-portal patterns and RLS shape (`learners.profile_id = auth.uid()`). Depends on 2, 5, 16 for full content. |
 | 9  | **Transport** | **QUEUED** | None (two free-text fields on a learner record only). Build vehicles, drivers, routes, stops, learner assignments, schedules, transport fees (into the existing fee ledger — `fee_category` already has `transport`), transport attendance, pickup/dropoff records, parent notifications. Architecture to allow future GPS. |
 | 10 | **Boarding / Hostel** | **QUEUED** | None. Groundwork: `learners.boarding_type` (`day_scholar`/`boarder`), `learner_enrollments.house` (free text). Build hostels/houses/rooms/beds/allocations, boarding attendance, house masters, boarding incidents (reuse `behaviour_incidents` where possible), check-in/out, leave permissions, boarding fees (fee ledger — `fee_category.boarding`). |
@@ -131,6 +131,23 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 ---
 
 ## Closed domains
+
+### Domain 7 — Parent Portal Completion — `CLOSED` (2026-09-07)
+
+**Do not reopen** unless a later domain exposes a genuine security or dependency defect.
+
+- **Branch:** `feat/parent-portal-completion`
+- **Migration:** `20260909090000_parent_portal_completion.sql` (1 SECURITY DEFINER RPC; additive).
+- **Context:** the guardian surfaces for Report Cards (Domain 2 — child-profile Report cards tab), Communication (Domain 4 — `/parent/messages`, notification settings, ParentNav) and Homework (Domain 5 — `/parent/homework`, ParentNav) were shipped by those domains. Domain 7 is the consolidation pass.
+- **Scope delivered:** (1) per-child **Homework** tab (`ChildHomeworkTab`) on the child profile — that child's assignments only, RLS-scoped, read-only, linking to the family homework page to submit; (2) Parent dashboard roll-ups via `useParentPortalHome` — "Homework to do" (outstanding `assigned`/`returned` assignments across all children + overdue count) and "Your applications"; (3) **`get_my_admission_applications()`** — a narrow SECURITY DEFINER read projecting only applicant-safe columns (no `decision_reason` / `resume_token` / event trail), scoped by `lower(applicant_email) = the caller's own profile email`, excludes drafts, `revoke … from public`.
+- **RBAC:** none new. `admission_applications` keeps its staff-only RLS; the RPC is the sole guardian path.
+- **Verification (2026-09-07):** `tsc -b --noEmit` PASS · `eslint .` PASS · `vitest` **240** PASS (unchanged) · RLS harness **627** PASS (4 new — `parent_portal_completion.test.sql`) · `vite build` PASS · `parent-portal-completion.spec.ts` E2E **1/1** + `parent-portal` regression **11/11** serial.
+- **Security notes:** the new RPC is the only change. It reads `admission_applications` (no guardian RLS policy) under SECURITY DEFINER but re-scopes to the caller's own verified profile email and column-narrows; RLS-tested that a guardian still cannot `SELECT admission_applications` directly and that a different-email guardian sees nothing.
+- **Docs:** `docs/PARENT_PORTAL_COMPLETION.md`.
+- **Deferred (non-blocking):** an "Upcoming events" dashboard card + child-profile Events tab (Domain 16).
+- **Production activation:** none — the migration is a plain function; the frontend ships as usual.
+
+---
 
 ### Domain 6 — Teacher Workspace — `CLOSED` (2026-09-07)
 

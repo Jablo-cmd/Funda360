@@ -3393,6 +3393,22 @@ export type Database = {
         Returns: AssignmentSubmissionFileRow;
       };
       is_learner_self: { Args: { p_learner_id: string }; Returns: boolean };
+      get_my_admission_applications: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          school_id: string;
+          reference_number: string | null;
+          status: AdmissionApplicationStatus;
+          learner_first_name: string | null;
+          learner_last_name: string | null;
+          requested_grade_id: string | null;
+          submitted_at: string | null;
+          decision_at: string | null;
+          converted_learner_id: string | null;
+          created_at: string;
+        }[];
+      };
     };
   };
 };

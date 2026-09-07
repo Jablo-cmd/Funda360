@@ -8,6 +8,7 @@ import { useLearner } from '@/features/learners/hooks/useLearner';
 import { ChildOverviewTab } from '@/features/parentPortal/components/ChildOverviewTab';
 import { ChildAttendanceTab } from '@/features/parentPortal/components/ChildAttendanceTab';
 import { ChildAcademicsTab } from '@/features/parentPortal/components/ChildAcademicsTab';
+import { ChildHomeworkTab } from '@/features/parentPortal/components/ChildHomeworkTab';
 import { LearnerReportCardsSection } from '@/features/reportCards/components/LearnerReportCardsSection';
 import { ChildFeesTab } from '@/features/parentPortal/components/ChildFeesTab';
 import { ChildBehaviourTab } from '@/features/parentPortal/components/ChildBehaviourTab';
@@ -17,13 +18,24 @@ import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAuth } from '@/features/auth/context/authContext';
 import { MyConsentSection } from '@/features/consent/components/MyConsentSection';
 
-type TabKey = 'overview' | 'attendance' | 'timetable' | 'academics' | 'reportCards' | 'fees' | 'behaviour' | 'documents' | 'consent';
+type TabKey =
+  | 'overview'
+  | 'attendance'
+  | 'timetable'
+  | 'academics'
+  | 'homework'
+  | 'reportCards'
+  | 'fees'
+  | 'behaviour'
+  | 'documents'
+  | 'consent';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'attendance', label: 'Attendance' },
   { key: 'timetable', label: 'Timetable' },
   { key: 'academics', label: 'Academics' },
+  { key: 'homework', label: 'Homework' },
   { key: 'reportCards', label: 'Report cards' },
   { key: 'fees', label: 'Fees' },
   { key: 'behaviour', label: 'Behaviour' },
@@ -94,6 +106,7 @@ export function ParentChildProfilePage() {
       {activeTab === 'attendance' && <ChildAttendanceTab learnerId={learner.id} />}
       {activeTab === 'timetable' && school && <ChildTimetableTab learnerId={learner.id} schoolId={school.id} />}
       {activeTab === 'academics' && <ChildAcademicsTab learnerId={learner.id} />}
+      {activeTab === 'homework' && <ChildHomeworkTab learnerId={learner.id} />}
       {activeTab === 'reportCards' && (
         <LearnerReportCardsSection
           learnerId={learner.id}
