@@ -10,7 +10,7 @@ No artificial sprints or milestones inside a domain. A domain is implemented com
 
 Statuses: `QUEUED` · `IN_PROGRESS` · `BLOCKED` · `CLOSED`
 
-Last updated: 2026-09-07 — Domain 5 (Homework / Learning) CLOSED.
+Last updated: 2026-09-07 — Domain 6 (Teacher Workspace) CLOSED.
 
 ---
 
@@ -112,7 +112,7 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 | 3  | **Admissions** | **CLOSED** | 2026-09-04. See the Domain 3 record below. `admission_applications` entity + full workflow + configurable document requirements + admissions dashboard + `convert_admission_application` (→ learner + guardian + enrolment, deduped) + a public intake form (`/apply`) served by the `admissions-public` Edge Function. The old learner-status Kanban is removed (enum unchanged). |
 | 4  | **Communication & Notifications** | **CLOSED** | 2026-09-07. See the Domain 4 record below. Threaded messaging (`conversations` / `conversation_participants` / `messages` / `message_attachments`, direct + group, RPC-only writes, per-user read cursor / archive / mute, `can_message_profile` staff↔anyone / guardian↔staff-only), per-user `notification_preferences` (email/SMS/WhatsApp opt-in + per-type overrides + quiet hours; in-app always on), the multi-channel delivery outbox (`notification_deliveries` + `school_messaging_settings` + `enqueue_notification_deliveries` inside `create_notification` + the `notifications-dispatch` Edge Function with real Resend/Twilio adapters, activated only on provider secrets), and a new `behaviour_incident` guardian-notification producer. |
 | 5  | **Homework / Learning** | **CLOSED** | 2026-09-07. See the Domain 5 record below. `assignments` (class+subject+due+instructions+rubric+resources) with a draft→published→closed lifecycle, `assignment_submissions` (one 'assigned' row per enrolled learner at publish, RPC-only state), submit / resubmit (learner-self, guardian-on-behalf, or staff), teacher mark/return/excuse with missing-tracking, gradebook (`assessment_results`) sync when linked to an `assessment_id`, guardian/learner visibility, guardian notifications. New `is_learner_self()` helper (Domain 8 groundwork). Reuses `class_teacher_assignments` / `assessments` / storage. |
-| 6  | **Teacher Workspace** | **QUEUED** | None (the "My Classes" nav item points at `/my-profile`). Build a unified teacher dashboard: today's timetable, classes, attendance status, upcoming assessments, homework, messages, notifications, learner alerts, outstanding marking, events; quick actions (take attendance, enter marks, create assignment, message parents, record behaviour, view learner). Pure composition over existing domains — **depends on 2, 4, 5, 16** for full content; a first pass can ship over timetable/attendance/assessments/behaviour and be extended. |
+| 6  | **Teacher Workspace** | **CLOSED** | 2026-09-07. See the Domain 6 record below. `/my-classes` (the "My Classes" nav item, was `/my-profile`) — a composed teacher dashboard: today's published lessons (in-progress highlighted), per-class register-taken status, homework awaiting marking, upcoming assessments, my classes, unread messages/notifications, quick actions. **No migration** — pure RLS-scoped composition. First pass per the tracker; extends for Events (16) + learner alerts. |
 | 7  | **Parent Portal Completion** | **QUEUED** | Substantially done: `src/features/parentPortal/` — multi-child dashboard, per-child Attendance / Timetable / Academics / Fees / Behaviour / Documents / Consent tabs, Announcements, Notifications, and the new family Fees page (`/parent/fees`, invoices + receipts + Pay-now + statements). **Remaining:** messaging (dep 4), events (dep 16), report cards (dep 2), homework (dep 5), applications (dep 3). Final consolidation pass **after** its dependency domains close. |
 | 8  | **Learner Portal** | **QUEUED** | None — no learner self-service login (`KNOWN_LIMITATIONS.md`). Groundwork exists: `learners.profile_id`, a disposable learner fixture, `learner` role in the union. Build a role-scoped learner experience (dashboard, timetable, subjects, assignments, results, attendance, documents, events, announcements, notifications) — **no admin surface**. Reuse the guardian-portal patterns and RLS shape (`learners.profile_id = auth.uid()`). Depends on 2, 5, 16 for full content. |
 | 9  | **Transport** | **QUEUED** | None (two free-text fields on a learner record only). Build vehicles, drivers, routes, stops, learner assignments, schedules, transport fees (into the existing fee ledger — `fee_category` already has `transport`), transport attendance, pickup/dropoff records, parent notifications. Architecture to allow future GPS. |
@@ -131,6 +131,22 @@ Repo state assessed 2026-09-03. "Repo state" describes what already exists so th
 ---
 
 ## Closed domains
+
+### Domain 6 — Teacher Workspace — `CLOSED` (2026-09-07)
+
+**Do not reopen** unless a later domain exposes a genuine security or dependency defect.
+
+- **Branch:** `feat/teacher-workspace`
+- **Migration:** none — pure composition over existing domains.
+- **Scope delivered:** `/my-classes` renders `TeacherWorkspacePage` (the sidebar "My Classes" item, previously pointing at `/my-profile`, now points here). Cards: **today's lessons** (`timetable_entries` where `teacher_profile_id = auth.uid()`, day = today, `status = published`; in-progress lesson highlighted via `currentOrNextLesson`), **attendance** (per assigned class, whether an `attendance_records` row exists for today), **homework to mark** (own published `assignments` + count of `submitted`/`late` submissions), **upcoming assessments** (next 10 for the teacher's classes), **my classes** (`class_teacher_assignments`), **inbox** (unread conversations + notifications). Quick actions → attendance / assessments / homework / messages / learners.
+- **RBAC:** route gated on `academic.view` (all teacher-variant roles + academic managers). No new permission. Every query is already RLS-scoped.
+- **Verification (2026-09-07):** `tsc -b --noEmit` PASS · `eslint .` PASS · `vitest` **240** PASS (7 new — `workspaceSummary.test.ts`) · RLS harness **623** PASS (unchanged — no SQL) · `vite build` PASS · `teacher-workspace.spec.ts` E2E **1/1** + `my-profile` regression **6/6**.
+- **Security notes:** no server component; nothing new to secure. The page composes only data the signed-in user's existing RLS policies already return.
+- **Docs:** `docs/TEACHER_WORKSPACE.md`.
+- **Deferred (non-blocking):** a "Today's events" card (Domain 16), a cross-class "learners needing attention" aggregation of `learnerAlerts.ts`, and a dedicated behaviour-capture entry point (the quick action routes to `/learners` today).
+- **Production activation:** none — ships with the frontend.
+
+---
 
 ### Domain 5 — Homework / Learning — `CLOSED` (2026-09-07)
 

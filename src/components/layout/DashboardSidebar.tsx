@@ -149,7 +149,9 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
         canViewEmployees
           ? { label: 'Leave Requests', path: '/employees/leave', icon: CalendarIcon }
           : { label: 'Leave Requests', icon: CalendarIcon },
-        { label: 'My Classes', path: '/my-profile', icon: ChalkboardIcon },
+        canViewAcademic
+          ? { label: 'My Classes', path: '/my-classes', icon: ChalkboardIcon }
+          : { label: 'My Classes', icon: ChalkboardIcon },
         canViewFinance
           ? { label: 'Fees', path: '/fees', icon: WalletIcon }
           : { label: 'Fees', icon: WalletIcon },
