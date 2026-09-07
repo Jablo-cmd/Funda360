@@ -87,7 +87,9 @@ test('a staff member starts a conversation and sees the message in the thread', 
   await page.getByRole('textbox', { name: 'Message' }).fill('Hello, could we discuss A1 progress?');
   await page.getByRole('button', { name: 'Send' }).click();
 
-  await expect(page.getByText('Hello, could we discuss A1 progress?')).toBeVisible();
+  // The message text appears both in the conversation-list preview and in
+  // the open thread — assert on the thread copy (rendered last).
+  await expect(page.getByText('Hello, could we discuss A1 progress?').last()).toBeVisible();
 });
 
 test('a guardian opens an existing conversation and replies', async ({ page }) => {

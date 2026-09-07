@@ -211,7 +211,11 @@ test('a role without academic.view is blocked from the academic section', async 
   });
 
   await page.goto('/academic');
-  await expect(page).toHaveURL('http://localhost:5173/dashboard');
+  // A learner has no academic.view, so /academic is blocked; from /dashboard
+  // the learner is then routed to their own portal (Domain 8 — Learner
+  // Portal). The security property under test is unchanged: the learner
+  // never reaches the academic admin section and sees no "Academic" nav.
+  await expect(page).toHaveURL('http://localhost:5173/learner/dashboard');
   await expect(page.getByRole('link', { name: 'Academic' })).toHaveCount(0);
 });
 
