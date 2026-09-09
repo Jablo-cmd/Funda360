@@ -18,7 +18,7 @@ below is therefore a first-time setup.
 
 | Need | Notes |
 | --- | --- |
-| Supabase account + **one hosted project** | Region: `af-south-1` (Cape Town) if available, else `eu-west-*`. Note the **project ref**. |
+| Supabase project | **`rzkybmkzhpwovpvrjkxk`** — "Funda360", region `eu-central-1`, Postgres 17. |
 | Supabase **paid tier** (Pro or above) | Required for Point-in-Time Recovery and log retention > 1 day. Free tier = daily backup only, 7-day retention, no PITR — acceptable only for a throwaway pilot. |
 | Supabase CLI ≥ 1.200 | `npm i -g supabase` or scoop/brew. Not currently installed on the dev box. |
 | Deno ≥ 2.x | For Edge Function type-check/deploy. |
@@ -107,6 +107,17 @@ capture it as a new migration, review, commit.
 
 ## 4. Edge Function deployment
 
+**Status (2026-09-09):** all four are **DEPLOYED** to project `rzkybmkzhpwovpvrjkxk`
+(`admissions-public` v3 `verify_jwt=false`, `payments-initiate` v2 `verify_jwt=true`,
+`payments-webhook` v2 `verify_jwt=false`, `notifications-dispatch` v2 `verify_jwt=false`)
+and respond correctly. Still needed: notification-provider + payment-provider secrets,
+and the `notifications-dispatch` scheduler. Deploy is **manual** (CLI, below) — CI only
+`deno check`s them; consider adding a deploy step gated on a `SUPABASE_ACCESS_TOKEN`
+repo secret if function churn increases.
+
+> The Supabase org also contains an unrelated project `human_res_app`
+> (`ulnfxfdfggmjootbpbej`). Always pass `--project-ref rzkybmkzhpwovpvrjkxk`.
+
 Four functions in `supabase/functions/`. Deploy only the ones the pilot uses.
 
 ```bash
@@ -146,7 +157,7 @@ pilot needs.
 
 | Secret | Function | Required when |
 | --- | --- | --- |
-| `NOTIFICATIONS_DISPATCH_SECRET` | notifications-dispatch | any external notification delivery |
+| `NOTIFICATIONS_DISPATCH_SECRET` | notifications-dispatch | **SET 2026-09-09** (random). Rotate and hand the new value to the scheduler when wiring it — Supabase does not let you read a secret value back. |
 | `RESEND_API_KEY`, `RESEND_FROM` | notifications-dispatch | email delivery of in-app notifications |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_SMS_FROM` | notifications-dispatch | SMS |
 | `TWILIO_WHATSAPP_FROM` | notifications-dispatch | WhatsApp |
