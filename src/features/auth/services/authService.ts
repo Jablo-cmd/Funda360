@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { appUrl } from '@/lib/appUrl';
 
 async function getSession(): Promise<Session | null> {
   const { data, error } = await supabase.auth.getSession();
@@ -20,7 +21,7 @@ async function signOut(): Promise<void> {
 
 async function requestPasswordReset(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`,
+    redirectTo: appUrl('/reset-password'),
   });
   if (error) throw error;
 }
@@ -36,7 +37,7 @@ async function requestPasswordReset(email: string): Promise<void> {
  */
 async function sendAccountActivationEmail(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/activate-account`,
+    redirectTo: appUrl('/activate-account'),
   });
   if (error) throw error;
 }

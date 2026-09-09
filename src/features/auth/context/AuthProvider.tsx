@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase, setAuthPersistence } from '@/lib/supabase';
+import { isCurrentPath } from '@/lib/appUrl';
 import { authService } from '@/features/auth/services/authService';
 import { mfaService } from '@/features/mfa/services/mfaService';
 import { toAuthenticatedUser } from '@/features/auth/utils/toAuthenticatedUser';
@@ -81,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // hood, just with a different redirectTo. Only redirect to the
         // staff reset page if the browser isn't already sitting on the
         // activation page the guardian's link actually pointed at.
-        if (window.location.pathname !== '/activate-account') {
+        if (!isCurrentPath('/activate-account')) {
           navigate('/reset-password', { replace: true });
         }
       }

@@ -153,6 +153,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_APP_NAME: Funda360
+          # GitHub Pages project site is served under /<repo>/ — asset URLs
+          # and the router basename must resolve there. Drop this line if the
+          # deploy ever moves to a custom domain served at the root.
+          DEPLOY_BASE: /Funda360/
         run: npm run build
 
       - name: Verify Pages entrypoint

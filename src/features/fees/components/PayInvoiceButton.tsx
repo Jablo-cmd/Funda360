@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { paymentGatewayService } from '@/features/fees/services/paymentGatewayService';
+import { appUrl } from '@/lib/appUrl';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 
 export interface PayInvoiceButtonProps {
@@ -25,13 +26,13 @@ export function PayInvoiceButton({ learnerId, invoiceId, amount, label = 'Pay no
     setBusy(true);
     setError(null);
     try {
-      const origin = window.location.origin;
+      const returnUrl = appUrl('/parent/payment-return');
       const intent = await paymentGatewayService.createIntent({
         learnerId,
         invoiceId,
         amount,
-        returnUrl: `${origin}/parent/payment-return`,
-        cancelUrl: `${origin}/parent/payment-return`,
+        returnUrl,
+        cancelUrl: returnUrl,
       });
 
       const redirect = await paymentGatewayService.getRedirect(intent.id);

@@ -7,9 +7,13 @@ import { SchoolProvider } from '@/features/school/context/SchoolProvider';
 import { AcademicProvider } from '@/features/academic/context/AcademicProvider';
 import { AppRoutes } from '@/app/AppRoutes';
 
+// "/" locally, "/Funda360" on the GitHub Pages project site — Vite's
+// import.meta.env.BASE_URL, minus the trailing slash React Router doesn't want.
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
+
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename}>
       <ToastProvider>
         <AuthProvider>
           <ProfileProvider>
