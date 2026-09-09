@@ -160,8 +160,8 @@ Audit: `supabase secrets list` → shows names + digests, never values.
 
 | Setting | Value |
 | --- | --- |
-| **Site URL** | the exact production origin, e.g. `https://jablo-cmd.github.io/Funda360` or the custom domain |
-| **Redirect URLs** | `<site-url>/reset-password`, `<site-url>/activate-account`, `<site-url>/verify-email`, `<site-url>/parent/payment-return` |
+| **Site URL** | `https://funda360.aurisnexus.co.za` |
+| **Redirect URLs** | `https://funda360.aurisnexus.co.za/reset-password`, `.../activate-account`, `.../verify-email`, `.../parent/payment-return` |
 | Email confirmations | The app sets `enable_confirmations = false` (config.toml) and drives activation through the recovery-email flow — mirror that on the hosted project. |
 | JWT expiry | default 3600s is fine; refresh is handled client-side. |
 
@@ -195,51 +195,40 @@ never `localhost`.
 
 ## 8. Production build & deployment
 
-Deployment is **GitHub Pages via `.github/workflows/ci.yml` → `deploy` job**
-(triggered on push to `main`, `needs: quality`). It:
-
-1. builds with the `github-pages` environment's `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`,
-2. fails if either secret is absent,
-3. uploads `dist/` and deploys to Pages.
+- **Live URL:** `https://funda360.aurisnexus.co.za/` — a custom domain on GitHub Pages,
+  served at the **root** of that domain. `https://jablo-cmd.github.io/Funda360/` is only a
+  legacy fallback that `301`s to the custom domain; do not treat it as an entry point.
+- **Pipeline:** `.github/workflows/ci.yml` → `deploy` job (push to `main`, `needs: quality`).
+  It verifies the `github-pages` environment secrets `VITE_SUPABASE_URL` /
+  `VITE_SUPABASE_ANON_KEY` are present and shaped like a hosted URL, builds with them,
+  copies `dist/index.html` → `dist/404.html` (SPA deep-link fallback), and deploys `dist/`.
+- **Base path:** default `/` — correct for the custom domain at root. Do **not** set a
+  Vite `base` / router `basename` unless the deploy ever moves to a sub-path.
+  `public/CNAME` (`funda360.aurisnexus.co.za`) ships in every build so the custom domain
+  is never dropped by a deploy.
 
 To deploy:
 
 ```bash
 git checkout main && git pull
-# ensure the github-pages environment secrets are set (§2.1)
-git push origin main          # CI runs quality gate, then deploy
+# github-pages environment secrets must be set (§2.1)
+git push origin main
 ```
 
-Confirm: repo → Actions → latest run green; repo → Settings → Pages shows the live URL;
-open it and check the login page loads.
+Confirm after the run:
 
-> **Housekeeping:** `.github/wodeploy-pages.yml` is a stray, mis-named file (not under
-> `.github/workflows/`, so GitHub never runs it) that duplicates the deploy logic
-> *without* injecting the Supabase secrets. Delete it to avoid confusion.
+```bash
+curl -s https://funda360.aurisnexus.co.za/ | grep -o 'src="[^"]*"'          # -> /assets/index-<hash>.js
+curl -s -o /dev/null -w '%{http_code}\n' \
+     "https://funda360.aurisnexus.co.za$(curl -s https://funda360.aurisnexus.co.za/ | grep -oE '/assets/index-[^\"]+\.js' | head -1)"   # -> 200
+curl -s https://funda360.aurisnexus.co.za/assets/index-*.js | grep -c 'localhost:54321\|service_role'   # -> 0
+```
 
-> **SPA on Pages:** deep links / refresh need a `404.html` fallback copied from
-> `index.html` (GitHub Pages has no SPA rewrite). Verify `dist/404.html` exists after
-> build; if not, add a build step to copy it. **As of this verification it does not
-> exist** (`/Funda360/404.html` → 301→404).
+Then open the URL and confirm the login form renders and a deep link (e.g.
+`/login`) survives a hard refresh.
 
-### 8.1 KNOWN BROKEN — base path (verified 2026-09-09, live site)
-
-`https://jablo-cmd.github.io/Funda360/` is deployed but **serves a blank page**:
-`index.html` requests `/assets/index-*.js` (absolute root) while GitHub Pages serves the
-app under `/Funda360/`, so every asset 404s. `vite.config.ts` has no `base`.
-
-Two ways to fix — pick one, do not do both:
-
-- **Custom domain (preferred):** point a domain at Pages (repo → Settings → Pages →
-  Custom domain), which serves at root — no `base`, no `basename` needed. Update Auth
-  Site URL / Redirect URLs to the new origin.
-- **Sub-path:** set `base: '/Funda360/'` in `vite.config.ts` **and** give
-  `BrowserRouter` in `src/App.tsx` a matching `basename="/Funda360"`. Guard both so
-  local dev / Playwright (which expect root) are unaffected — e.g.
-  `base: process.env.GITHUB_ACTIONS ? '/Funda360/' : '/'` and read
-  `import.meta.env.BASE_URL` for the router basename. Re-run the full e2e suite after.
-
-Also add a build step to `cp dist/index.html dist/404.html` for SPA deep-link support.
+> `.github/wodeploy-pages.yml` (stray, mis-named, never ran, no secret injection) was
+> removed on 2026-09-09.
 
 ---
 
