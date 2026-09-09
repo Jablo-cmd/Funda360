@@ -335,7 +335,12 @@ export function AppRoutes() {
                 <Route path="/schools/onboard" element={<SchoolOnboardingWizardPage />} />
               </Route>
 
-              <Route element={<RequirePermission permission="profile.view_any" />}>
+              {/* User & role administration — gated on profile.manage_any,
+                  matching both the sidebar (see NAV_MODEL) and the page's
+                  own canManageUsers() check. profile.view_any alone (held by
+                  receptionist / support_engineer / auditor for unrelated
+                  profile lookups) does not grant the staff directory. */}
+              <Route element={<RequirePermission permission="profile.manage_any" />}>
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/users/:id" element={<UserProfilePage />} />
               </Route>
@@ -364,6 +369,11 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="reportcard.view" />}>
                 <Route path="/report-cards" element={<ReportCardsPage />} />
                 <Route path="/report-cards/:id" element={<ReportCardDetailPage />} />
+              </Route>
+
+              {/* Report-card configuration is principal-tier (reportcard.approve),
+                  not something a marking teacher or a reviewing HOD manages. */}
+              <Route element={<RequirePermission permission="reportcard.approve" />}>
                 <Route path="/academic/grading-scales" element={<GradingScalesPage />} />
                 <Route path="/academic/report-templates" element={<ReportCardTemplatesPage />} />
               </Route>

@@ -18,12 +18,14 @@ import {
   totalToMark,
 } from '@/features/teacherWorkspace/utils/workspaceSummary';
 
+// Every entry links somewhere a teacher can actually go — a teacher holds
+// no `learner.view`, so a "View learners" action (which RequirePermission
+// would bounce straight back to /dashboard) is deliberately absent.
 const QUICK_ACTIONS = [
   { label: 'Take attendance', to: '/attendance' },
   { label: 'Enter marks', to: '/academic/assessments' },
   { label: 'Create homework', to: '/homework' },
   { label: 'Message parents', to: '/messages' },
-  { label: 'View learners', to: '/learners' },
 ];
 
 function Card({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {

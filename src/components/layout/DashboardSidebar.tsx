@@ -1,41 +1,8 @@
 import { Link, NavLink } from 'react-router-dom';
-import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/lib/cn';
 import { useAuth } from '@/features/auth/context/authContext';
 import { useProfile } from '@/features/profile/context/profileContext';
-import { hasPermission } from '@/features/rbac';
-import {
-  BookIcon,
-  BriefcaseIcon,
-  BuildingIcon,
-  CalendarIcon,
-  ChalkboardIcon,
-  ChatIcon,
-  CheckIcon,
-  ChartIcon,
-  ClipboardListIcon,
-  GearIcon,
-  GraduationCapIcon,
-  GridIcon,
-  LayersIcon,
-  MegaphoneIcon,
-  ShieldIcon,
-  UsersIcon,
-  WalletIcon,
-} from '@/components/ui/icons';
-
-interface NavItem {
-  label: string;
-  path?: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
-  /** Exact-match only — for an item whose path is itself a prefix of sibling items' paths (e.g. /academic vs /academic/years), so it doesn't show active on every sub-page. */
-  end?: boolean;
-}
-
-interface NavSection {
-  label: string;
-  items: NavItem[];
-}
+import { resolveNavForRole } from '@/features/rbac/constants/navigation';
 
 export interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -44,155 +11,12 @@ export interface DashboardSidebarProps {
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const { user } = useAuth();
   const { profile } = useProfile();
-  const role = user?.role ?? null;
 
-  const canViewUsers = hasPermission(role, 'profile.view_any');
-  const canViewGuardians = hasPermission(role, 'guardian.view');
-  const canViewEmployees = hasPermission(role, 'employee.view');
-  const canViewAcademic = hasPermission(role, 'academic.view');
-  const canViewTimetable = hasPermission(role, 'timetable.view');
-  const canViewLearners = hasPermission(role, 'learner.view');
-  const canViewAdmissions = hasPermission(role, 'admission.view');
-  const canViewReports = hasPermission(role, 'reports.view');
-  const canViewAttendance = hasPermission(role, 'attendance.view');
-  const canViewAssessments = hasPermission(role, 'assessment.view');
-  const canViewReportCards = hasPermission(role, 'reportcard.view');
-  const canManageReportCards = hasPermission(role, 'reportcard.manage');
-  const canViewFinance = hasPermission(role, 'learner.view_financial');
-  const canManageFinance = hasPermission(role, 'learner.manage_financial');
-  const canViewSafeguarding = hasPermission(role, 'learner.view_safeguarding');
-  const canSwitchSchool = hasPermission(role, 'tenant.switch');
-  const canManageSchool = hasPermission(role, 'school.manage');
-
-  const sections: NavSection[] = [
-    {
-      label: 'Overview',
-      items: [{ label: 'Dashboard', path: '/dashboard', icon: GridIcon }],
-    },
-    {
-      label: 'People',
-      items: [
-        canViewLearners
-          ? { label: 'Learners', path: '/learners', icon: GraduationCapIcon }
-          : { label: 'Learners', icon: GraduationCapIcon },
-        canViewAdmissions
-          ? { label: 'Admissions', path: '/admissions', icon: ClipboardListIcon }
-          : { label: 'Admissions', icon: ClipboardListIcon },
-        canViewLearners
-          ? { label: 'Alumni', path: '/alumni', icon: GraduationCapIcon }
-          : { label: 'Alumni', icon: GraduationCapIcon },
-        canViewGuardians
-          ? { label: 'Guardians', path: '/guardians', icon: UsersIcon }
-          : { label: 'Guardians', icon: UsersIcon },
-        canViewEmployees
-          ? { label: 'Employees', path: '/employees', icon: BriefcaseIcon }
-          : { label: 'Employees', icon: BriefcaseIcon },
-      ],
-    },
-    {
-      label: 'Academics',
-      items: [
-        canViewAcademic
-          ? { label: 'Academic Overview', path: '/academic', icon: LayersIcon, end: true }
-          : { label: 'Academic Overview', icon: LayersIcon },
-        canViewAcademic
-          ? { label: 'Academic Years', path: '/academic/years', icon: CalendarIcon }
-          : { label: 'Academic Years', icon: CalendarIcon },
-        canViewAcademic
-          ? { label: 'Terms', path: '/academic/terms', icon: BookIcon }
-          : { label: 'Terms', icon: BookIcon },
-        canViewAcademic
-          ? { label: 'Grades', path: '/academic/grades', icon: LayersIcon }
-          : { label: 'Grades', icon: LayersIcon },
-        canViewAcademic
-          ? { label: 'Classes', path: '/academic/classes', icon: ChalkboardIcon }
-          : { label: 'Classes', icon: ChalkboardIcon },
-        canViewAcademic
-          ? { label: 'Subjects', path: '/academic/subjects', icon: BookIcon }
-          : { label: 'Subjects', icon: BookIcon },
-        canViewAcademic
-          ? {
-              label: 'Teaching Assignments',
-              path: '/academic/teaching-assignments',
-              icon: UsersIcon,
-            }
-          : { label: 'Teaching Assignments', icon: UsersIcon },
-        canViewAssessments
-          ? { label: 'Assessments', path: '/academic/assessments', icon: ChartIcon }
-          : { label: 'Assessments', icon: ChartIcon },
-        canViewReportCards
-          ? { label: 'Report Cards', path: '/report-cards', icon: ClipboardListIcon }
-          : { label: 'Report Cards', icon: ClipboardListIcon },
-        canViewAssessments
-          ? { label: 'Homework', path: '/homework', icon: BookIcon }
-          : { label: 'Homework', icon: BookIcon },
-        ...(canManageReportCards
-          ? [
-              { label: 'Grading Scales', path: '/academic/grading-scales', icon: LayersIcon },
-              { label: 'Report Templates', path: '/academic/report-templates', icon: BookIcon },
-            ]
-          : []),
-        canViewTimetable
-          ? { label: 'Timetable', path: '/timetable', icon: CalendarIcon }
-          : { label: 'Timetable', icon: CalendarIcon },
-      ],
-    },
-    {
-      label: 'Operations',
-      items: [
-        canViewAttendance
-          ? { label: 'Attendance', path: '/attendance', icon: CheckIcon }
-          : { label: 'Attendance', icon: CheckIcon },
-        canViewEmployees
-          ? { label: 'Staff Attendance', path: '/employees/attendance', icon: CheckIcon }
-          : { label: 'Staff Attendance', icon: CheckIcon },
-        canViewEmployees
-          ? { label: 'Leave Requests', path: '/employees/leave', icon: CalendarIcon }
-          : { label: 'Leave Requests', icon: CalendarIcon },
-        canViewAcademic
-          ? { label: 'My Classes', path: '/my-classes', icon: ChalkboardIcon }
-          : { label: 'My Classes', icon: ChalkboardIcon },
-        canViewFinance
-          ? { label: 'Fees', path: '/fees', icon: WalletIcon }
-          : { label: 'Fees', icon: WalletIcon },
-        ...(canViewFinance ? [{ label: 'Invoices', path: '/fees/invoices', icon: WalletIcon }] : []),
-        ...(canManageFinance ? [{ label: 'Payment Settings', path: '/fees/settings', icon: GearIcon }] : []),
-        canViewSafeguarding
-          ? { label: 'Safeguarding', path: '/safeguarding', icon: ShieldIcon }
-          : { label: 'Safeguarding', icon: ShieldIcon },
-      ],
-    },
-    {
-      label: 'Communication',
-      items: [
-        { label: 'Messages', path: '/messages', icon: ChatIcon, end: true },
-        { label: 'Announcements', path: '/announcements', icon: MegaphoneIcon },
-        { label: 'Notification Preferences', path: '/notifications/settings', icon: GearIcon },
-        ...(canManageSchool
-          ? [{ label: 'Messaging & Delivery', path: '/settings/messaging', icon: GearIcon }]
-          : []),
-      ],
-    },
-    {
-      label: 'Reporting',
-      items: [
-        canViewReports
-          ? { label: 'Reports', path: '/reports', icon: ChartIcon }
-          : { label: 'Reports', icon: ChartIcon },
-      ],
-    },
-    {
-      label: 'Administration',
-      items: [
-        canViewUsers
-          ? { label: 'Users & Roles', path: '/users', icon: UsersIcon }
-          : { label: 'Users & Roles', icon: UsersIcon },
-        ...(canSwitchSchool ? [{ label: 'Schools', path: '/schools', icon: GearIcon }] : []),
-        { label: 'School Profile', path: '/school/profile', icon: BuildingIcon },
-        { label: 'My Profile', path: '/my-profile', icon: UsersIcon },
-      ],
-    },
-  ];
+  // The sidebar is composed from the role's actual usable capabilities —
+  // every item here links somewhere the signed-in user can genuinely go.
+  // There is no "show but disable" branch: an item a role cannot use is
+  // simply absent (see resolveNavForRole).
+  const sections = resolveNavForRole(user?.role ?? null);
 
   const fullName = profile ? `${profile.firstName} ${profile.lastName}`.trim() : null;
   const initials = fullName
@@ -213,55 +37,35 @@ export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
               {section.label}
             </p>
             <div className="flex flex-col gap-0.5">
-              {section.items.map(({ label, path, icon: Icon, end }) =>
-                path ? (
-                  <NavLink
-                    key={label}
-                    to={path}
-                    end={end}
-                    onClick={onNavigate}
-                    className={({ isActive }) =>
-                      cn(
-                        'focus-ring flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-sidebar-active text-white'
-                          : 'text-white/70 hover:bg-sidebar-raised hover:text-white',
-                      )
-                    }
-                  >
-                    <Icon className="h-[18px] w-[18px] shrink-0" />
-                    {label}
-                  </NavLink>
-                ) : (
-                  <div
-                    key={label}
-                    className="flex cursor-not-allowed items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/50"
-                  >
-                    <span className="flex items-center gap-3">
-                      <Icon className="h-[18px] w-[18px] shrink-0" />
-                      {label}
-                    </span>
-                    <span className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/50">
-                      Soon
-                    </span>
-                  </div>
-                ),
-              )}
+              {section.items.map(({ label, path, icon: Icon, end }) => (
+                <NavLink
+                  key={label}
+                  to={path}
+                  end={end}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    cn(
+                      'focus-ring flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-active text-white'
+                        : 'text-white/70 hover:bg-sidebar-raised hover:text-white',
+                    )
+                  }
+                >
+                  <Icon className="h-[18px] w-[18px] shrink-0" />
+                  {label}
+                </NavLink>
+              ))}
             </div>
           </div>
         ))}
       </nav>
 
       <div className="shrink-0 border-t border-sidebar-border px-3 py-3">
-        <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white/60">
-          <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-success-500" />
-          <span className="font-mono uppercase tracking-wider">System Operational</span>
-        </div>
-
         <Link
           to="/my-profile"
           onClick={onNavigate}
-          className="focus-ring mt-1.5 flex items-center gap-2.5 rounded-md px-3 py-2 hover:bg-sidebar-raised"
+          className="focus-ring flex items-center gap-2.5 rounded-md px-3 py-2 hover:bg-sidebar-raised"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-active text-xs font-semibold text-white">
             {initials}

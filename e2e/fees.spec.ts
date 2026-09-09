@@ -212,12 +212,12 @@ test('a finance_manager can send overdue reminders from Finance Overview', async
   expect(calledWithSchoolId).toBe(MOCK_TENANT_ID);
 });
 
-test('dashboard shows a Fee Collection Rate KPI for a role with learner.view_financial', async ({ page }) => {
+test('the finance dashboard shows a Collection Rate KPI for a finance role', async ({ page }) => {
   await seedAuthenticatedSession(page, { role: 'finance_manager' });
   await installDataMocks(page, {
     profile: buildMockProfileRow({ role: 'finance_manager' }),
     school: buildMockSchoolRow(),
-    academicYears: [buildMockAcademicYearRow()],
+    academicYears: [buildMockAcademicYearRow({ isActive: true })],
   });
   await installFeesBaseMocks(page);
   await page.route('**/rest/v1/learner_fee_adjustments*', async (route) => {
@@ -231,9 +231,12 @@ test('dashboard shows a Fee Collection Rate KPI for a role with learner.view_fin
 
   await page.goto('/dashboard');
   // CHARGE_ROW (1000) - PAYMENT_ROW (400 paid), no adjustments -> 40% collected.
-  const kpiCard = page.getByRole('link', { name: /Fee Collection Rate/ });
+  const kpiCard = page.getByRole('link', { name: /Collection Rate/ });
   await expect(kpiCard).toBeVisible();
   await expect(kpiCard).toContainText('40%');
+  // The finance dashboard is finance-only — no attendance/academic KPIs.
+  await expect(page.getByText('Outstanding Fees')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Attendance', exact: true })).toHaveCount(0);
 });
 
 const BANK_LINE = {
