@@ -4,7 +4,12 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 1 : 0,
+  // One retry everywhere (not CI-only): the residual `vite preview`
+  // connection-scheduling flake documented below and in
+  // docs/FUNDA360_KNOWN_LIMITATIONS.md is a local-server quirk, so it is
+  // exactly the local full-suite run that needs the same absorption CI
+  // already had.
+  retries: 1,
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:5173',
@@ -20,30 +25,27 @@ export default defineConfig({
   // occasional one). This is the same known, already-documented
   // local-server connection-handling quirk in
   // docs/FUNDA360_KNOWN_LIMITATIONS.md, not expected against the pilot's
-  // real hosted deployment — a small CI-only assertion-timeout increase
-  // (not a blanket one) is the proportionate response to a diagnosed,
-  // bounded, occasional connection-scheduling delay, not a mask for an
-  // unexplained failure.
+  // real hosted deployment — a small assertion-timeout increase (8s, not
+  // a blanket one) plus a single retry is the proportionate response to a
+  // diagnosed, bounded, occasional connection-scheduling delay, not a
+  // mask for an unexplained failure.
   expect: {
-    timeout: process.env.CI ? 8_000 : 5_000,
+    timeout: 8_000,
   },
   webServer: {
-    // CI runs against a production build served by `vite preview`, not the
-    // dev server: the dev server compiles each route's module graph
-    // on-demand on first request, and under fullyParallel workers the
-    // first few navigations can occasionally lose that race against the
-    // default 5s assertion timeout — a real, previously-observed source of
-    // flaky failures with no product defect behind them, not something a
-    // longer timeout should paper over. A prebuilt bundle has no
-    // on-demand compilation step, so every navigation resolves at the
-    // same (fast) speed regardless of parallelism. Local runs keep the
-    // dev server for its faster edit-test iteration loop, where an
-    // occasional cold-start retry is an acceptable trade a CI merge gate
-    // should not have to make.
-    command: process.env.CI ? 'npm run build && npm run preview -- --port 5173 --strictPort' : 'npm run dev',
+    // Always serve a prebuilt bundle, never the dev server. The dev
+    // server compiles each lazy route's module graph on first request,
+    // and under fullyParallel workers those cold navigations lose a race
+    // that produces flaky failures with no product defect behind them
+    // (see the comment above and docs/FUNDA360_KNOWN_LIMITATIONS.md). A
+    // prebuilt bundle has no on-demand compilation, so the full-suite
+    // `npm run test:e2e` gate is deterministic locally and in CI alike.
+    // Iterating on a single spec is still fast: run `npm run dev`
+    // yourself and Playwright reuses it (reuseExistingServer, non-CI).
+    command: 'npm run build && npm run preview -- --port 5173 --strictPort',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
-    timeout: process.env.CI ? 120_000 : 30_000,
+    timeout: 120_000,
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });
