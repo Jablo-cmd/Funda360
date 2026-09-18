@@ -8,6 +8,7 @@ import type { UserRole } from '@/features/auth/types/auth.types';
  * renumbering the table.
  */
 export const ROLE_RANK: Record<UserRole, number> = {
+  platform_owner: 110,
   super_administrator: 100,
   platform_administrator: 95,
   support_engineer: 90,
