@@ -40,7 +40,7 @@ This specification defines the Role-Based Access Control (RBAC) and security per
 - **Password Policies:** Strong complexity rules.
 - **Password Reset:** Secure email workflow.
 - **Email Verification:** Mandatory for new accounts.
-- **MFA Strategy:** Optional for admins, mandatory for super admins.
+- **MFA Strategy:** Optional for standard admins; mandatory for Platform Owner, Super Administrator and Platform Administrator.
 - **SSO Roadmap:** Integration with enterprise identity providers.
 - **Device Trust:** Future device fingerprinting.
 - **Session Expiry:** Configurable timeouts.
@@ -219,6 +219,7 @@ Examples:
 - **Role Hierarchy Diagram:**
 ```mermaid
 graph TD
+    PlatformOwner --> SuperAdmin
     SuperAdmin --> PlatformAdmin
     PlatformAdmin --> SchoolOwner
     SchoolOwner --> Principal
