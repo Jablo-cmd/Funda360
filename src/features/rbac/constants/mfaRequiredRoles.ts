@@ -24,6 +24,7 @@ import type { UserRole } from '@/features/auth/types/auth.types';
  * silently dropped.
  */
 const MFA_REQUIRED_ROLES: readonly UserRole[] = [
+  'platform_owner',
   'school_owner',
   'principal',
   'finance_manager',
