@@ -50,8 +50,15 @@ describe('isAtLeast', () => {
     expect(isAtLeast(undefined, 'guest')).toBe(false);
   });
 
-  it('places super_administrator at least as senior as every other role', () => {
+  it('places platform_owner at least as senior as every other role', () => {
     for (const role of USER_ROLES) {
+      expect(isAtLeast('platform_owner', role)).toBe(true);
+    }
+  });
+
+  it('places super_administrator at least as senior as every other role except platform_owner', () => {
+    for (const role of USER_ROLES) {
+      if (role === 'platform_owner') continue;
       expect(isAtLeast('super_administrator', role)).toBe(true);
     }
   });
