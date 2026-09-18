@@ -3,6 +3,7 @@
  * Slugs are the expected values of the `role` claim in `app_metadata`.
  */
 export const USER_ROLES = [
+  'platform_owner',
   'super_administrator',
   'platform_administrator',
   'support_engineer',
