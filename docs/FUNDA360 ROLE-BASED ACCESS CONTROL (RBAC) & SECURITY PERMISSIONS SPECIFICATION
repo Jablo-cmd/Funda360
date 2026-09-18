@@ -63,7 +63,8 @@ This specification defines the Role-Based Access Control (RBAC) and security per
 ## 6. System Roles
 | Role | Purpose | Responsibilities | Access Scope |
 |------|---------|------------------|--------------|
-| Super Administrator | Global control | Manage platform | All tenants |
+| **Platform Owner** | Sovereign platform control | Ultimate ownership, governance and control-plane authority | All tenants |
+| Super Administrator | Global control | Manage platform operations | All tenants |
 | Platform Administrator | System ops | Configure services | All tenants |
 | Support Engineer | Troubleshooting | Assist schools | Limited tenant access |
 | School Owner | Governance | Strategic oversight | Single school |
