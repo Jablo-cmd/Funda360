@@ -809,10 +809,10 @@ select pg_temp.seed_demo_school(
 );
 
 -- ============================================================================
--- Platform-level Super Administrator (not scoped to any school)
+-- Platform-level Platform Owner (not scoped to any school)
 -- ============================================================================
 select pg_temp.seed_person(
-  'f0000000-0000-0000-0000-000000000001', 'super.admin@funda360.dev', 'Lerato', 'Molefe', 'super_administrator', null
+  'f0000000-0000-0000-0000-000000000001', 'platform.owner@funda360.dev', 'Platform', 'Owner', 'platform_owner', null
 );
 
 do $$
@@ -820,7 +820,7 @@ begin
   raise notice '============================================================';
   raise notice ' FUNDA360 DEMO SEED COMPLETE';
   raise notice ' 3 schools, 375 learners (360 enrolled + 15 admissions pipeline), 63 employees';
-  raise notice ' ~650 guardians, ~703 total login accounts (staff + guardians + 1 platform admin)';
+  raise notice ' ~650 guardians, ~703 total login accounts (staff + guardians + 1 platform owner)';
   raise notice ' Shared password for every account: Funda360!DEMO-ONLY-2026';
   raise notice ' See supabase/seed.sql header / final report for the full account directory.';
   raise notice '============================================================';
