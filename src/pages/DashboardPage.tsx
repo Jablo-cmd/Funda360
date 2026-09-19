@@ -1,10 +1,7 @@
 import { useAuth } from '@/features/auth/context/authContext';
-import { useProfile } from '@/features/profile/context/profileContext';
-import { useTenant } from '@/features/tenant/context/tenantContext';
-import { useSchool } from '@/features/school/hooks/useSchool';
 import { resolveDashboardPersona } from '@/features/dashboard/resolveDashboardPersona';
-import { DashboardScreen, DashboardHeading, NoSchoolSelectedState } from '@/features/dashboard/components/DashboardPrimitives';
 import { PrincipalDashboard } from '@/features/dashboard/personas/PrincipalDashboard';
+import { PlatformDashboard } from '@/features/dashboard/personas/PlatformDashboard';
 import { FinanceDashboard } from '@/features/dashboard/personas/FinanceDashboard';
 import { HrDashboard } from '@/features/dashboard/personas/HrDashboard';
 import { AdmissionsDashboard } from '@/features/dashboard/personas/AdmissionsDashboard';
@@ -18,27 +15,13 @@ import { TeacherWorkspacePage } from '@/features/teacherWorkspace/pages/TeacherW
  */
 export function DashboardPage() {
   const { user } = useAuth();
-  const { profile } = useProfile();
-  const { tenant } = useTenant();
-  const { school } = useSchool();
   const persona = resolveDashboardPersona(user?.role ?? null);
 
-  if (persona === 'platform' && !school) {
-    return (
-      <DashboardScreen>
-        <DashboardHeading
-          title={`Welcome back${profile?.firstName ? `, ${profile.firstName}` : ''}`}
-          subtitle={`${profile?.role ? profile.role.replace(/_/g, ' ') : 'No role assigned'}${
-            tenant?.school.name ? ` at ${tenant.school.name}` : ''
-          }`}
-        />
-        <NoSchoolSelectedState />
-      </DashboardScreen>
-    );
+  if (persona === 'platform') {
+    return <PlatformDashboard />;
   }
 
   switch (persona) {
-    case 'platform':
     case 'principal':
       return <PrincipalDashboard />;
     case 'teacher':
