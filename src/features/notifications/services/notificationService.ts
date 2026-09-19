@@ -18,7 +18,6 @@ function toNotification(row: NotificationRow): Notification {
   };
 }
 
-/** The current user's notifications, most recent first. RLS (notifications_select_own) independently enforces that only the caller's own rows are ever returned — this filter is for query efficiency, not the actual security boundary. */
 async function getMyNotifications(recipientProfileId: string): Promise<Notification[]> {
   const { data, error } = await supabase
     .from('notifications')
@@ -50,4 +49,13 @@ async function markAllRead(recipientProfileId: string): Promise<void> {
   if (error) throw error;
 }
 
-export const notificationService = { getMyNotifications, markRead, markAllRead };
+function toNotificationForRealtime(row: NotificationRow): Notification {
+  return toNotification(row);
+}
+
+export const notificationService = {
+  getMyNotifications,
+  markRead,
+  markAllRead,
+  toNotificationForRealtime,
+};
