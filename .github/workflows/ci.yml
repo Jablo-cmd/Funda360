@@ -107,7 +107,7 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    needs: quality
+    needs: [quality, edge-functions, rls-tests, e2e]
     runs-on: ubuntu-latest
     permissions:
       contents: read
