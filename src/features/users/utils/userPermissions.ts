@@ -31,7 +31,7 @@ export function canAssignRole(
   newRole: AssignableRole,
   currentRole: UserRole | null,
 ): boolean {
-  if (actorRole === 'super_administrator' || actorRole === 'platform_administrator') {
+  if (actorRole === 'platform_owner' || actorRole === 'super_administrator' || actorRole === 'platform_administrator') {
     return true;
   }
   if (actorRole === 'school_owner') {
