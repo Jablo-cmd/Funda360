@@ -5,6 +5,7 @@ import { useSchool } from '@/features/school/hooks/useSchool';
 import { resolveDashboardPersona } from '@/features/dashboard/resolveDashboardPersona';
 import { DashboardScreen, DashboardHeading, NoSchoolSelectedState } from '@/features/dashboard/components/DashboardPrimitives';
 import { PrincipalDashboard } from '@/features/dashboard/personas/PrincipalDashboard';
+import { PlatformDashboard } from '@/features/dashboard/personas/PlatformDashboard';
 import { FinanceDashboard } from '@/features/dashboard/personas/FinanceDashboard';
 import { HrDashboard } from '@/features/dashboard/personas/HrDashboard';
 import { AdmissionsDashboard } from '@/features/dashboard/personas/AdmissionsDashboard';
@@ -23,6 +24,10 @@ export function DashboardPage() {
   const { school } = useSchool();
   const persona = resolveDashboardPersona(user?.role ?? null);
 
+  if (persona === 'platform') {
+    return <PlatformDashboard />;
+  }
+
   if (persona === 'platform' && !school) {
     return (
       <DashboardScreen>
@@ -38,7 +43,6 @@ export function DashboardPage() {
   }
 
   switch (persona) {
-    case 'platform':
     case 'principal':
       return <PrincipalDashboard />;
     case 'teacher':
