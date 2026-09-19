@@ -82,6 +82,6 @@ Deno.serve(async (req) => {
     return json(redirect);
   } catch (err) {
     console.error('payments-initiate error', err);
-    return json({ error: 'initiation_failed', detail: String(err) }, 502);
+    return json({ error: 'initiation_failed' }, 502);
   }
 });
