@@ -1,7 +1,5 @@
 import { useAuth } from '@/features/auth/context/authContext';
-import { useProfile } from '@/features/profile/context/profileContext';
 import { resolveDashboardPersona } from '@/features/dashboard/resolveDashboardPersona';
-import { DashboardScreen } from '@/features/dashboard/components/DashboardPrimitives';
 import { PrincipalDashboard } from '@/features/dashboard/personas/PrincipalDashboard';
 import { PlatformDashboard } from '@/features/dashboard/personas/PlatformDashboard';
 import { FinanceDashboard } from '@/features/dashboard/personas/FinanceDashboard';
@@ -17,7 +15,6 @@ import { TeacherWorkspacePage } from '@/features/teacherWorkspace/pages/TeacherW
  */
 export function DashboardPage() {
   const { user } = useAuth();
-  const { profile } = useProfile();
   const persona = resolveDashboardPersona(user?.role ?? null);
 
   if (persona === 'platform') {
