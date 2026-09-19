@@ -87,7 +87,7 @@ async function sendTwilio(from: string, to: string, body: string): Promise<Adapt
 
 function deliver(row: DeliveryRow, notification: NotificationRow): Promise<AdapterResult> {
   const to = (row.destination ?? '').trim();
-  if (to.length === 0) return { ok: false, error: 'no_destination' };
+  if (to.length === 0) return Promise.resolve({ ok: false, error: 'no_destination' });
   const text = `${notification.body}${notification.link_path ? `\n\n${notification.link_path}` : ''}`;
 
   if (row.channel === 'email') return sendEmail(to, notification.title, text);
