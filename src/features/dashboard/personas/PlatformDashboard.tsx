@@ -5,7 +5,6 @@ import {
   BuildingIcon,
   ChartIcon,
   GearIcon,
-  GridIcon,
   ShieldIcon,
   UsersIcon,
 } from '@/components/ui/icons';
