@@ -131,7 +131,8 @@ test('principal can upload a school logo', async ({ page }) => {
   let patchedLogoUrl: unknown;
   await page.route('**/rest/v1/schools*', async (route) => {
     if (route.request().method() !== 'PATCH') return route.fallback();
-    const body = route.request().postDataJSON() as { logo_url?: string };
+    const rawBody = route.request().postData() ?? '{}';
+    const body = JSON.parse(rawBody) as { logo_url?: string };
     patchedLogoUrl = body.logo_url;
     await route.fulfill({
       status: 200,
