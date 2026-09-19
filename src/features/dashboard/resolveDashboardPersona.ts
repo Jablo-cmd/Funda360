@@ -19,6 +19,7 @@ export type DashboardPersona =
   | 'minimal';
 
 const PERSONA_BY_ROLE: Partial<Record<UserRole, DashboardPersona>> = {
+  platform_owner: 'platform',
   super_administrator: 'platform',
   platform_administrator: 'platform',
   school_owner: 'principal',
