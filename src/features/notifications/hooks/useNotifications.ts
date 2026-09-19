@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { notificationService } from '@/features/notifications/services/notificationService';
 import type { Notification } from '@/features/notifications/types/notification.types';
+import type { NotificationRow } from '@/lib/database.types';
 import { getDbErrorMessage } from '@/lib/dbErrors';
+import { supabase } from '@/lib/supabase';
 
 export interface UseNotificationsResult {
   notifications: Notification[];
@@ -37,6 +39,36 @@ export function useNotifications(recipientProfileId: string | undefined): UseNot
   useEffect(() => {
     void load();
   }, [load]);
+
+  // In-app notifications are a real-time surface. New rows addressed to
+  // this profile appear without requiring a page refresh.
+  useEffect(() => {
+    if (!recipientProfileId) return;
+
+    const channel = supabase
+      .channel(`notifications:${recipientProfileId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_profile_id=eq.${recipientProfileId}`,
+        },
+        (payload) => {
+          const row = payload.new as NotificationRow;
+          setNotifications((current) => {
+            if (current.some((notification) => notification.id === row.id)) return current;
+            return [notificationService.toNotificationForRealtime(row), ...current].slice(0, 50);
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [recipientProfileId]);
 
   const markRead = useCallback(
     async (id: string) => {
