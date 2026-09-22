@@ -55,7 +55,7 @@ export function DashboardLayout() {
                   type="button"
                   onClick={() => setIsMobileNavOpen(false)}
                   aria-label="Close menu"
-                  className="focus-ring rounded-md p-1.5 text-white/70 hover:text-white"
+                  className="focus-ring touch-target flex items-center justify-center rounded-md p-1.5 text-white/70 hover:text-white"
                 >
                   <CloseIcon className="h-5 w-5" />
                 </button>
