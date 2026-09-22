@@ -183,6 +183,15 @@
   textarea {
     max-width: 100%;
   }
+
+  /* Keep native controls and long utility content from forcing the page wider
+     on small devices. Components remain responsible for their own intentional
+     horizontal scrolling. */
+  button,
+  a,
+  label {
+    min-width: 0;
+  }
 }
 
 @media (max-width: 767px) {
