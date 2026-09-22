@@ -33,7 +33,7 @@ const NAV_ITEMS = [
  */
 export function ParentNav({ onNavigate }: ParentNavProps) {
   return (
-    <nav className="flex h-full flex-col gap-1 bg-sidebar px-3 py-4">
+    <nav className="flex h-full min-h-0 flex-col gap-1 overflow-y-auto bg-sidebar px-3 py-4">
       {NAV_ITEMS.map((item) => (
         <NavLink
           key={item.path}
