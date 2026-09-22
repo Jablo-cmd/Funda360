@@ -46,8 +46,8 @@ export function MessagesPage({ basePath = '/messages' }: MessagesPageProps) {
 
       <ErrorAlert message={error} />
 
-      <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
-        <div className="flex flex-col gap-2">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[20rem_1fr]">
+        <div className={`flex min-w-0 flex-col gap-2 ${conversationId ? "hidden lg:flex" : ""}`}
           <div className="flex gap-1 text-sm">
             <button
               type="button"
