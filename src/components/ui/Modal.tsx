@@ -65,9 +65,9 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-card border border-border bg-surface-raised shadow-card dark:shadow-card-dark"
+        className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-lg flex-col overflow-hidden rounded-card border border-border bg-surface-raised shadow-card dark:shadow-card-dark sm:max-h-[calc(100vh-2rem)]"
       >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3.5 sm:px-5 sm:py-4">
           <h2 id={titleId} className="text-base font-semibold text-content-primary">
             {title}
           </h2>
@@ -80,8 +80,8 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
             <CloseIcon className="h-5 w-5" />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="border-t border-border px-5 py-4">{footer}</div>}
+        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
+        {footer && <div className="shrink-0 border-t border-border px-4 py-3.5 sm:px-5 sm:py-4">{footer}</div>}
       </div>
     </div>,
     document.body,
