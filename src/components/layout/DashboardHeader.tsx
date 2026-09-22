@@ -90,7 +90,7 @@ export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderP
         )}
         <div className="hidden h-9 w-px bg-border sm:block" />
         <NotificationBell to="/notifications" />
-        <span className="hidden sm:block"><ThemeToggle /></span>
+        <ThemeToggle />
         <UserMenu />
       </div>
     </header>
