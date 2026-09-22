@@ -30,8 +30,8 @@ export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderP
   const canSwitchSchool = can('tenant.switch');
 
   return (
-    <header className="flex h-[4.5rem] shrink-0 items-center justify-between gap-4 border-b border-border bg-surface-raised px-4 sm:px-6">
-      <div className="flex min-w-0 items-center gap-3">
+    <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border bg-surface-raised px-3 sm:h-[4.5rem] sm:gap-4 sm:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
@@ -47,7 +47,7 @@ export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderP
 
         <div className="hidden h-9 w-px bg-border md:block" />
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-semibold leading-tight text-content-primary">
             {title}
           </p>
@@ -57,7 +57,7 @@ export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderP
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
         <span className="hidden max-w-[16rem] truncate text-right sm:block">
           <span className="block text-sm font-medium text-content-secondary">
             {school?.name ?? 'No school selected'}
@@ -90,7 +90,7 @@ export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderP
         )}
         <div className="hidden h-9 w-px bg-border sm:block" />
         <NotificationBell to="/notifications" />
-        <ThemeToggle />
+        <span className="hidden sm:block"><ThemeToggle /></span>
         <UserMenu />
       </div>
     </header>
