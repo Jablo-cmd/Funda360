@@ -88,7 +88,7 @@ export function DashboardHeading({ title, subtitle }: { title: string; subtitle?
 }
 
 export function DashboardScreen({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-5 px-4 py-6 sm:px-6">{children}</div>;
+  return <div className="flex w-full min-w-0 flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-6 sm:py-6">{children}</div>;
 }
 
 /**
