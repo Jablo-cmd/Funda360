@@ -15,11 +15,11 @@ export interface PageHeaderProps {
 export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-bold text-content-primary">{title}</h1>
-        {description && <p className="mt-1 text-sm text-content-secondary">{description}</p>}
+      <div className="min-w-0">
+        <h1 className="break-words text-2xl font-bold text-content-primary">{title}</h1>
+        {description && <p className="mt-1 break-words text-sm text-content-secondary">{description}</p>}
       </div>
-      {action}
+      {action && <div className="min-w-0 w-full sm:w-auto">{action}</div>}
     </div>
   );
 }
