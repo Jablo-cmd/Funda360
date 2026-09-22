@@ -72,14 +72,14 @@ export function ConversationView({ conversationId, onChanged, onArchived }: Conv
 
   return (
     <div className="flex h-full flex-col rounded-card border border-border bg-surface-raised">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-3 sm:flex-nowrap sm:gap-3 sm:px-4">
         <div className="min-w-0">
           <p className="truncate font-semibold text-content-primary">{title}</p>
           <p className="text-xs text-content-tertiary">
             {conversation.kind === 'group' ? `${conversation.otherParticipants.length + 1} participants` : 'Direct message'}
           </p>
         </div>
-        <div className="flex shrink-0 gap-2 text-sm">
+        <div className="flex w-full shrink-0 gap-1.5 text-xs sm:w-auto sm:gap-2 sm:text-sm">
           <button
             type="button"
             className="focus-ring rounded-md px-2 py-1 text-content-secondary hover:bg-surface-sunken"
@@ -173,7 +173,7 @@ export function ConversationView({ conversationId, onChanged, onArchived }: Conv
 
       <div className="border-t border-border p-3">
         <ErrorAlert message={actionError} />
-        <div className="flex items-end gap-2">
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
           <textarea
             className="min-h-[2.75rem] w-full rounded-md border border-border-strong bg-surface-raised p-2 text-sm text-content-primary"
             rows={2}
@@ -184,7 +184,7 @@ export function ConversationView({ conversationId, onChanged, onArchived }: Conv
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void handleSend();
             }}
           />
-          <div className="w-28 shrink-0">
+          <div className="w-full shrink-0 sm:w-28">
             <Button type="button" onClick={() => void handleSend()} isLoading={busy} disabled={draft.trim().length === 0}>
               Send
             </Button>
