@@ -152,3 +152,60 @@
     @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface;
   }
 }
+
+
+/* Mobile interaction hardening ------------------------------------------------
+ * Keep the app viewport locked to the device width, preserve horizontal
+ * scrolling only inside intentional table/overflow containers, and make
+ * controls comfortable to tap without changing the desktop design.
+ */
+@layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  button,
+  [role='button'],
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .focus-ring {
+    @apply focus-visible:ring-offset-1;
+  }
+
+  /* Avoid accidental page-level horizontal overflow from long labels,
+     data widgets or third-party content. Intentional table scrolling remains
+     available through TableScrollContainer's overflow-x-auto wrapper. */
+  main,
+  main > *,
+  main section,
+  main article {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Comfortable touch targets for compact icon controls. Existing larger
+     buttons are unaffected because this only applies to the common icon
+     control classes. */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
