@@ -40,7 +40,7 @@ export function TableScrollContainer({ children }: TableScrollContainerProps) {
 
   return (
     <div className="relative">
-      <div ref={scrollRef} className="overflow-x-auto rounded-card border border-border bg-surface-raised">
+      <div ref={scrollRef} className="overscroll-x-contain overflow-x-auto rounded-card border border-border bg-surface-raised">
         {children}
       </div>
       {canScrollLeft && (
