@@ -61,6 +61,9 @@ psql_exec < "$SCRIPT_DIR/01_test_util.sql"
 echo "==> applying storage schema stub"
 psql_exec < "$SCRIPT_DIR/00b_storage_stub.sql"
 
+echo "==> creating Supabase Realtime publication stub"
+psql_exec -c 'create publication supabase_realtime;'
+
 echo "==> applying migrations (supabase/migrations/*.sql, filename order)"
 for migration in "$MIGRATIONS_DIR"/*.sql; do
   echo "    - $(basename "$migration")"
