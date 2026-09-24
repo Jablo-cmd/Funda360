@@ -2,7 +2,7 @@
 
 **This file is the authoritative roadmap and source of truth for the remaining Funda360 development sequence.**
 
-Funda360 is completed **one full domain at a time**:
+Funda360 is completed **one full domain at a time**. The repository may contain completed cross-domain work that was delivered through later hardening/product waves; the current-state register is the authoritative implementation inventory:
 
 > **ONE DOMAIN → COMPLETE → VERIFY → DOCUMENT → COMMIT → CLOSE → NEXT DOMAIN**
 
@@ -10,7 +10,7 @@ No artificial sprints or milestones inside a domain. A domain is implemented com
 
 Statuses: `QUEUED` · `IN_PROGRESS` · `BLOCKED` · `CLOSED`
 
-Last updated: 2026-09-07 — Domains 4–8 CLOSED (Communication, Homework, Teacher Workspace, Parent Portal Completion, Learner Portal).
+Last updated: 2026-09-24. Current implementation truth is maintained in [FUNDA360_CURRENT_STATE_2026-09-24.md](./FUNDA360_CURRENT_STATE_2026-09-24.md). The domain queue below remains the roadmap for domains not yet closed in this tracker; it must not be used to infer that already-implemented cross-domain capabilities are absent.
 
 ---
 
