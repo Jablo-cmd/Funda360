@@ -1,46 +1,44 @@
-# FUNDA360 TESTING STRATEGY & QUALITY ASSURANCE MASTER PLAN (TSQAMP)
+# Funda360 — Reconciled Documentation
 
-## 1. Executive Summary
-This Testing Strategy & Quality Assurance Master Plan defines the processes, standards, and responsibilities required to ensure Funda360 meets enterprise SaaS quality expectations. It integrates testing into every phase of the software development lifecycle, establishes quality gates, and provides a framework for continuous improvement. The plan ensures reliability, scalability, accessibility, and compliance with POPIA and international standards.
+**Documentation status:** Current as of 2026-09-24  
+**Repository:** Jablo-cmd/Funda360  
+**Source of truth:** `docs/FUNDA360_CURRENT_STATE_2026-09-24.md`
 
----
+> This document was reconciled against the current repository rather than against historical requirements or generated specifications. Implemented capability, partial capability, external configuration, and planned capability are kept separate. A feature is not described as live merely because a route, migration, adapter, or design exists.
 
-## 2. Quality Objectives
-- **Reliability:** 99.9% uptime, minimal downtime.
-- **Low Defect Rates:** < 0.5 defects per 1,000 lines of code.
-- **Usability:** Task completion rate > 90%.
-- **Accessibility:** WCAG 2.2 AA compliance.
-- **Security Assurance:** Zero critical vulnerabilities at release.
-- **Performance:** Response times < 3 seconds for 95% of requests.
-- **Scalability:** Support millions of learners across thousands of schools.
-- **Maintainability:** Modular, testable codebase.
-- **Compliance:** POPIA and audit requirements.
-- **Customer Satisfaction:** CSAT > 85%.
+## Current platform baseline
 
----
+Funda360 is an enterprise-oriented, multi-tenant school-management SaaS platform built with React 18/TypeScript/Vite/Tailwind and Supabase Auth/PostgreSQL/RLS/Storage, using PostgREST/client-direct access plus SECURITY DEFINER RPCs where appropriate. The repository currently records 67 SQL migrations, 56 RLS regression-test files, 43 Playwright E2E specs and 26 unit-test files, with Docker-based RLS verification and CI tooling.
 
-## 3. Quality Principles
-- **Shift Left Testing:** Testing begins at requirements and design phases.
-- **Test Pyramid:** Unit > Integration > E2E > UI tests.
-- **Risk-Based Testing:** Prioritize high-risk modules (finance, HR, authentication).
-- **Continuous Testing:** Automated tests integrated into CI/CD.
-- **Automation First:** Maximize automation for regression and performance.
-- **Manual Exploratory Testing:** Human-driven discovery of edge cases.
-- **Regression Prevention:** Automated regression suites.
-- **Traceability:** Link requirements → tests → defects → releases.
-- **Quality Ownership:** Shared responsibility across teams.
-- **Defect Prevention:** Root cause analysis and proactive measures.
+Implemented/current domains include authentication and account lifecycle, multi-tenancy, RBAC, school administration, academic structure, timetable, teaching assignments, assessments/gradebook, report cards, learner/SIS, guardians and portals, admissions, attendance, homework, finance ledger and reconciliation workflows, employee/HR/leave, behaviour, safeguarding, consent, messaging/announcements, notifications, reporting/CSV exports, documents/storage and audit/security controls.
 
----
+The platform is production-oriented, but the repository does **not** establish that every enterprise capability is production-certified. Payment-provider activation, government interoperability, native mobile, enterprise BI, full payroll, transport, boarding, library, sports, assets, procurement, SGB governance, independent security certification and other roadmap items remain separate from shipped functionality unless explicitly evidenced in code/configuration.
 
-## 4. Software Development Lifecycle Integration
-```mermaid
-flowchart TD
-    A[Requirements] --> B[Design]
-    B --> C[Development]
-    C --> D[Code Review]
-    D --> E[Build]
-    E --> F[Testing]
-    F --> G[Staging]
-    G --> H[Production]
-    H --> I[Maintenance]
+## Documentation rule
+
+For future updates use this order of evidence:
+
+**CODE → DATABASE/MIGRATIONS → ROUTES → RBAC/RLS → TESTS → DOCUMENTATION**
+
+When a requirement differs from implementation, document the implementation as current and the requirement as planned/target state.
+
+## Testing & QA — current implementation
+
+The repository currently records:
+- 67 SQL migrations
+- 56 RLS regression-test files
+- Docker PostgreSQL RLS harness
+- 43 Playwright E2E specs
+- 26 unit-test files
+- TypeScript typecheck
+- ESLint
+- Vitest
+- Vite build
+- Playwright
+- RLS harness
+- load-test tooling
+
+Testing emphasis includes tenant isolation, role boundaries, privileged RPC security, finance integrity, guardian/learner scoping, admissions, academic workflows, attendance, homework, portals, report cards and operational domains.
+
+### QA rule
+A passing local test suite is evidence of tested behaviour, not proof of production readiness. Hosted configuration, provider integrations, backups, monitoring and deployment-specific smoke tests require separate verification.
