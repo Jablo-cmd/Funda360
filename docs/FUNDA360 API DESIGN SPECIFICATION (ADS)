@@ -1,32 +1,32 @@
-# FUNDA360 API DESIGN SPECIFICATION (ADS)
+# Funda360 — Reconciled Documentation
 
-## 1. Executive Summary
-The Funda360 API is the backbone of the enterprise SaaS platform, enabling secure, scalable, and consistent communication between frontend applications, backend services, mobile clients, and third-party integrations. Designed around REST principles, the API ensures multi-tenancy, tenant isolation, and compliance with POPIA. This specification defines the API contracts, versioning strategy, authentication, authorization, resource catalogue, and operational standards.
+**Documentation status:** Current as of 2026-09-24  
+**Repository:** Jablo-cmd/Funda360  
+**Source of truth:** `docs/FUNDA360_CURRENT_STATE_2026-09-24.md`
 
----
+> This document was reconciled against the current repository rather than against historical requirements or generated specifications. Implemented capability, partial capability, external configuration, and planned capability are kept separate. A feature is not described as live merely because a route, migration, adapter, or design exists.
 
-## 2. Design Principles
-- **RESTful Design:** Resource-oriented endpoints with predictable URIs.
-- **Resource-based URLs:** `/schools/{id}/learners` instead of RPC-style calls.
-- **Stateless Requests:** Each request contains all necessary context.
-- **Idempotency:** Safe retries for POST/PUT operations.
-- **Versioning:** Clear versioning strategy to avoid breaking clients.
-- **Consistency:** Uniform request/response formats.
-- **Backward Compatibility:** Deprecated endpoints remain functional until migration.
-- **API Discoverability:** Documentation-first approach with OpenAPI.
-- **Security by Design:** JWT, RLS, RBAC, encryption.
-- **Developer Experience:** Clear error messages, sandbox environments.
+## Current platform baseline
 
----
+Funda360 is an enterprise-oriented, multi-tenant school-management SaaS platform built with React 18/TypeScript/Vite/Tailwind and Supabase Auth/PostgreSQL/RLS/Storage, using PostgREST/client-direct access plus SECURITY DEFINER RPCs where appropriate. The repository currently records 67 SQL migrations, 56 RLS regression-test files, 43 Playwright E2E specs and 26 unit-test files, with Docker-based RLS verification and CI tooling.
 
-## 3. API Overview
+Implemented/current domains include authentication and account lifecycle, multi-tenancy, RBAC, school administration, academic structure, timetable, teaching assignments, assessments/gradebook, report cards, learner/SIS, guardians and portals, admissions, attendance, homework, finance ledger and reconciliation workflows, employee/HR/leave, behaviour, safeguarding, consent, messaging/announcements, notifications, reporting/CSV exports, documents/storage and audit/security controls.
 
-### Architecture Overview
-```mermaid
-flowchart TD
-    A[Frontend Clients] --> B[API Gateway]
-    B --> C[Authentication Service]
-    B --> D[Application Services]
-    D --> E[Database - PostgreSQL]
-    D --> F[Supabase Storage]
-    D --> G[External Integrations]
+The platform is production-oriented, but the repository does **not** establish that every enterprise capability is production-certified. Payment-provider activation, government interoperability, native mobile, enterprise BI, full payroll, transport, boarding, library, sports, assets, procurement, SGB governance, independent security certification and other roadmap items remain separate from shipped functionality unless explicitly evidenced in code/configuration.
+
+## Documentation rule
+
+For future updates use this order of evidence:
+
+**CODE → DATABASE/MIGRATIONS → ROUTES → RBAC/RLS → TESTS → DOCUMENTATION**
+
+When a requirement differs from implementation, document the implementation as current and the requirement as planned/target state.
+
+## API / integration design — current implementation
+
+Funda360 currently uses Supabase PostgREST/client-direct access for ordinary data operations, with SECURITY DEFINER RPCs and Deno Edge Functions for narrowly scoped privileged/public workflows.
+
+This means the repository does **not** currently expose a universal public REST/OpenAPI API equivalent to a dedicated API gateway.
+
+### Future API platform
+A formal versioned API, service accounts, webhooks, rate limits, developer documentation and partner integration layer can be added without misrepresenting the present architecture.
