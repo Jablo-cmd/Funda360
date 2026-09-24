@@ -1,50 +1,18 @@
-# Funda360 — Teacher Quick Start
+# Funda360 — Reconciled Documentation
 
-Everything you need to take attendance. Nothing else.
+**Current as of:** 2026-09-24  
+**Source of truth:** `docs/FUNDA360_CURRENT_STATE_2026-09-24.md`
 
-## 1. Login
+> Reconciled against current code, migrations, routes, RBAC/RLS and tests. Historical requirements are not treated as current capability.
 
-Go to the Funda360 address you were given, enter your email and password, sign in.
+## Teacher quick start
+1. Sign in.
+2. Confirm assigned teaching/class context.
+3. Open timetable/teacher workspace.
+4. Record attendance.
+5. Manage assessments/gradebook where permitted.
+6. Create and mark homework where applicable.
+7. Review learner information available to your role.
+8. Use announcements/messages according to school permissions.
 
-## 2. Open Attendance
-
-From the sidebar (or the menu icon on your phone): **Attendance**.
-
-## 3. Select your class
-
-The class dropdown only shows classes you're actually assigned to teach.
-
-## 4. Select the date
-
-Defaults to today — change it if you're recording or checking a different day.
-
-## 5. Mark each learner
-
-Every learner enrolled in that class appears with four buttons:
-
-- **Present**
-- **Absent**
-- **Late**
-- **Excused** (already-approved absence, e.g. a medical note)
-
-Tap the right one for each learner.
-
-## 6. Save
-
-Tap **Save register**. You'll see a confirmation once it's saved.
-
-## 7. Correct an attendance record
-
-Open the same class and the same date again — whether that's five minutes later or a week later. Change the learner's status and tap **Save register** again. This corrects the existing record; it does **not** create a duplicate.
-
-## 8. Confirm it saved
-
-Reload the page (or leave and come back). The statuses you set should still be there exactly as you left them.
-
-## 9. Logout
-
-Tap your name (top right) → **Sign out**.
-
----
-
-That's the whole workflow. If a class or learner you expect to see is missing, don't try to work around it — tell your pilot coordinator.
+Access is assignment- and permission-scoped; UI hiding is not the security boundary.
