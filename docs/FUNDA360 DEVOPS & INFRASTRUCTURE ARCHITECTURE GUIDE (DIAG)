@@ -1,50 +1,33 @@
-# FUNDA360 DEVOPS & INFRASTRUCTURE ARCHITECTURE GUIDE (DIAG)
+# Funda360 — Reconciled Documentation
 
-## 1. Executive Summary
-This guide defines the DevOps and infrastructure architecture for Funda360, an enterprise SaaS school management platform. It ensures high availability, scalability, security, and operational excellence across environments. The architecture supports continuous delivery, observability, disaster recovery, and compliance with POPIA and international standards.
+**Documentation status:** Current as of 2026-09-24  
+**Repository:** Jablo-cmd/Funda360  
+**Source of truth:** `docs/FUNDA360_CURRENT_STATE_2026-09-24.md`
 
----
+> This document was reconciled against the current repository rather than against historical requirements or generated specifications. Implemented capability, partial capability, external configuration, and planned capability are kept separate. A feature is not described as live merely because a route, migration, adapter, or design exists.
 
-## 2. Infrastructure Principles
-- **Infrastructure as Code (IaC):** Declarative, version-controlled infrastructure.
-- **Immutable Infrastructure:** Deploy new instances instead of patching.
-- **GitOps:** Git as the single source of truth for deployments.
-- **Automation First:** Automated builds, tests, deployments, monitoring.
-- **Security by Design:** Encryption, RBAC, zero trust.
-- **Zero Trust:** Continuous identity verification.
-- **High Availability:** Multi-zone deployments.
-- **Self-Healing:** Auto-restart and failover.
-- **Observability:** Logging, metrics, tracing.
-- **Scalability:** Horizontal scaling, auto-scaling policies.
-- **Cost Optimisation:** Resource monitoring and right-sizing.
-- **Resilience:** Disaster recovery and redundancy.
+## Current platform baseline
 
----
+Funda360 is an enterprise-oriented, multi-tenant school-management SaaS platform built with React 18/TypeScript/Vite/Tailwind and Supabase Auth/PostgreSQL/RLS/Storage, using PostgREST/client-direct access plus SECURITY DEFINER RPCs where appropriate. The repository currently records 67 SQL migrations, 56 RLS regression-test files, 43 Playwright E2E specs and 26 unit-test files, with Docker-based RLS verification and CI tooling.
 
-## 3. Environment Strategy
-| Environment | Purpose | Access Rules | Deployment Rules | Data Management |
-|-------------|---------|--------------|------------------|-----------------|
-| Local Dev | Developer coding | Developer only | Manual | Synthetic data |
-| Sandbox | Feature testing | Developer only | On-demand | Synthetic data |
-| QA | Automated testing | QA team | CI/CD | Seed data |
-| UAT | Business validation | Product owners | Approved builds | Anonymized data |
-| Staging | Pre-production | Restricted | CI/CD | Production-like data |
-| Pre-Prod | Final validation | Restricted | Manual approval | Production-like data |
-| Production | Live system | Role-based | CI/CD | Real data |
-| Training | Onboarding | Trainers | Manual | Synthetic data |
-| Disaster Recovery | Failover | Restricted | Automated | Replicated data |
+Implemented/current domains include authentication and account lifecycle, multi-tenancy, RBAC, school administration, academic structure, timetable, teaching assignments, assessments/gradebook, report cards, learner/SIS, guardians and portals, admissions, attendance, homework, finance ledger and reconciliation workflows, employee/HR/leave, behaviour, safeguarding, consent, messaging/announcements, notifications, reporting/CSV exports, documents/storage and audit/security controls.
 
----
+The platform is production-oriented, but the repository does **not** establish that every enterprise capability is production-certified. Payment-provider activation, government interoperability, native mobile, enterprise BI, full payroll, transport, boarding, library, sports, assets, procurement, SGB governance, independent security certification and other roadmap items remain separate from shipped functionality unless explicitly evidenced in code/configuration.
 
-## 4. Cloud Architecture
-```mermaid
-flowchart TD
-    A[Users] --> B[DNS + CDN]
-    B --> C[Load Balancer]
-    C --> D[Frontend Hosting - React/Vite]
-    C --> E[Backend - Supabase Functions]
-    E --> F[PostgreSQL Database]
-    E --> G[Supabase Storage]
-    E --> H[Secrets Vault]
-    F --> I[Backup Storage]
-    C --> J[Monitoring & Logging]
+## Documentation rule
+
+For future updates use this order of evidence:
+
+**CODE → DATABASE/MIGRATIONS → ROUTES → RBAC/RLS → TESTS → DOCUMENTATION**
+
+When a requirement differs from implementation, document the implementation as current and the requirement as planned/target state.
+
+## DevOps & infrastructure — current state
+
+The repository uses GitHub Actions CI, Vite builds, automated unit/E2E checks and a Docker-based PostgreSQL RLS harness. Supabase provides the application data/auth/storage platform.
+
+### Current operational boundary
+CI and local verification are implemented. Production observability, backup/recovery configuration, uptime objectives and deployment-specific operational controls must be verified in the hosted environment and should not be represented as completed merely because a runbook exists.
+
+### Future maturity
+Centralised observability, formal SLOs, stronger DR automation, environment promotion controls, infrastructure-as-code and independent assurance can be added as the platform scales.
