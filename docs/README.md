@@ -1,5 +1,11 @@
 # Funda360 Documentation
 
+## Current source of truth
+
+**[FUNDA360_CURRENT_STATE_2026-09-24.md](./FUNDA360_CURRENT_STATE_2026-09-24.md)** — authoritative snapshot of the capabilities, implementation paths, security architecture, verification surface, production truth, and remaining roadmap as of 2026-09-24.
+
+Use the current-state document first when answering **"what does Funda360 have today?"** It is derived from the repository's actual code and migration/test inventory, not the original product plan.
+
 ## Foundation Documents
 
 1. Context & Architecture  
@@ -21,19 +27,28 @@
 
 - [FINANCE.md](./FINANCE.md) — fee ledger, invoicing, allocation, statements, receipts, bank reconciliation
 - [PAYMENT_GATEWAY.md](./PAYMENT_GATEWAY.md) — provider-agnostic online payment architecture + go-live checklist
+- [LEARNER_PORTAL.md](./LEARNER_PORTAL.md) — learner self-service
+- [PARENT_PORTAL_COMPLETION.md](./PARENT_PORTAL_COMPLETION.md) — guardian/parent portal completion
+- [COMMUNICATION.md](./COMMUNICATION.md) — messaging and notifications
+- [HOMEWORK.md](./HOMEWORK.md) — assignments, submissions and learning workflow
+- [TEACHER_WORKSPACE.md](./TEACHER_WORKSPACE.md) — teacher operational workspace
+- [REPORT_CARDS.md](./REPORT_CARDS.md) — governed report-card workflow
+- [ADMISSIONS.md](./ADMISSIONS.md) — admissions workflow and public intake
+- [NOTIFICATIONS_DELIVERY.md](./NOTIFICATIONS_DELIVERY.md) — notification delivery architecture
 
----
+## Roadmap and engineering control
 
-These documents form the **official engineering and business foundation** for the Funda360 platform. They provide a comprehensive blueprint covering:
+- [DOMAIN_STATUS.md](./DOMAIN_STATUS.md) — domain queue, completion rules and remaining implementation sequence
+- [product/FUNDA360-TOP-TIER-KANBAN.md](./product/FUNDA360-TOP-TIER-KANBAN.md) — detailed product backlog and verification history
 
-- **Strategic Context:** Vision, architecture, and product positioning.  
-- **Requirements:** Business, functional, and technical specifications.  
-- **Design:** System, database, API, and frontend standards.  
-- **Security & Governance:** RBAC, compliance, and operational safeguards.  
-- **Quality Assurance:** Testing strategy and defect management.  
-- **Operations:** DevOps, deployment, release, and monitoring.  
-- **Resilience:** Continuity and disaster recovery planning.  
-- **Implementation:** Rollout methodology, onboarding, and training.  
+## Documentation rule
 
-Together, they ensure that every stakeholder—executives, architects, developers, QA engineers, operations teams, and customers—has a **single source of truth** guiding the successful delivery and scaling of Funda360 across South Africa and the wider African education market.
+These documents form the official engineering and business foundation for Funda360. However, **the code is the authority for current implementation**.
 
+When documentation conflicts with the repository:
+1. Inspect the implementation.
+2. Correct the documentation.
+3. Record whether the capability is implemented, partial, externally blocked, or planned.
+4. Do not present roadmap functionality as shipped functionality.
+
+This keeps Funda360's technical, product, sales and investor-facing claims aligned with what the platform actually does.
