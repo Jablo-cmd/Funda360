@@ -21,7 +21,7 @@ begin
  call test_util.record('operations masters are writable to manager',coalesce(v_ok,false),'one or more master records missing');
 
  v_req:=public.create_data_subject_request(v_school,p_request_type=>'access');
- call test_util.record('DSAR request is auditable',v_req is not null,'request not created');
+ call test_util.record('DSAR request is auditable',v_req.id is not null,'request not created');
  execute 'reset role';
 
  perform set_config('request.jwt.claims',test_util.jwt_claims('33333333-3333-3333-3333-333333333333','teacher','bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),true);
