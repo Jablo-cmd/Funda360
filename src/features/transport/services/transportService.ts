@@ -50,7 +50,11 @@ async function createAssignment(schoolId: string, input: CreateTransportAssignme
   if (error) throw error; return data as TransportAssignment;
 }
 async function createSchedule(schoolId: string, input: CreateTransportScheduleInput): Promise<TransportSchedule> {
-  const { data, error } = await supabase.from('transport_schedules').insert({ school_id: schoolId, status: 'scheduled', ...input }).select('*').single();
+  const { data, error } = await supabase.rpc('create_transport_schedule', {
+    p_school_id: schoolId, p_route_id: input.route_id, p_vehicle_id: input.vehicle_id,
+    p_driver_id: input.driver_id ?? null, p_service_date: input.service_date,
+    p_departure_time: input.departure_time ?? null, p_notes: input.notes ?? null,
+  });
   if (error) throw error; return data as TransportSchedule;
 }
 
