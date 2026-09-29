@@ -437,3 +437,27 @@ select jsonb_build_object(
 $$;
 grant execute on function public.get_operations_analytics(uuid) to authenticated;
 revoke execute on function public.get_operations_analytics(uuid) from public;
+
+-- Restricted governance/compliance visibility: these are not ordinary staff records.
+create or replace function public.can_view_governance(target_school_id uuid)
+returns boolean language sql stable set search_path=public as $$
+ select public.is_platform_admin()
+   or (public.current_tenant_id()=target_school_id and coalesce((select role::text from public.profiles where id=auth.uid()),'') in
+       ('school_owner','principal','vice_principal','governance_officer','auditor'));
+$$;
+create or replace function public.can_view_dsar(target_school_id uuid)
+returns boolean language sql stable set search_path=public as $$
+ select public.is_platform_admin()
+   or (public.current_tenant_id()=target_school_id and coalesce((select role::text from public.profiles where id=auth.uid()),'') in
+       ('school_owner','principal','vice_principal','governance_officer','auditor','hr_manager'));
+$$;
+drop policy if exists governance_meetings_select on public.governance_meetings;
+create policy governance_meetings_select on public.governance_meetings for select to authenticated using(public.can_view_governance(school_id));
+drop policy if exists governance_members_select on public.governance_members;
+create policy governance_members_select on public.governance_members for select to authenticated using(public.can_view_governance(school_id));
+drop policy if exists governance_resolutions_select on public.governance_resolutions;
+create policy governance_resolutions_select on public.governance_resolutions for select to authenticated using(public.can_view_governance(school_id));
+drop policy if exists governance_documents_select on public.governance_documents;
+create policy governance_documents_select on public.governance_documents for select to authenticated using(public.can_view_governance(school_id));
+drop policy if exists data_subject_requests_select on public.data_subject_requests;
+create policy data_subject_requests_select on public.data_subject_requests for select to authenticated using(public.can_view_dsar(school_id) or subject_profile_id=auth.uid());
