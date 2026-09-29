@@ -10,17 +10,15 @@
 -- records and timetables — enough for every implemented Funda360 module to
 -- show real, coherent, relational data out of the box.
 --
--- SAFETY: this file creates real auth.users rows protected only by a
--- shared, publicly-documented password printed right here in this
--- repository — that is fine for a throwaway local Docker container and
--- NEVER fine against a hosted/production Supabase project. Never point
--- VITE_SUPABASE_URL at a hosted project while using this seed file.
---
--- Every seeded login (staff and guardians alike) shares one password:
---   Funda360!DEMO-ONLY-2026
--- (the "DEMO-ONLY" marker is deliberate — unmistakable as a placeholder if
--- ever pasted elsewhere, same convention this repo's local-dev seed always
--- used.)
+-- SAFETY: this file creates real, sign-in-capable auth.users rows. It must
+-- only ever run against a throwaway local Docker Postgres. Two guards:
+--   1. It refuses to run if auth.users already holds any account outside
+--      the *.funda360.dev demo domain (i.e. a database with real users).
+--   2. There is no fixed, published password. Every run generates a fresh
+--      random password, shared by all seeded accounts of that run, and
+--      prints it once in the `supabase db reset` output. A password that
+--      has ever been committed to this public repository must be treated
+--      as compromised — never reintroduce one here.
 --
 -- REPEATABLE BY DESIGN: every id in this file is derived deterministically
 -- from a short school code via md5(...)::uuid, and every date is computed
@@ -30,23 +28,32 @@
 --
 -- See the bottom of this file for the full account directory.
 
+create extension if not exists pgcrypto;
+
 do $$
+declare
+  v_password text;
 begin
+  if exists (select 1 from auth.users where email is null or email not like '%funda360.dev') then
+    raise exception 'FUNDA360 DEMO SEED ABORTED: auth.users contains non-demo accounts. This seed must only run against a disposable local database.';
+  end if;
+
+  -- Session-scoped (is_local = false) so seed_person() below can read it.
+  v_password := 'Demo-' || replace(replace(encode(gen_random_bytes(12), 'base64'), '/', 'x'), '+', 'y');
+  perform set_config('funda360.seed_password', v_password, false);
+
   raise notice '============================================================';
-  raise notice ' FUNDA360 PUBLIC DEMO SEED — DO NOT USE AGAINST A REAL PROJECT';
-  raise notice ' Every seeded account shares the password: Funda360!DEMO-ONLY-2026';
-  raise notice ' If you are seeing this against a hosted Supabase project,';
-  raise notice ' stop now and investigate — this file must never run there.';
+  raise notice ' FUNDA360 DEMO SEED — LOCAL DOCKER DATABASE ONLY';
+  raise notice ' Password for every seeded account THIS RUN: %', v_password;
+  raise notice ' (Randomly generated per run — copy it now; it is not stored anywhere else.)';
   raise notice '============================================================';
 end;
 $$;
 
-create extension if not exists pgcrypto;
-
 -- ============================================================================
 -- Helper #1: seed_person — creates a real, sign-in-capable identity
--- (auth.users + auth.identities + public.profiles) with the shared demo
--- password. Reused for every staff member and guardian created below.
+-- (auth.users + auth.identities + public.profiles) with this run's random
+-- demo password. Reused for every staff member and guardian created below.
 -- Dropped automatically at the end of this session (pg_temp).
 -- ============================================================================
 create function pg_temp.seed_person(
@@ -76,7 +83,7 @@ begin
     confirmation_token, recovery_token, email_change_token_new, email_change
   ) values (
     '00000000-0000-0000-0000-000000000000', p_id, 'authenticated', 'authenticated', p_email,
-    crypt('Funda360!DEMO-ONLY-2026', gen_salt('bf')), now(),
+    crypt(current_setting('funda360.seed_password'), gen_salt('bf')), now(),
     v_meta, jsonb_build_object('first_name', p_first, 'last_name', p_last),
     now(), now(), '', '', '', ''
   )
@@ -821,7 +828,7 @@ begin
   raise notice ' FUNDA360 DEMO SEED COMPLETE';
   raise notice ' 3 schools, 375 learners (360 enrolled + 15 admissions pipeline), 63 employees';
   raise notice ' ~650 guardians, ~703 total login accounts (staff + guardians + 1 platform owner)';
-  raise notice ' Shared password for every account: Funda360!DEMO-ONLY-2026';
+  raise notice ' Shared password for every account this run: %', current_setting('funda360.seed_password');
   raise notice ' See supabase/seed.sql header / final report for the full account directory.';
   raise notice '============================================================';
 end;
