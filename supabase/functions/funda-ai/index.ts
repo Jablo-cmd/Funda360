@@ -1,5 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
 type RequestBody = { question?: string; context?: Record<string, unknown> };
 
 Deno.serve(async (req: Request) => {
