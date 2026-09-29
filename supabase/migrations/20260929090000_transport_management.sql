@@ -316,7 +316,7 @@ begin
   if v_school is null then raise exception 'not_found: transport assignment'; end if;
   if not public.can_manage_transport(v_school) then raise exception 'insufficient_privilege: cannot manage transport'; end if;
   update public.transport_assignments set status=p_status where id=p_assignment_id returning * into v_result;
-  perform public.write_audit_log(v_school,'transport_assignment_status_changed', 'transport_assignments', p_assignment_id,
+  perform public.write_audit_log(v_school,auth.uid(),'transport_assignment_status_changed', 'transport_assignments', p_assignment_id,
     null, jsonb_build_object('status',p_status));
   return v_result;
 end; $$;
@@ -362,7 +362,7 @@ begin
     );
   end if;
 
-  perform public.write_audit_log(v_school,'transport_attendance_recorded','transport_attendance',v_result.id,
+  perform public.write_audit_log(v_school,auth.uid(),'transport_attendance_recorded','transport_attendance',v_result.id,
     null, jsonb_build_object('learner_id',p_learner_id,'status',p_status));
   return v_result;
 end; $$;
