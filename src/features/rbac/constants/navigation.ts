@@ -137,7 +137,7 @@ export const NAV_MODEL: NavGroupDef[] = [
   {
     label: 'Operations',
     items: [
-      { label: 'Operations Hub', path: '/operations', icon: Building2Icon, permission: 'operations.view', end: true },
+      { label: 'Operations Hub', path: '/operations', icon: BuildingIcon, permission: 'operations.view', end: true },
     ],
   },
   {
