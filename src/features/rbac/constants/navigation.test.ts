@@ -112,10 +112,10 @@ describe('resolveNavForRole', () => {
     }
   });
 
-  it('gives a permissionless role a minimal honest nav', () => {
+  it('gives a specialist role only its operational navigation', () => {
     const l = labels('librarian');
     expect(l.sort()).toEqual(
-      ['Announcements', 'Dashboard', 'Messages', 'My Profile', 'Notification Preferences'].sort(),
+      ['Announcements', 'Dashboard', 'Messages', 'My Profile', 'Notification Preferences', 'Operations Hub'].sort(),
     );
   });
 
