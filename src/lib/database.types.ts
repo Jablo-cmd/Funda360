@@ -3132,6 +3132,26 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      create_transport_assignment: {
+        Args: { p_school_id: string; p_learner_id: string; p_route_id: string; p_pickup_stop_id?: string | null; p_dropoff_stop_id?: string | null; p_effective_from?: string; p_effective_to?: string | null; p_notes?: string | null };
+        Returns: TransportAssignmentRow;
+      };
+      list_transport_learners: {
+        Args: { p_school_id: string };
+        Returns: { id: string; learner_number: string; first_name: string; last_name: string }[];
+      };
+      get_transport_roster: {
+        Args: { p_schedule_id: string };
+        Returns: { learner_id: string; learner_number: string; first_name: string; last_name: string; pickup_stop_id: string | null; dropoff_stop_id: string | null; attendance_status: TransportAttendanceStatus | null; recorded_at: string | null }[];
+      };
+      add_transport_route_stop: {
+        Args: { p_route_id: string; p_stop_id: string; p_stop_order: number; p_pickup_time?: string | null; p_dropoff_time?: string | null };
+        Returns: TransportRouteStopRow;
+      };
+      create_transport_charge: {
+        Args: { p_learner_id: string; p_fee_structure_id: string; p_due_date?: string | null; p_notes?: string | null };
+        Returns: any;
+      };
       set_transport_assignment_status: {
         Args: { p_assignment_id: string; p_status: TransportAssignmentStatus };
         Returns: TransportAssignmentRow;
