@@ -10,12 +10,17 @@ declare
   v_driver uuid := 'aaaaaaaa-4444-4444-4444-aaaaaaaaaaaa';
   v_assignment uuid;
   v_schedule uuid;
+  v_learner uuid := '77770000-0000-0000-0000-000000000001';
   v_count int;
   v_error text;
 begin
   perform set_config('request.jwt.claims',
     test_util.jwt_claims('22222222-2222-2222-2222-222222222222','school_owner','aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
   execute 'set local role authenticated';
+
+  insert into public.learners(id,school_id,learner_number,admission_number,first_name,last_name,date_of_birth,admission_date,status)
+    values(v_learner,'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','LRN-T001','ADM-T001','Transport','Test','2015-01-01',current_date,'enrolled')
+    on conflict (id) do nothing;
 
   insert into public.transport_routes(id,school_id,name,code,direction)
     values(v_route,'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','Ops Route','OPS-01','both')
@@ -37,7 +42,7 @@ begin
 
   v_assignment := public.create_transport_assignment(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11110000-0000-0000-0000-000000000001',
+    v_learner,
     v_route,v_stop,v_stop,current_date,null,null
   );
 
@@ -62,7 +67,7 @@ begin
 
   perform public.record_transport_attendance(v_schedule,'11110000-0000-0000-0000-000000000001','picked_up','test');
   select count(*) into v_count from public.transport_attendance
-    where schedule_id=v_schedule and learner_id='11110000-0000-0000-0000-000000000001' and status='picked_up';
+    where schedule_id=v_schedule and learner_id=v_learner and status='picked_up';
   call test_util.record('pickup attendance is recorded',v_count=1,'rows: '||v_count);
 
   execute 'reset role';
