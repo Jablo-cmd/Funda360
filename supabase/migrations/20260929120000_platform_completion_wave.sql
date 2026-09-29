@@ -5,7 +5,7 @@
 create or replace function public.can_manage_operations(target_school_id uuid)
 returns boolean language sql stable set search_path=public as $$
   select public.is_platform_admin()
-      or (public.current_tenant_id() = target_school_id and coalesce(public.current_profile_role(),'') in
+      or (public.current_tenant_id() = target_school_id and coalesce((select role::text from public.profiles where id=auth.uid()),'') in
           ('school_owner','principal','vice_principal','platform_owner','platform_administrator','super_administrator',
            'boarding_manager','librarian','sports_coordinator','asset_manager','procurement_officer','governance_officer','events_coordinator'));
 $$;
