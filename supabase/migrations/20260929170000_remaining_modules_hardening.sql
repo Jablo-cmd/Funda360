@@ -16,7 +16,7 @@ as $$
           and p.role::text = any(allowed_roles)
       )
     );
-$;
+$$;
 
 grant execute on function public.operations_role_allowed(uuid,text[]) to authenticated;
 
