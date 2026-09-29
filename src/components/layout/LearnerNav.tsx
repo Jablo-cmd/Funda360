@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { label: 'Results', path: '/learner/results', icon: ChartIcon },
   { label: 'Report cards', path: '/learner/report-cards', icon: ClipboardListIcon },
   { label: 'Attendance', path: '/learner/attendance', icon: CheckIcon },
+  { label: 'Transport', path: '/learner/transport', icon: CalendarIcon },
   { label: 'Documents', path: '/learner/documents', icon: BookIcon },
   { label: 'Announcements', path: '/learner/announcements', icon: MegaphoneIcon },
   { label: 'My Profile', path: '/learner/profile', icon: UsersIcon },
