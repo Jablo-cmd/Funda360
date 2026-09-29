@@ -49,7 +49,7 @@ begin
   begin
     perform public.create_transport_assignment(
       'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      '11110000-0000-0000-0000-000000000001',
+      v_learner,
       v_route,v_stop,v_stop,current_date,null,null
     );
     call test_util.record('overlapping learner assignment is rejected',false,'second assignment succeeded');
@@ -65,7 +65,7 @@ begin
   select count(*) into v_count from public.get_transport_roster(v_schedule);
   call test_util.record('trip roster derives active learner assignment',v_count=1,'roster rows: '||v_count);
 
-  perform public.record_transport_attendance(v_schedule,'11110000-0000-0000-0000-000000000001','picked_up','test');
+  perform public.record_transport_attendance(v_schedule,v_learner,'picked_up','test');
   select count(*) into v_count from public.transport_attendance
     where schedule_id=v_schedule and learner_id=v_learner and status='picked_up';
   call test_util.record('pickup attendance is recorded',v_count=1,'rows: '||v_count);
