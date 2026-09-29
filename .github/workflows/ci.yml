@@ -77,7 +77,7 @@ jobs:
 
   e2e:
     name: Playwright end-to-end suite
-    timeout-minutes: 20
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     env:
       # The e2e suite is fully network-mocked and never reaches a real
