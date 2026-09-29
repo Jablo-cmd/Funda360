@@ -7,32 +7,24 @@ import type {
   CreateTransportScheduleInput, TransportAssignmentStatus, TransportAttendanceStatus, TransportTripStatus,
 } from '@/features/transport/types/transport.types';
 
-async function list<T extends string>(
-  table: T,
-  schoolId: string,
-): Promise<any[]> {
-  const { data, error } = await supabase.from(table as any).select('*').eq('school_id', schoolId);
-  if (error) throw error;
-  return data ?? [];
-}
-
 async function getSummary(schoolId: string): Promise<TransportSummary> {
   const [vehicles, drivers, routes, assignments, schedules] = await Promise.all([
-    list('transport_vehicles', schoolId),
-    list('transport_drivers', schoolId),
-    list('transport_routes', schoolId),
-    list('transport_assignments', schoolId),
+    supabase.from('transport_vehicles').select('id,status').eq('school_id', schoolId),
+    supabase.from('transport_drivers').select('id,status').eq('school_id', schoolId),
+    supabase.from('transport_routes').select('id,active').eq('school_id', schoolId),
+    supabase.from('transport_assignments').select('id,status').eq('school_id', schoolId),
     supabase.from('transport_schedules').select('id,status,service_date').eq('school_id', schoolId),
   ]);
+  for (const result of [vehicles, drivers, routes, assignments, schedules]) if (result.error) throw result.error;
   const upcoming = (schedules.data ?? []).filter((s) => s.service_date >= new Date().toISOString().slice(0, 10) && s.status !== 'completed' && s.status !== 'cancelled');
   return {
-    vehicles: vehicles.length,
-    activeVehicles: vehicles.filter((v) => v.status === 'active').length,
-    drivers: drivers.length,
-    activeDrivers: drivers.filter((d) => d.status === 'active').length,
-    routes: routes.length,
-    activeRoutes: routes.filter((r) => r.active).length,
-    activeAssignments: assignments.filter((a) => a.status === 'active').length,
+    vehicles: vehicles.data?.length ?? 0,
+    activeVehicles: vehicles.data?.filter((v) => v.status === 'active').length ?? 0,
+    drivers: drivers.data?.length ?? 0,
+    activeDrivers: drivers.data?.filter((d) => d.status === 'active').length ?? 0,
+    routes: routes.data?.length ?? 0,
+    activeRoutes: routes.data?.filter((r) => r.active).length ?? 0,
+    activeAssignments: assignments.data?.filter((a) => a.status === 'active').length ?? 0,
     upcomingTrips: upcoming.length,
   };
 }
