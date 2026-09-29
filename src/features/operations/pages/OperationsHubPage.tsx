@@ -44,7 +44,7 @@ export function OperationsHubPage() {
 
   useEffect(()=>{void load();},[load]);
 
-  const run=async(fn:()=>Promise<unknown>,success?:string)=>{
+  const run=async(fn:()=>PromiseLike<unknown>,success?:string)=>{
     setBusy(true);setError(null);setMessage(null);
     try{await Promise.resolve(fn());if(success)setMessage(success);await load();}
     catch(e){setError(getDbErrorMessage(e,'The operation could not be completed.'));}
