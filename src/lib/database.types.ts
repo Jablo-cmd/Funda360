@@ -3150,7 +3150,7 @@ export type Database = {
       };
       create_transport_charge: {
         Args: { p_learner_id: string; p_fee_structure_id: string; p_due_date?: string | null; p_notes?: string | null };
-        Returns: any;
+        Returns: Json;
       };
       create_operation_record: {
         Args: { p_entity: string; p_school_id: string; p_payload: Json };
