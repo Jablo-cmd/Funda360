@@ -8,7 +8,7 @@ declare
   v_stop uuid := 'aaaaaaaa-2222-2222-2222-aaaaaaaaaaaa';
   v_vehicle uuid := 'aaaaaaaa-3333-3333-3333-aaaaaaaaaaaa';
   v_driver uuid := 'aaaaaaaa-4444-4444-4444-aaaaaaaaaaaa';
-  v_assignment uuid;
+  v_assignment public.transport_assignments;
   v_schedule uuid;
   v_learner uuid := '77770000-0000-0000-0000-000000000001';
   v_count int;
