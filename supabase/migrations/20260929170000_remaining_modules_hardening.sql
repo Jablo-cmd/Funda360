@@ -539,3 +539,29 @@ end $$;
 revoke execute on function public.get_operations_analytics(uuid) from public;
 revoke execute on function public.get_advanced_analytics(uuid) from public;
 revoke execute on function public.get_operations_workspace(uuid) from public;
+
+
+create or replace function public.get_operations_workspace(p_school_id uuid)
+returns jsonb language plpgsql security definer stable set search_path=public as $$
+begin
+  if not public.can_view_operations(p_school_id) then raise exception 'insufficient_privilege'; end if;
+  return jsonb_build_object(
+    'learners',coalesce((select jsonb_agg(to_jsonb(x)) from (select id,learner_number,first_name,last_name from public.learners where school_id=p_school_id and status in ('enrolled','active') order by last_name,first_name limit 200)x),'[]'::jsonb),
+    'boarding_beds',coalesce((select jsonb_agg(to_jsonb(x)) from (select b.id,b.bed_code,rm.name room,h.name house from public.boarding_beds b join public.boarding_rooms rm on rm.id=b.room_id join public.boarding_houses h on h.id=rm.house_id where b.school_id=p_school_id and b.active order by h.name,rm.name,b.bed_code limit 200)x),'[]'::jsonb),
+    'boarding',coalesce((select jsonb_agg(to_jsonb(x)) from (select a.id,l.first_name||' '||l.last_name learner,b.code bed_code,h.name house,a.effective_from from public.boarding_allocations a join public.learners l on l.id=a.learner_id join public.boarding_beds b on b.id=a.bed_id join public.boarding_rooms rm on rm.id=b.room_id join public.boarding_houses h on h.id=rm.house_id where a.school_id=p_school_id and a.status='active' order by l.last_name limit 50)x),'[]'::jsonb),
+    'library_copies',coalesce((select jsonb_agg(to_jsonb(x)) from (select c.id,c.barcode,c.status,b.title from public.library_copies c join public.library_books b on b.id=c.book_id where c.school_id=p_school_id order by b.title,c.barcode limit 200)x),'[]'::jsonb),
+    'library',coalesce((select jsonb_agg(to_jsonb(x)) from (select l.id,b.title,le.first_name||' '||le.last_name learner,l.due_at,l.status from public.library_loans l join public.library_copies c on c.id=l.copy_id join public.library_books b on b.id=c.book_id join public.learners le on le.id=l.learner_id where l.school_id=p_school_id and l.returned_at is null order by l.due_at limit 50)x),'[]'::jsonb),
+    'sports_teams',coalesce((select jsonb_agg(to_jsonb(x)) from (select t.id,t.name team,a.name activity from public.sports_teams t join public.sports_activities a on a.id=t.activity_id where t.school_id=p_school_id and t.active order by a.name,t.name limit 100)x),'[]'::jsonb),
+    'sports',coalesce((select jsonb_agg(to_jsonb(x)) from (select f.id,t.name team,f.fixture_date,f.opponent,f.venue,f.status,f.score_for,f.score_against from public.sports_fixtures f join public.sports_teams t on t.id=f.team_id where f.school_id=p_school_id order by f.fixture_date desc limit 50)x),'[]'::jsonb),
+    'assets',coalesce((select jsonb_agg(to_jsonb(x)) from (select a.id,a.asset_number,a.description,a.location,a.condition,a.status,a.warranty_until from public.assets a where a.school_id=p_school_id order by a.asset_number limit 100)x),'[]'::jsonb),
+    'procurement',coalesce((select jsonb_agg(to_jsonb(x)) from (select r.id,r.description,r.estimated_amount,r.status,r.created_at from public.purchase_requests r where r.school_id=p_school_id order by r.created_at desc limit 50)x),'[]'::jsonb),
+    'suppliers',coalesce((select jsonb_agg(to_jsonb(x)) from (select s.id,s.name,s.active from public.procurement_suppliers s where s.school_id=p_school_id and s.active order by s.name limit 100)x),'[]'::jsonb),
+    'governance_meetings',coalesce((select jsonb_agg(to_jsonb(x)) from (select m.id,m.title,m.meeting_date,m.venue,m.status from public.governance_meetings m where m.school_id=p_school_id order by m.meeting_date desc limit 50)x),'[]'::jsonb),
+    'governance',coalesce((select jsonb_agg(to_jsonb(x)) from (select r.id,r.resolution_number,r.title,r.decision,r.status,r.due_date from public.governance_resolutions r where r.school_id=p_school_id order by r.due_date nulls last limit 50)x),'[]'::jsonb),
+    'events',coalesce((select jsonb_agg(to_jsonb(x)) from (select e.id,e.title,e.event_type,e.starts_at,e.ends_at,e.venue,e.status from public.school_events e where e.school_id=p_school_id and e.starts_at>=now() order by e.starts_at limit 50)x),'[]'::jsonb),
+    'interop',coalesce((select jsonb_agg(to_jsonb(x)) from (select i.id,i.entity_type,i.file_name,i.status,i.total_rows,i.valid_rows,i.error_rows,i.created_at from public.interop_imports i where i.school_id=p_school_id order by i.created_at desc limit 50)x),'[]'::jsonb),
+    'dsar',coalesce((select jsonb_agg(to_jsonb(x)) from (select d.id,d.request_type,d.status,d.requested_at,d.subject_profile_id,d.subject_learner_id from public.data_subject_requests d where d.school_id=p_school_id order by d.requested_at desc limit 50)x),'[]'::jsonb),
+    'automation',coalesce((select jsonb_agg(to_jsonb(x)) from (select j.id,j.job_key,j.cron_expression,j.enabled,j.last_run_at,j.last_result from public.automation_jobs j where j.school_id=p_school_id order by j.job_key)x),'[]'::jsonb)
+  );
+end $$;
+revoke execute on function public.get_operations_workspace(uuid) from public;
