@@ -115,7 +115,7 @@ describe('resolveNavForRole', () => {
   it('gives a specialist role only its operational navigation', () => {
     const l = labels('librarian');
     expect(l.sort()).toEqual(
-      ['Announcements', 'Dashboard', 'Messages', 'My Profile', 'Notification Preferences', 'Operations Hub'].sort(),
+      ['Announcements', 'Dashboard', 'Messages', 'My Profile', 'Notification Preferences', 'Operations Hub', 'Funda Intelligence'].sort(),
     );
   });
 
