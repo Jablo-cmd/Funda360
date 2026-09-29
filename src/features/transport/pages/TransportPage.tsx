@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -166,7 +166,7 @@ export function TransportPage() {
   );
 }
 
-function FormCard({ title, children }: { title: string; children: React.ReactNode }) {
+function FormCard({ title, children }: { title: string; children: ReactNode }) {
   return <section className="rounded-card border border-border bg-surface-raised p-4 shadow-card dark:shadow-card-dark"><h2 className="mb-4 text-sm font-semibold text-content-primary">{title}</h2><div className="flex flex-col gap-3">{children}</div></section>;
 }
 function DataCard({ title, children }: { title: string; children: React.ReactNode }) {
