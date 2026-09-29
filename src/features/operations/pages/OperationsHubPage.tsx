@@ -67,7 +67,7 @@ export function OperationsHubPage() {
       </section>
       <div className="grid gap-6 lg:grid-cols-2">
         <WorkflowList title="Library loans" rows={workspace.library_loans ?? []} empty="No active loans." />
-        <WorkflowList title="Purchase requests" rows={workspace.purchase_requests ?? []} empty="No purchase requests." action={row=>row.status==='submitted' ? <Button variant="secondary" onClick={()=>void transitionRequest(row.id,'approved')}>Approve</Button>:null} />
+        <WorkflowList title="Purchase requests" rows={workspace.purchase_requests ?? []} empty="No purchase requests." action={row=>row.status==='submitted' ? <Button variant="secondary" onClick={()=>void transitionRequest(String(row.id),'approved')}>Approve</Button>:null} />
         <WorkflowList title="Upcoming events" rows={workspace.events ?? []} empty="No events configured." />
         <WorkflowList title="POPIA requests" rows={workspace.dsar ?? []} empty="No data-subject requests." />
       </div>
