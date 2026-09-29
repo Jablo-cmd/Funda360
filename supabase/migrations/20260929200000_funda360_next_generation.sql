@@ -426,3 +426,31 @@ revoke execute on function public.funda_ai_copilot(uuid,text) from anon;
 comment on table public.funda_risk_profiles is 'Learner early-warning and explainable risk signals.';
 comment on table public.funda_ai_artifacts is 'Auditable AI/copilot outputs; external model use is optional and never bypasses RLS.';
 comment on table public.funda_integrations is 'Integration registry; live provider connection requires school/provider credentials.';
+
+create or replace function public.funda_validate_learner_school()
+returns trigger language plpgsql set search_path=public as $$
+begin
+  if new.learner_id is not null and not exists (
+    select 1 from public.learners l where l.id=new.learner_id and l.school_id=new.school_id
+  ) then
+    raise exception 'Learner does not belong to school';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists funda_risk_learner_school on public.funda_risk_profiles;
+create trigger funda_risk_learner_school before insert or update on public.funda_risk_profiles for each row execute function public.funda_validate_learner_school();
+drop trigger if exists funda_intervention_learner_school on public.funda_interventions;
+create trigger funda_intervention_learner_school before insert or update on public.funda_interventions for each row execute function public.funda_validate_learner_school();
+drop trigger if exists funda_family_learner_school on public.funda_family_events;
+create trigger funda_family_learner_school before insert or update on public.funda_family_events for each row execute function public.funda_validate_learner_school();
+drop trigger if exists funda_id_learner_school on public.funda_ids;
+create trigger funda_id_learner_school before insert or update on public.funda_ids for each row execute function public.funda_validate_learner_school();
+drop trigger if exists funda_gate_learner_school on public.funda_gate_scans;
+create trigger funda_gate_learner_school before insert or update on public.funda_gate_scans for each row execute function public.funda_validate_learner_school();
+drop trigger if exists funda_health_learner_school on public.funda_health_records;
+create trigger funda_health_learner_school before insert or update on public.funda_health_records for each row execute function public.funda_validate_learner_school();
+drop trigger if exists funda_document_learner_school on public.funda_documents;
+create trigger funda_document_learner_school before insert or update on public.funda_documents for each row execute function public.funda_validate_learner_school();
+
