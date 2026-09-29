@@ -7,14 +7,14 @@ import type {
 
 export type { TransportVehicleStatus, TransportDriverStatus, TransportAssignmentStatus, TransportTripStatus, TransportAttendanceStatus };
 
-export interface TransportVehicle extends TransportVehicleRow {}
-export interface TransportDriver extends TransportDriverRow {}
-export interface TransportRoute extends TransportRouteRow {}
-export interface TransportStop extends TransportStopRow {}
-export interface TransportRouteStop extends TransportRouteStopRow {}
-export interface TransportAssignment extends TransportAssignmentRow {}
-export interface TransportSchedule extends TransportScheduleRow {}
-export interface TransportAttendance extends TransportAttendanceRow {}
+export type TransportVehicle = TransportVehicleRow;
+export type TransportDriver = TransportDriverRow;
+export type TransportRoute = TransportRouteRow;
+export type TransportStop = TransportStopRow;
+export type TransportRouteStop = TransportRouteStopRow;
+export type TransportAssignment = TransportAssignmentRow;
+export type TransportSchedule = TransportScheduleRow;
+export type TransportAttendance = TransportAttendanceRow;
 
 export interface TransportSummary {
   vehicles: number;
