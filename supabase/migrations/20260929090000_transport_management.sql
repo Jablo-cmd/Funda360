@@ -379,8 +379,8 @@ begin
   if v_school is null then raise exception 'not_found: transport schedule'; end if;
   if not public.can_manage_transport(v_school) then raise exception 'insufficient_privilege: cannot manage transport'; end if;
   update public.transport_schedules set status=p_status where id=p_schedule_id returning * into v_result;
-  perform public.write_audit_log(v_school,'transport_trip_status_changed','transport_schedules',p_schedule_id,
-    jsonb_build_object('status',p_status));
+  perform public.write_audit_log(v_school,auth.uid(),'transport_trip_status_changed','transport_schedules',p_schedule_id,
+    null, jsonb_build_object('status',p_status));
   return v_result;
 end; $$;
 grant execute on function public.set_transport_trip_status(uuid, public.transport_trip_status) to authenticated;
