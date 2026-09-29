@@ -292,6 +292,7 @@ const ParentProfilePage = named(
   'ParentProfilePage',
 );
 const ParentTransportPage = named(() => import('@/features/transport/pages/ParentTransportPage'), 'ParentTransportPage');
+const LearnerTransportPage = named(() => import('@/features/transport/pages/LearnerTransportPage'), 'LearnerTransportPage');
 
 export function AppRoutes() {
   return (
@@ -472,6 +473,7 @@ export function AppRoutes() {
                 <Route path="/learner/results" element={<LearnerResultsPage />} />
                 <Route path="/learner/report-cards" element={<LearnerReportCardsPage />} />
                 <Route path="/learner/attendance" element={<LearnerAttendancePage />} />
+                <Route path="/learner/transport" element={<LearnerTransportPage />} />
                 <Route path="/learner/documents" element={<LearnerDocumentsPage />} />
                 <Route path="/learner/announcements" element={<AnnouncementsPage />} />
                 <Route path="/learner/notifications" element={<NotificationsPage />} />
