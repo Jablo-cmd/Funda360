@@ -472,11 +472,11 @@ begin
  ) loop
    execute 'revoke execute on function '||f.sig||' from public';
  end loop;
-end $;
+end $$;
 
 -- Keep the operational RPC surface callable by authenticated clients while retaining
 -- authorization checks inside every function. Anonymous execution remains revoked.
-do $
+do $$
 declare f record;
 begin
  for f in select p.oid::regprocedure::text as sig
@@ -494,7 +494,7 @@ begin
      ) loop
    execute 'grant execute on function '||f.sig||' to authenticated';
  end loop;
-end $;
+end $$;
 
 create index if not exists library_reservations_book_status_idx on public.library_reservations(school_id,book_id,status);
 create index if not exists sports_players_team_active_idx on public.sports_players(school_id,team_id,active);
