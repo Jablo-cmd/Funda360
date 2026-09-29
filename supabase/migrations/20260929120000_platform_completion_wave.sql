@@ -461,3 +461,143 @@ drop policy if exists governance_documents_select on public.governance_documents
 create policy governance_documents_select on public.governance_documents for select to authenticated using(public.can_view_governance(school_id));
 drop policy if exists data_subject_requests_select on public.data_subject_requests;
 create policy data_subject_requests_select on public.data_subject_requests for select to authenticated using(public.can_view_dsar(school_id) or subject_profile_id=auth.uid());
+
+
+-- Interoperability: controlled import lifecycle with validation and learner apply.
+alter table public.interop_imports add column if not exists source_rows jsonb not null default '[]'::jsonb;
+create or replace function public.create_interop_import(
+  p_school_id uuid,p_entity_type text,p_file_name text,p_format text,p_rows jsonb,p_mapping jsonb default '{}'::jsonb
+) returns public.interop_imports language plpgsql security definer set search_path=public as $$
+declare r public.interop_imports;
+begin
+ if not public.can_manage_operations(p_school_id) then raise exception 'insufficient_privilege'; end if;
+ if p_format not in ('csv','xlsx') then raise exception 'validation_error: format must be csv or xlsx'; end if;
+ if jsonb_typeof(p_rows)<>'array' then raise exception 'validation_error: rows must be an array'; end if;
+ insert into public.interop_imports(school_id,entity_type,file_name,format,total_rows,mapping,source_rows,created_by)
+ values(p_school_id,p_entity_type,p_file_name,p_format,jsonb_array_length(p_rows),p_mapping,p_rows,auth.uid()) returning * into r;
+ perform public.write_audit_log(p_school_id,auth.uid(),'interop_import_created','interop_imports',r.id,null,to_jsonb(r));
+ return r;
+end $$;
+grant execute on function public.create_interop_import(uuid,text,text,text,jsonb,jsonb) to authenticated;
+revoke execute on function public.create_interop_import(uuid,text,text,text,jsonb,jsonb) from public;
+
+create or replace function public.validate_interop_import(p_import_id uuid)
+returns public.interop_imports language plpgsql security definer set search_path=public as $$
+declare r public.interop_imports; row jsonb; errs jsonb:='[]'::jsonb; ok int:=0; n int:=0; ln text;
+begin
+ select * into r from public.interop_imports where id=p_import_id;
+ if r.id is null or not public.can_manage_operations(r.school_id) then raise exception 'insufficient_privilege'; end if;
+ for row in select value from jsonb_array_elements(r.source_rows) loop
+   n:=n+1;
+   if r.entity_type='learners' then
+     if nullif(row->>'learner_number','') is null or nullif(row->>'admission_number','') is null or nullif(row->>'first_name','') is null or nullif(row->>'last_name','') is null or nullif(row->>'date_of_birth','') is null or nullif(row->>'admission_date','') is null then
+       errs:=errs||jsonb_build_array(jsonb_build_object('row',n,'error','learner_number, admission_number, first_name, last_name, date_of_birth and admission_date are required')); continue;
+     end if;
+     if exists(select 1 from public.learners l where l.school_id=r.school_id and (l.learner_number=row->>'learner_number' or l.admission_number=row->>'admission_number')) then
+       errs:=errs||jsonb_build_array(jsonb_build_object('row',n,'error','duplicate learner_number or admission_number')); continue;
+     end if;
+   else
+     if row is null or jsonb_typeof(row)<>'object' then errs:=errs||jsonb_build_array(jsonb_build_object('row',n,'error','row must be an object')); continue; end if;
+   end if;
+   ok:=ok+1;
+ end loop;
+ update public.interop_imports set status=case when jsonb_array_length(errs)=0 then 'validated' else 'failed' end,valid_rows=ok,error_rows=jsonb_array_length(errs),errors=errs where id=r.id returning * into r;
+ return r;
+end $$;
+grant execute on function public.validate_interop_import(uuid) to authenticated;
+revoke execute on function public.validate_interop_import(uuid) from public;
+
+create or replace function public.apply_interop_import(p_import_id uuid)
+returns public.interop_imports language plpgsql security definer set search_path=public as $$
+declare r public.interop_imports; row jsonb; new_id uuid;
+begin
+ select * into r from public.interop_imports where id=p_import_id;
+ if r.id is null or not public.can_manage_operations(r.school_id) then raise exception 'insufficient_privilege'; end if;
+ if r.status<>'validated' then raise exception 'validation_error: import must be validated before apply'; end if;
+ if r.entity_type<>'learners' then raise exception 'validation_error: apply currently supports learners; other entity mappings are retained for official SA-SAMS/CEMIS adapters'; end if;
+ for row in select value from jsonb_array_elements(r.source_rows) loop
+   if not exists(select 1 from public.learners where school_id=r.school_id and (learner_number=row->>'learner_number' or admission_number=row->>'admission_number')) then
+     insert into public.learners(school_id,learner_number,admission_number,first_name,last_name,date_of_birth,admission_date,status,created_by,updated_by)
+     values(r.school_id,row->>'learner_number',row->>'admission_number',row->>'first_name',row->>'last_name',(row->>'date_of_birth')::date,(row->>'admission_date')::date,coalesce(nullif(row->>'status',''),'prospective')::public.learner_status,auth.uid(),auth.uid()) returning id into new_id;
+   end if;
+ end loop;
+ update public.interop_imports set status='applied' where id=r.id returning * into r;
+ perform public.write_audit_log(r.school_id,auth.uid(),'interop_import_applied','interop_imports',r.id,null,to_jsonb(r));
+ return r;
+end $$;
+grant execute on function public.apply_interop_import(uuid) to authenticated;
+revoke execute on function public.apply_interop_import(uuid) from public;
+
+-- Advanced analytics: cross-domain operational indicators.
+create or replace function public.get_advanced_analytics(p_school_id uuid)
+returns jsonb language sql security definer stable set search_path=public as $$
+select jsonb_build_object(
+ 'attendance',jsonb_build_object(
+   'present',(select count(*) from public.attendance_records where school_id=p_school_id and status='present'),
+   'absent',(select count(*) from public.attendance_records where school_id=p_school_id and status='absent'),
+   'late',(select count(*) from public.attendance_records where school_id=p_school_id and status='late')),
+ 'finance',jsonb_build_object(
+   'outstanding',(select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active and status='unpaid'),
+   'overdue',(select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active and status='unpaid' and due_date<current_date)),
+ 'admissions',jsonb_build_object(
+   'submitted',(select count(*) from public.admission_applications where school_id=p_school_id and status='submitted'),
+   'accepted',(select count(*) from public.admission_applications where school_id=p_school_id and status='accepted'),
+   'enrolled',(select count(*) from public.admission_applications where school_id=p_school_id and status='enrolled')),
+ 'discipline',jsonb_build_object(
+   'total',(select count(*) from public.behaviour_incidents where school_id=p_school_id and active),
+   'high',(select count(*) from public.behaviour_incidents where school_id=p_school_id and active and severity='high')),
+ 'transport',jsonb_build_object(
+   'trips',(select count(*) from public.transport_schedules where school_id=p_school_id),
+   'no_show',(select count(*) from public.transport_attendance where school_id=p_school_id and status='no_show')),
+ 'operations',(select public.get_operations_analytics(p_school_id))
+);
+$$;
+grant execute on function public.get_advanced_analytics(uuid) to authenticated;
+revoke execute on function public.get_advanced_analytics(uuid) from public;
+
+-- Automation control plane: pg_cron schedules the already-tested workers.
+create table if not exists public.automation_jobs (
+ id uuid primary key default gen_random_uuid(), school_id uuid references public.schools(id),
+ job_key text not null, cron_expression text not null, enabled boolean not null default true,
+ last_run_at timestamptz, last_result jsonb, created_at timestamptz not null default now(),
+ unique(school_id,job_key)
+);
+create table if not exists public.automation_job_runs (
+ id uuid primary key default gen_random_uuid(), school_id uuid, job_key text not null,
+ started_at timestamptz not null default now(), completed_at timestamptz, status text not null check(status in ('running','success','failed')),
+ result jsonb, error_message text
+);
+alter table public.automation_jobs enable row level security;
+alter table public.automation_jobs force row level security;
+alter table public.automation_job_runs enable row level security;
+alter table public.automation_job_runs force row level security;
+drop policy if exists automation_jobs_select on public.automation_jobs;
+create policy automation_jobs_select on public.automation_jobs for select to authenticated using(public.can_manage_operations(school_id));
+drop policy if exists automation_job_runs_select on public.automation_job_runs;
+create policy automation_job_runs_select on public.automation_job_runs for select to authenticated using(public.can_manage_operations(school_id));
+
+do $$
+begin
+ if exists(select 1 from pg_extension where extname='pg_cron') then
+   perform cron.schedule('funda360-fee-overdue','0 7 * * *',$job$select public.trigger_fee_overdue_reminders(id) from public.schools where status='active';$job$);
+   perform cron.schedule('funda360-document-expiry','15 7 * * *',$job$select public.trigger_document_expiry_alerts(id) from public.schools where status='active';$job$);
+ end if;
+end $$;
+
+-- POPIA export: returns a controlled, audit-backed subject package without exposing secrets.
+create or replace function public.export_data_subject_package(p_request_id uuid)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare r public.data_subject_requests; result jsonb;
+begin
+ select * into r from public.data_subject_requests where id=p_request_id;
+ if r.id is null or not public.can_view_dsar(r.school_id) then raise exception 'insufficient_privilege'; end if;
+ result:=jsonb_build_object(
+   'request',to_jsonb(r),
+   'profile',case when r.subject_profile_id is null then null else (select to_jsonb(p) from public.profiles p where p.id=r.subject_profile_id and p.tenant_id=r.school_id) end,
+   'learner',case when r.subject_learner_id is null then null else (select to_jsonb(l) from public.learners l where l.id=r.subject_learner_id and l.school_id=r.school_id) end
+ );
+ perform public.write_audit_log(r.school_id,auth.uid(),'dsar_export_generated','data_subject_requests',r.id,null,result);
+ return result;
+end $$;
+grant execute on function public.export_data_subject_package(uuid) to authenticated;
+revoke execute on function public.export_data_subject_package(uuid) from public;
