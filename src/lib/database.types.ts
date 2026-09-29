@@ -3184,6 +3184,27 @@ export type Database = {
         Args: { p_school_id: string };
         Returns: Json;
       };
+      create_interop_import: {
+        Args: { p_school_id: string; p_entity_type: string; p_file_name: string; p_format: string; p_rows: Json; p_mapping?: Json };
+        Returns: Json;
+      };
+      validate_interop_import: {
+        Args: { p_import_id: string };
+        Returns: Json;
+      };
+      apply_interop_import: {
+        Args: { p_import_id: string };
+        Returns: Json;
+      };
+      get_advanced_analytics: {
+        Args: { p_school_id: string };
+        Returns: Json;
+      };
+      export_data_subject_package: {
+        Args: { p_request_id: string };
+        Returns: Json;
+      };
+
       create_transport_schedule: {
         Args: { p_school_id: string; p_route_id: string; p_vehicle_id: string; p_driver_id?: string | null; p_service_date?: string; p_departure_time?: string | null; p_notes?: string | null };
         Returns: TransportScheduleRow;
