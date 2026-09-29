@@ -205,3 +205,81 @@ $$;
 
 grant execute on function public.create_transport_charge(uuid,uuid,date,text) to authenticated;
 revoke execute on function public.create_transport_charge(uuid,uuid,date,text) from public;
+
+-- Production invariants for trip scheduling.
+create or replace function public.transport_schedule_validate_capacity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_capacity integer;
+  v_assigned integer;
+  v_driver_status public.transport_driver_status;
+  v_licence_expiry date;
+begin
+  select capacity into v_capacity from public.transport_vehicles where id=new.vehicle_id and school_id=new.school_id;
+  if v_capacity is null then raise exception 'validation_error: vehicle is not valid for this school'; end if;
+
+  select count(*) into v_assigned
+  from public.transport_assignments a
+  where a.school_id=new.school_id and a.route_id=new.route_id and a.status='active'
+    and a.effective_from <= new.service_date
+    and (a.effective_to is null or a.effective_to >= new.service_date);
+
+  if v_assigned > v_capacity then
+    raise exception 'validation_error: route has % active learners but vehicle capacity is %', v_assigned, v_capacity;
+  end if;
+
+  if new.driver_id is not null then
+    select status,licence_expiry into v_driver_status,v_licence_expiry
+    from public.transport_drivers where id=new.driver_id and school_id=new.school_id;
+    if v_driver_status is null or v_driver_status <> 'active' then
+      raise exception 'validation_error: driver is not active';
+    end if;
+    if v_licence_expiry is not null and v_licence_expiry < new.service_date then
+      raise exception 'validation_error: driver licence expires before the trip date';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists transport_schedules_validate_capacity on public.transport_schedules;
+create trigger transport_schedules_validate_capacity
+before insert or update on public.transport_schedules
+for each row execute function public.transport_schedule_validate_capacity();
+
+create or replace function public.create_transport_schedule(
+  p_school_id uuid,
+  p_route_id uuid,
+  p_vehicle_id uuid,
+  p_driver_id uuid default null,
+  p_service_date date default current_date,
+  p_departure_time time default null,
+  p_notes text default null
+) returns public.transport_schedules
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_result public.transport_schedules;
+begin
+  if not public.can_manage_transport(p_school_id) then
+    raise exception 'insufficient_privilege: cannot manage transport';
+  end if;
+  insert into public.transport_schedules(
+    school_id,route_id,vehicle_id,driver_id,service_date,departure_time,status,notes
+  ) values (
+    p_school_id,p_route_id,p_vehicle_id,p_driver_id,p_service_date,p_departure_time,'scheduled',p_notes
+  ) returning * into v_result;
+  perform public.write_audit_log(p_school_id,auth.uid(),'transport_trip_created','transport_schedules',v_result.id,
+    null,jsonb_build_object('route_id',p_route_id,'vehicle_id',p_vehicle_id,'driver_id',p_driver_id,'service_date',p_service_date));
+  return v_result;
+end;
+$$;
+
+grant execute on function public.create_transport_schedule(uuid,uuid,uuid,uuid,date,time,text) to authenticated;
+revoke execute on function public.create_transport_schedule(uuid,uuid,uuid,uuid,date,time,text) from public;
