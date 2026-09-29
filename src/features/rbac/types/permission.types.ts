@@ -39,4 +39,8 @@ export type Permission =
   | 'employee.view'
   | 'employee.manage'
   | 'reports.view'
-  | 'reports.export';
+  | 'reports.export'
+  | 'transport.view'
+  | 'transport.manage'
+  | 'operations.view'
+  | 'operations.manage';

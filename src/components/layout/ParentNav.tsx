@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   BookIcon,
+  CalendarIcon,
   ChatIcon,
   GridIcon,
   GraduationCapIcon,
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { label: 'My Children', path: '/parent/children', icon: GraduationCapIcon },
   { label: 'Homework', path: '/parent/homework', icon: BookIcon },
   { label: 'Fees', path: '/parent/fees', icon: WalletIcon },
+  { label: 'Transport', path: '/parent/transport', icon: CalendarIcon },
   { label: 'Messages', path: '/parent/messages', icon: ChatIcon },
   { label: 'Announcements', path: '/parent/announcements', icon: MegaphoneIcon },
   { label: 'My Profile', path: '/parent/profile', icon: UsersIcon },

@@ -2715,6 +2715,72 @@ export type AssignmentSubmissionFileRow = {
 export type AssignmentSubmissionFileInsert = never;
 export type AssignmentSubmissionFileUpdate = never;
 
+
+export type TransportVehicleStatus = 'active' | 'maintenance' | 'inactive';
+export type TransportDriverStatus = 'active' | 'suspended' | 'inactive';
+export type TransportAssignmentStatus = 'active' | 'suspended' | 'ended';
+export type TransportTripStatus = 'scheduled' | 'boarding' | 'in_progress' | 'completed' | 'cancelled';
+export type TransportAttendanceStatus = 'boarded' | 'absent' | 'picked_up' | 'dropped_off' | 'no_show';
+
+export type TransportVehicleRow = {
+  id: string; school_id: string; registration_number: string; fleet_number: string | null;
+  make: string | null; model: string | null; year: number | null; capacity: number;
+  status: TransportVehicleStatus; notes: string | null; created_by: string | null; updated_by: string | null;
+  created_at: string; updated_at: string;
+};
+export type TransportVehicleInsert = Omit<TransportVehicleRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'> & Partial<Pick<TransportVehicleRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'>>;
+export type TransportVehicleUpdate = Partial<Omit<TransportVehicleRow,'id'>>;
+
+export type TransportDriverRow = {
+  id: string; school_id: string; employee_id: string | null; first_name: string; last_name: string;
+  phone: string | null; licence_number: string | null; licence_expiry: string | null;
+  status: TransportDriverStatus; notes: string | null; created_by: string | null; updated_by: string | null;
+  created_at: string; updated_at: string;
+};
+export type TransportDriverInsert = Omit<TransportDriverRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'> & Partial<Pick<TransportDriverRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'>>;
+export type TransportDriverUpdate = Partial<Omit<TransportDriverRow,'id'>>;
+
+export type TransportRouteRow = {
+  id: string; school_id: string; name: string; code: string; direction: 'morning'|'afternoon'|'both';
+  active: boolean; notes: string | null; created_by: string | null; updated_by: string | null; created_at: string; updated_at: string;
+};
+export type TransportRouteInsert = Omit<TransportRouteRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'> & Partial<Pick<TransportRouteRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'>>;
+export type TransportRouteUpdate = Partial<Omit<TransportRouteRow,'id'>>;
+
+export type TransportStopRow = {
+  id: string; school_id: string; name: string; address: string | null; latitude: number | null; longitude: number | null;
+  pickup_time: string | null; dropoff_time: string | null; active: boolean; created_by: string | null; updated_by: string | null;
+  created_at: string; updated_at: string;
+};
+export type TransportStopInsert = Omit<TransportStopRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'> & Partial<Pick<TransportStopRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'>>;
+export type TransportStopUpdate = Partial<Omit<TransportStopRow,'id'>>;
+
+export type TransportRouteStopRow = { id:string; school_id:string; route_id:string; stop_id:string; stop_order:number; pickup_time:string|null; dropoff_time:string|null; created_by:string|null; created_at:string; };
+export type TransportRouteStopInsert = Omit<TransportRouteStopRow,'id'|'created_by'|'created_at'> & Partial<Pick<TransportRouteStopRow,'id'|'created_by'|'created_at'>>;
+export type TransportRouteStopUpdate = Partial<Omit<TransportRouteStopRow,'id'>>;
+
+export type TransportAssignmentRow = {
+  id:string; school_id:string; learner_id:string; route_id:string; pickup_stop_id:string|null; dropoff_stop_id:string|null;
+  effective_from:string; effective_to:string|null; status:TransportAssignmentStatus; notes:string|null;
+  created_by:string|null; updated_by:string|null; created_at:string; updated_at:string;
+};
+export type TransportAssignmentInsert = Omit<TransportAssignmentRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'|'status'> & Partial<Pick<TransportAssignmentRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'|'status'>>;
+export type TransportAssignmentUpdate = Partial<Omit<TransportAssignmentRow,'id'>>;
+
+export type TransportScheduleRow = {
+  id:string; school_id:string; route_id:string; vehicle_id:string; driver_id:string|null; service_date:string;
+  departure_time:string|null; status:TransportTripStatus; notes:string|null; created_by:string|null; updated_by:string|null; created_at:string; updated_at:string;
+};
+export type TransportScheduleInsert = Omit<TransportScheduleRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'|'status'> & Partial<Pick<TransportScheduleRow,'id'|'created_by'|'updated_by'|'created_at'|'updated_at'|'status'>>;
+export type TransportScheduleUpdate = Partial<Omit<TransportScheduleRow,'id'>>;
+
+export type TransportAttendanceRow = {
+  id:string; school_id:string; schedule_id:string; learner_id:string; status:TransportAttendanceStatus;
+  recorded_at:string; recorded_by:string|null; notes:string|null;
+};
+export type TransportAttendanceInsert = never;
+export type TransportAttendanceUpdate = never;
+
 export type Database = {
   public: {
     Tables: {
@@ -3053,9 +3119,112 @@ export type Database = {
         Insert: AssignmentSubmissionFileInsert;
         Update: AssignmentSubmissionFileUpdate;
       };
+
+      transport_vehicles: { Row: TransportVehicleRow; Insert: TransportVehicleInsert; Update: TransportVehicleUpdate; };
+      transport_drivers: { Row: TransportDriverRow; Insert: TransportDriverInsert; Update: TransportDriverUpdate; };
+      transport_routes: { Row: TransportRouteRow; Insert: TransportRouteInsert; Update: TransportRouteUpdate; };
+      transport_stops: { Row: TransportStopRow; Insert: TransportStopInsert; Update: TransportStopUpdate; };
+      transport_route_stops: { Row: TransportRouteStopRow; Insert: TransportRouteStopInsert; Update: TransportRouteStopUpdate; };
+      transport_assignments: { Row: TransportAssignmentRow; Insert: TransportAssignmentInsert; Update: TransportAssignmentUpdate; };
+      transport_schedules: { Row: TransportScheduleRow; Insert: TransportScheduleInsert; Update: TransportScheduleUpdate; };
+      transport_attendance: { Row: TransportAttendanceRow; Insert: TransportAttendanceInsert; Update: TransportAttendanceUpdate; };
+
     };
     Views: Record<string, never>;
     Functions: {
+      create_transport_assignment: {
+        Args: { p_school_id: string; p_learner_id: string; p_route_id: string; p_pickup_stop_id?: string | null; p_dropoff_stop_id?: string | null; p_effective_from?: string; p_effective_to?: string | null; p_notes?: string | null };
+        Returns: TransportAssignmentRow;
+      };
+      list_transport_learners: {
+        Args: { p_school_id: string };
+        Returns: { id: string; learner_number: string; first_name: string; last_name: string }[];
+      };
+      get_transport_roster: {
+        Args: { p_schedule_id: string };
+        Returns: { learner_id: string; learner_number: string; first_name: string; last_name: string; pickup_stop_id: string | null; dropoff_stop_id: string | null; attendance_status: TransportAttendanceStatus | null; recorded_at: string | null }[];
+      };
+      add_transport_route_stop: {
+        Args: { p_route_id: string; p_stop_id: string; p_stop_order: number; p_pickup_time?: string | null; p_dropoff_time?: string | null };
+        Returns: TransportRouteStopRow;
+      };
+      create_transport_charge: {
+        Args: { p_learner_id: string; p_fee_structure_id: string; p_due_date?: string | null; p_notes?: string | null };
+        Returns: Json;
+      };
+      create_operation_record: {
+        Args: { p_entity: string; p_school_id: string; p_payload: Json };
+        Returns: Json;
+      };
+      library_checkout: {
+        Args: { p_school_id: string; p_copy_id: string; p_learner_id: string; p_due_at: string };
+        Returns: Json;
+      };
+      library_return: {
+        Args: { p_loan_id: string };
+        Returns: Json;
+      };
+      transition_purchase_request: {
+        Args: { p_request_id: string; p_status: string };
+        Returns: Json;
+      };
+      set_event_participation: {
+        Args: { p_participant_id: string; p_status: string };
+        Returns: Json;
+      };
+      create_data_subject_request: {
+        Args: { p_school_id: string; p_subject_profile_id?: string | null; p_subject_learner_id?: string | null; p_request_type?: string; p_reason?: string | null };
+        Returns: Json;
+      };
+      transition_data_subject_request: {
+        Args: { p_request_id: string; p_status: string; p_outcome?: string | null };
+        Returns: Json;
+      };
+      get_operations_analytics: {
+        Args: { p_school_id: string };
+        Returns: Json;
+      };
+      create_interop_import: {
+        Args: { p_school_id: string; p_entity_type: string; p_file_name: string; p_format: string; p_rows: Json; p_mapping?: Json };
+        Returns: Json;
+      };
+      validate_interop_import: {
+        Args: { p_import_id: string };
+        Returns: Json;
+      };
+      apply_interop_import: {
+        Args: { p_import_id: string };
+        Returns: Json;
+      };
+      get_advanced_analytics: {
+        Args: { p_school_id: string };
+        Returns: Json;
+      };
+      get_operations_workspace: {
+        Args: { p_school_id: string };
+        Returns: Json;
+      };
+      export_data_subject_package: {
+        Args: { p_request_id: string };
+        Returns: Json;
+      };
+
+      create_transport_schedule: {
+        Args: { p_school_id: string; p_route_id: string; p_vehicle_id: string; p_driver_id?: string | null; p_service_date?: string; p_departure_time?: string | null; p_notes?: string | null };
+        Returns: TransportScheduleRow;
+      };
+      set_transport_assignment_status: {
+        Args: { p_assignment_id: string; p_status: TransportAssignmentStatus };
+        Returns: TransportAssignmentRow;
+      };
+      record_transport_attendance: {
+        Args: { p_schedule_id: string; p_learner_id: string; p_status: TransportAttendanceStatus; p_notes?: string | null };
+        Returns: TransportAttendanceRow;
+      };
+      set_transport_trip_status: {
+        Args: { p_schedule_id: string; p_status: TransportTripStatus };
+        Returns: TransportScheduleRow;
+      };
       admin_create_user: {
         Args: {
           p_email: string;

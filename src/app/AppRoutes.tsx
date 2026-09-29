@@ -250,6 +250,8 @@ const TimetablePage = named(
   () => import('@/features/timetable/pages/TimetablePage'),
   'TimetablePage',
 );
+const TransportPage = named(() => import('@/features/transport/pages/TransportPage'), 'TransportPage');
+const OperationsHubPage = named(() => import('@/features/operations/pages/OperationsHubPage'), 'OperationsHubPage');
 const AssessmentReportPage = named(
   () => import('@/features/reports/pages/AssessmentReportPage'),
   'AssessmentReportPage',
@@ -290,6 +292,8 @@ const ParentProfilePage = named(
   () => import('@/features/parentPortal/pages/ParentProfilePage'),
   'ParentProfilePage',
 );
+const ParentTransportPage = named(() => import('@/features/transport/pages/ParentTransportPage'), 'ParentTransportPage');
+const LearnerTransportPage = named(() => import('@/features/transport/pages/LearnerTransportPage'), 'LearnerTransportPage');
 
 export function AppRoutes() {
   return (
@@ -394,6 +398,11 @@ export function AppRoutes() {
                 <Route path="/timetable" element={<TimetablePage />} />
               </Route>
 
+              <Route element={<RequirePermission permission="transport.view" />}>
+                <Route path="/transport" element={<TransportPage />} />
+                <Route path="/operations" element={<OperationsHubPage />} />
+              </Route>
+
               <Route element={<RequirePermission permission="guardian.view" />}>
                 <Route path="/guardians" element={<GuardiansPage />} />
                 <Route path="/guardians/:id" element={<GuardianProfilePage />} />
@@ -453,6 +462,7 @@ export function AppRoutes() {
                 />
                 <Route path="/parent/homework" element={<ParentHomeworkPage />} />
                 <Route path="/parent/homework/:assignmentId" element={<ParentHomeworkPage />} />
+                <Route path="/parent/transport" element={<ParentTransportPage />} />
               </Route>
             </Route>
 
@@ -465,6 +475,7 @@ export function AppRoutes() {
                 <Route path="/learner/results" element={<LearnerResultsPage />} />
                 <Route path="/learner/report-cards" element={<LearnerReportCardsPage />} />
                 <Route path="/learner/attendance" element={<LearnerAttendancePage />} />
+                <Route path="/learner/transport" element={<LearnerTransportPage />} />
                 <Route path="/learner/documents" element={<LearnerDocumentsPage />} />
                 <Route path="/learner/announcements" element={<AnnouncementsPage />} />
                 <Route path="/learner/notifications" element={<NotificationsPage />} />

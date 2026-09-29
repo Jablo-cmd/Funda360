@@ -982,7 +982,7 @@ export async function installAttendanceRecordsMock(page: Page, records: ReturnTy
 /** Mocks the `attendanceService.saveAttendance` upsert (POST). */
 export async function installAttendanceUpsertMock(page: Page, records: ReturnType<typeof buildMockAttendanceRecordRow>[]) {
   await page.route('**/rest/v1/attendance_records*', async (route: Route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
+    if (!['POST', 'PUT'].includes(route.request().method())) return route.fallback();
     await fulfillJson(route, records);
   });
 }
@@ -1130,12 +1130,12 @@ export async function installAssessmentResultsUpsertMock(page: Page, results: Re
  */
 export async function installStorageUploadMock(page: Page, bucket: string, status = 200) {
   await page.route(`**/storage/v1/object/${bucket}/**`, async (route: Route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
+    if (!['POST', 'PUT'].includes(route.request().method())) return route.fallback();
     if (status >= 400) {
       await fulfillJson(route, { statusCode: String(status), error: 'Error', message: 'Upload failed.' }, status);
       return;
     }
-    await fulfillJson(route, { Id: 'mock-object-id', Key: `${bucket}/mock-path` }, status);
+    await fulfillJson(route, { Id: 'mock-object-id', Key: `${bucket}/mock-path`, id: 'mock-object-id', path: `${bucket}/mock-path`, fullPath: `${bucket}/mock-path` }, status);
   });
 }
 
