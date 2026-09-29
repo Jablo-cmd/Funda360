@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -21,6 +21,7 @@ export function OperationsHubPage() {
   const [advanced,setAdvanced]=useState<Record<string, unknown>>({});
   const [csvText,setCsvText]=useState('');
   const [importMessage,setImportMessage]=useState<string|null>(null);
+  const [workspace,setWorkspace]=useState<Record<string, unknown[]>>({});
   const [error,setError]=useState<string|null>(null);
   const [busy,setBusy]=useState(false);
   const canManage=can('operations.manage');
@@ -31,12 +32,17 @@ export function OperationsHubPage() {
       const {data,error}=await supabase.rpc('get_operations_analytics',{p_school_id:school.id});
       if(error)throw error;
       setAnalytics((data ?? {}) as Analytics);
+      const workspaceResult=await supabase.rpc('get_operations_workspace',{p_school_id:school.id});
+      if(workspaceResult.error)throw workspaceResult.error;
+      setWorkspace((workspaceResult.data ?? {}) as Record<string, unknown[]>);
       const advancedResult=await supabase.rpc('get_advanced_analytics',{p_school_id:school.id});
       if(advancedResult.error)throw advancedResult.error;
       setAdvanced((advancedResult.data ?? {}) as Record<string, unknown>);
     }catch(e){setError(getDbErrorMessage(e,'Unable to load operations analytics.'));}
   },[school]);
   useEffect(()=>{void load();},[load]);
+
+  const transitionRequest=async(id:string,status:string)=>{if(!school)return;setBusy(true);try{const {error}=await supabase.rpc('transition_purchase_request',{p_request_id:id,p_status:status});if(error)throw error;await load();}catch(e){setError(getDbErrorMessage(e,'Procurement transition failed.'));}finally{setBusy(false);}};
 
   const create=async(entity:string,payload:Record<string,string|number|null>)=>{
     if(!school)return;
@@ -59,6 +65,12 @@ export function OperationsHubPage() {
           {Object.entries(advanced).map(([key,value]) => <div key={key} className="rounded-md border border-border p-3"><p className="text-xs font-semibold capitalize text-content-primary">{key}</p><pre className="mt-2 max-h-28 overflow-auto text-[11px] text-content-tertiary">{JSON.stringify(value,null,2)}</pre></div>)}
         </div>
       </section>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <WorkflowList title="Library loans" rows={workspace.library_loans ?? []} empty="No active loans." />
+        <WorkflowList title="Purchase requests" rows={workspace.purchase_requests ?? []} empty="No purchase requests." action={row=>row.status==='submitted' ? <Button variant="secondary" onClick={()=>void transitionRequest(row.id,'approved')}>Approve</Button>:null} />
+        <WorkflowList title="Upcoming events" rows={workspace.events ?? []} empty="No events configured." />
+        <WorkflowList title="POPIA requests" rows={workspace.dsar ?? []} empty="No data-subject requests." />
+      </div>
     {canManage&&<div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
       <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card dark:shadow-card-dark">
         <h2 className="mb-2 font-semibold text-content-primary">SA-SAMS / CEMIS import staging</h2>
@@ -91,4 +103,8 @@ function OperationForm({title,fields,busy,onSubmit}:{title:string;fields:string[
  const [values,setValues]=useState<Record<string,string>>({});
  const submit=async(e:FormEvent)=>{e.preventDefault();await onSubmit(values);setValues({});};
  return <form onSubmit={submit} className="rounded-card border border-border bg-surface-raised p-5 shadow-card dark:shadow-card-dark"><h2 className="mb-4 font-semibold text-content-primary">{title}</h2><div className="space-y-3">{fields.map(f=><input key={f} className={input} required={['name','code','title','full_name','role_title','event_type'].includes(f)} placeholder={f.replaceAll('_',' ')} value={values[f]??''} onChange={e=>setValues(v=>({...v,[f]:e.target.value}))}/>)}</div><Button className="mt-4" disabled={busy}>Create</Button></form>;
+}
+
+function WorkflowList({title,rows,empty,action}:{title:string;rows:unknown[];empty:string;action?:(row:Record<string, any>)=>ReactNode}) {
+ return <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card dark:shadow-card-dark"><h2 className="mb-3 font-semibold text-content-primary">{title}</h2>{rows.length===0?<p className="text-sm text-content-tertiary">{empty}</p>:<div className="space-y-2">{rows.slice(0,8).map((raw,index)=>{const row=raw as Record<string,any>;return <div key={String(row.id??index)} className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-0"><div><p className="text-sm font-medium text-content-primary">{row.title??row.description??row.request_type??'Record'}</p><p className="text-xs capitalize text-content-tertiary">{row.status??''}</p></div>{action?.(row)}</div>})}</div>}</section>;
 }
