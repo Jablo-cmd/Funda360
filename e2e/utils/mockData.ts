@@ -1135,7 +1135,7 @@ export async function installStorageUploadMock(page: Page, bucket: string, statu
       await fulfillJson(route, { statusCode: String(status), error: 'Error', message: 'Upload failed.' }, status);
       return;
     }
-    await fulfillJson(route, { Id: 'mock-object-id', Key: `${bucket}/mock-path` }, status);
+    await fulfillJson(route, { Id: 'mock-object-id', Key: `${bucket}/mock-path`, id: 'mock-object-id', path: `${bucket}/mock-path`, fullPath: `${bucket}/mock-path` }, status);
   });
 }
 
