@@ -53,6 +53,42 @@ async function createSchedule(schoolId: string, input: CreateTransportScheduleIn
   const { data, error } = await supabase.from('transport_schedules').insert({ school_id: schoolId, status: 'scheduled', ...input }).select('*').single();
   if (error) throw error; return data as TransportSchedule;
 }
+
+async function listTransportLearners(schoolId: string) {
+  const { data, error } = await supabase.rpc('list_transport_learners', { p_school_id: schoolId });
+  if (error) throw error;
+  return data ?? [];
+}
+async function createAssignment(schoolId: string, input: CreateTransportAssignmentInput): Promise<TransportAssignment> {
+  const { data, error } = await supabase.rpc('create_transport_assignment', {
+    p_school_id: schoolId, p_learner_id: input.learner_id, p_route_id: input.route_id,
+    p_pickup_stop_id: input.pickup_stop_id ?? null, p_dropoff_stop_id: input.dropoff_stop_id ?? null,
+    p_effective_from: input.effective_from, p_effective_to: input.effective_to ?? null, p_notes: input.notes ?? null,
+  });
+  if (error) throw error; return data as TransportAssignment;
+}
+async function addRouteStop(routeId: string, stopId: string, stopOrder: number, pickupTime?: string | null, dropoffTime?: string | null): Promise<TransportRouteStop> {
+  const { data, error } = await supabase.rpc('add_transport_route_stop', {
+    p_route_id: routeId, p_stop_id: stopId, p_stop_order: stopOrder,
+    p_pickup_time: pickupTime ?? null, p_dropoff_time: dropoffTime ?? null,
+  });
+  if (error) throw error; return data as TransportRouteStop;
+}
+async function listRouteStops(routeId: string): Promise<TransportRouteStop[]> {
+  const { data, error } = await supabase.from('transport_route_stops').select('*').eq('route_id', routeId).order('stop_order');
+  if (error) throw error; return (data ?? []) as TransportRouteStop[];
+}
+async function getRoster(scheduleId: string) {
+  const { data, error } = await supabase.rpc('get_transport_roster', { p_schedule_id: scheduleId });
+  if (error) throw error; return data ?? [];
+}
+async function createTransportCharge(learnerId: string, feeStructureId: string, dueDate?: string | null, notes?: string | null) {
+  const { data, error } = await supabase.rpc('create_transport_charge', {
+    p_learner_id: learnerId, p_fee_structure_id: feeStructureId, p_due_date: dueDate ?? null, p_notes: notes ?? null,
+  });
+  if (error) throw error; return data;
+}
+
 async function listAttendance(scheduleId: string): Promise<TransportAttendance[]> {
   const { data, error } = await supabase.from('transport_attendance').select('*').eq('schedule_id', scheduleId).order('recorded_at');
   if (error) throw error; return (data ?? []) as TransportAttendance[];
@@ -74,5 +110,5 @@ async function recordAttendance(scheduleId: string, learnerId: string, status: T
 
 export const transportService = {
   getSummary, createVehicle, createDriver, createRoute, createStop, createAssignment, createSchedule,
-  listAttendance, setAssignmentStatus, setTripStatus, recordAttendance,
+  listAttendance, listTransportLearners, createAssignment, addRouteStop, listRouteStops, getRoster, createTransportCharge, setAssignmentStatus, setTripStatus, recordAttendance,
 };
