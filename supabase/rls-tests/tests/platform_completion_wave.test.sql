@@ -2,7 +2,7 @@
 do $$
 declare v_school uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; v_house uuid; v_book uuid; v_activity uuid; v_asset_cat uuid; v_supplier uuid; v_event uuid; v_req uuid; v_visible int; v_error text;
 begin
- perform set_config('request.jwt.claims',test_util.jwt_claims('22222222-2222-2222-2222-222222222222','school_owner',v_school::text),true);
+ perform set_config('request.jwt.claims',test_util.jwt_claims('22222222-2222-2222-2222-222222222222','school_owner',v_school),true);
  execute 'set local role authenticated';
 
  perform public.create_operation_record('boarding_house',v_school,jsonb_build_object('name','Test House','code','TH','capacity',10));
