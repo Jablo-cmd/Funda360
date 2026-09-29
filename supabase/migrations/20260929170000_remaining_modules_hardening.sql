@@ -125,8 +125,10 @@ declare r public.boarding_allocations;
 begin
  if not public.operations_role_allowed(p_school_id,array['school_owner','principal','vice_principal','boarding_manager','platform_owner','platform_administrator','super_administrator']) then raise exception 'insufficient_privilege'; end if;
  if not exists(select 1 from public.learners where id=p_learner_id and school_id=p_school_id and boarding_type='boarder') then raise exception 'validation_error: learner is not an active boarder'; end if;
- if not exists(select 1 from public.boarding_beds b join public.boarding_rooms rm on rm.id=b.room_id where b.id=p_bed_id and b.school_id=p_school_id and b.active and rm.active) then raise exception 'validation_error: bed unavailable'; end if;
+ perform 1 from public.boarding_beds b join public.boarding_rooms rm on rm.id=b.room_id where b.id=p_bed_id and b.school_id=p_school_id and b.active and rm.active for update;
+ if not found then raise exception 'validation_error: bed unavailable'; end if;
  if exists(select 1 from public.boarding_allocations where learner_id=p_learner_id and status='active') then raise exception 'validation_error: learner already allocated'; end if;
+ if exists(select 1 from public.boarding_allocations where bed_id=p_bed_id and status='active') then raise exception 'validation_error: bed already allocated'; end if;
  insert into public.boarding_allocations(school_id,learner_id,bed_id,effective_from,notes) values(p_school_id,p_learner_id,p_bed_id,p_effective_from,p_notes) returning * into r;
  perform public.write_audit_log(p_school_id,auth.uid(),'boarding_allocated','boarding_allocations',r.id,null,to_jsonb(r));
  return r;
@@ -568,8 +570,8 @@ revoke execute on function public.get_operations_workspace(uuid) from public;
 
 
 -- Concurrency protections for scarce resources.
-create unique index if not exists boarding_one_active_per_bed on public.boarding_allocations(bed_id) where status='active';
-create unique index if not exists library_one_active_loan_per_copy on public.library_loans(copy_id) where returned_at is null and status in ('borrowed','overdue');
+create index if not exists boarding_active_bed_idx on public.boarding_allocations(bed_id,status);
+create index if not exists library_active_copy_idx on public.library_loans(copy_id,status) where returned_at is null;
 
 create or replace function public.library_checkout(p_school_id uuid,p_copy_id uuid,p_learner_id uuid,p_due_at timestamptz)
 returns public.library_loans language plpgsql security definer set search_path=public as $$
