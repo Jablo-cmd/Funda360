@@ -16,7 +16,13 @@ as $$
           and p.role::text = any(allowed_roles)
       )
     );
-$$;
+$;
+
+grant execute on function public.operations_role_allowed(uuid,text[]) to authenticated;
+
+grant execute on function public.can_manage_operations(uuid) to authenticated;
+
+grant execute on function public.can_view_operations(uuid) to authenticated;
 
 create or replace function public.can_manage_operations(target_school_id uuid)
 returns boolean language sql stable set search_path=public as $$
