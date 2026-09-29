@@ -1,3 +1,4 @@
+/* global self, caches, fetch */
 const CACHE = 'funda360-shell-v1';
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/','/index.html'])));
