@@ -400,6 +400,8 @@ export function AppRoutes() {
 
               <Route element={<RequirePermission permission="transport.view" />}>
                 <Route path="/transport" element={<TransportPage />} />
+              </Route>
+              <Route element={<RequirePermission permission="operations.view" />}>
                 <Route path="/operations" element={<OperationsHubPage />} />
               </Route>
 

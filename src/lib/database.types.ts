@@ -3208,6 +3208,86 @@ export type Database = {
         Args: { p_request_id: string };
         Returns: Json;
       };
+      boarding_allocate_learner: {
+        Args: { p_school_id: string; p_learner_id: string; p_bed_id: string; p_effective_from?: string; p_notes?: string | null };
+        Returns: Json;
+      };
+      boarding_record_attendance: {
+        Args: { p_school_id: string; p_learner_id: string; p_date: string; p_status: string };
+        Returns: Json;
+      };
+      boarding_transition_leave: {
+        Args: { p_leave_id: string; p_status: string };
+        Returns: Json;
+      };
+      library_reserve: {
+        Args: { p_school_id: string; p_book_id: string; p_learner_id: string };
+        Returns: Json;
+      };
+      library_renew: {
+        Args: { p_loan_id: string; p_due_at: string };
+        Returns: Json;
+      };
+      sports_add_player: {
+        Args: { p_school_id: string; p_team_id: string; p_learner_id: string };
+        Returns: Json;
+      };
+      sports_record_fixture_result: {
+        Args: { p_fixture_id: string; p_status: string; p_score_for?: number | null; p_score_against?: number | null };
+        Returns: Json;
+      };
+      asset_transfer: {
+        Args: { p_asset_id: string; p_to_location: string; p_to_profile_id?: string | null; p_reason?: string | null };
+        Returns: Json;
+      };
+      asset_set_lifecycle: {
+        Args: { p_asset_id: string; p_status: string; p_condition?: string | null };
+        Returns: Json;
+      };
+      create_purchase_request: {
+        Args: { p_school_id: string; p_description: string; p_estimated_amount: number };
+        Returns: Json;
+      };
+      add_purchase_request_item: {
+        Args: { p_request_id: string; p_description: string; p_quantity: number; p_unit_cost: number };
+        Returns: Json;
+      };
+      create_purchase_order: {
+        Args: { p_school_id: string; p_request_id: string; p_supplier_id: string; p_po_number: string; p_total_amount: number };
+        Returns: Json;
+      };
+      record_goods_receipt: {
+        Args: { p_purchase_order_id: string; p_notes?: string | null };
+        Returns: Json;
+      };
+      transition_supplier_invoice: {
+        Args: { p_invoice_id: string; p_status: string };
+        Returns: Json;
+      };
+      create_governance_meeting: {
+        Args: { p_school_id: string; p_title: string; p_meeting_date: string; p_location?: string | null };
+        Returns: Json;
+      };
+      create_governance_resolution: {
+        Args: { p_school_id: string; p_meeting_id: string; p_title: string; p_decision: string; p_due_date?: string | null };
+        Returns: Json;
+      };
+      create_school_event: {
+        Args: { p_school_id: string; p_title: string; p_event_type: string; p_starts_at: string; p_ends_at: string; p_venue?: string | null; p_description?: string | null };
+        Returns: Json;
+      };
+      create_event_participant: {
+        Args: { p_event_id: string; p_profile_id?: string | null; p_learner_id?: string | null };
+        Returns: Json;
+      };
+      save_analytics_view: {
+        Args: { p_school_id: string; p_name: string; p_report_key: string; p_filters?: Json };
+        Returns: Json;
+      };
+      set_automation_job: {
+        Args: { p_school_id: string; p_job_key: string; p_cron_expression: string; p_enabled: boolean };
+        Returns: Json;
+      };
 
       create_transport_schedule: {
         Args: { p_school_id: string; p_route_id: string; p_vehicle_id: string; p_driver_id?: string | null; p_service_date?: string; p_departure_time?: string | null; p_notes?: string | null };

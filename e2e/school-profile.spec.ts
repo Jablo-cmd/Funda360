@@ -129,10 +129,15 @@ test('principal can upload a school logo', async ({ page }) => {
   await installStorageUploadMock(page, 'school-logos');
 
   let patchedLogoUrl: string | undefined;
-  page.on('request', (request) => {
-    if (request.method() !== 'PATCH' || !request.url().includes('/rest/v1/schools')) return;
-    const body = request.postDataJSON() as { logo_url?: string } | null;
+  await page.route('**/rest/v1/schools*', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
+    const body = route.request().postDataJSON() as { logo_url?: string } | null;
     patchedLogoUrl = body?.logo_url;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...buildMockSchoolRow(), logo_url: patchedLogoUrl ?? null }),
+    });
   });
 
   await page.goto('/school/profile');
@@ -143,7 +148,7 @@ test('principal can upload a school logo', async ({ page }) => {
   });
 
   await expect(page.getByText('Uploading…')).toHaveCount(0);
-  expect(patchedLogoUrl).toBe(`${buildMockSchoolRow().id}/logo`);
+  expect(patchedLogoUrl).toBe(buildMockSchoolRow().id + '/logo');
 });
 
 test('an unsupported logo file type is rejected before any upload request is made', async ({ page }) => {
