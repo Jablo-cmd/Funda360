@@ -537,8 +537,8 @@ select jsonb_build_object(
    'absent',(select count(*) from public.attendance_records where school_id=p_school_id and status='absent'),
    'late',(select count(*) from public.attendance_records where school_id=p_school_id and status='late')),
  'finance',jsonb_build_object(
-   'outstanding',(select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active and status='unpaid'),
-   'overdue',(select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active and status='unpaid' and due_date<current_date)),
+   'outstanding',((select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active) - (select coalesce(sum(amount),0) from public.learner_fee_payments where school_id=p_school_id)),
+   'overdue',((select coalesce(sum(c.amount),0) from public.learner_fee_charges c where c.school_id=p_school_id and c.active and c.due_date<current_date) - (select coalesce(sum(p.amount),0) from public.learner_fee_payments p where p.school_id=p_school_id and p.payment_date<current_date))),
  'admissions',jsonb_build_object(
    'submitted',(select count(*) from public.admission_applications where school_id=p_school_id and status='submitted'),
    'accepted',(select count(*) from public.admission_applications where school_id=p_school_id and status='accepted'),
