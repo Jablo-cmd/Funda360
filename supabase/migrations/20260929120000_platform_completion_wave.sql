@@ -325,7 +325,7 @@ begin
       insert into public.school_events(school_id,title,event_type,starts_at,ends_at,venue,description,created_by) values(p_school_id,p_payload->>'title',p_payload->>'event_type',(p_payload->>'starts_at')::timestamptz,(p_payload->>'ends_at')::timestamptz,p_payload->>'venue',p_payload->>'description',auth.uid()) returning to_jsonb(school_events.*) into r;
     else raise exception 'unsupported_operation_entity';
   end case;
-  perform public.write_audit_log(p_school_id,auth.uid(),'operation_record_created',p_entity,null,null,p_payload);
+  perform public.write_audit_log(p_school_id,auth.uid(),'operation_record_created',p_entity,(r->>'id')::uuid,null,r);
   return r;
 end $$;
 grant execute on function public.create_operation_record(text,uuid,jsonb) to authenticated;
