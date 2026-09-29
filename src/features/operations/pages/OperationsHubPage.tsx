@@ -77,7 +77,7 @@ export function OperationsHubPage() {
         <p className="mb-3 text-xs text-content-tertiary">Controlled CSV staging with validation, duplicate detection, audit history and an explicit apply step. No undocumented government API is assumed.</p>
         <textarea className={input+" min-h-32"} placeholder="learner_number,admission_number,first_name,last_name,date_of_birth,admission_date" value={csvText} onChange={e=>setCsvText(e.target.value)} />
         <Button disabled={busy||!csvText.trim()} onClick={async()=>{setBusy(true);setImportMessage(null);try{
-          const lines=csvText.trim().split(/\r?\n/).filter(Boolean); const headers=lines[0].split(',').map(x=>x.trim()); const rows=lines.slice(1).map(line=>{const cells=line.split(',');return Object.fromEntries(headers.map((h,i)=>[h,(cells[i]??'').trim()]))});
+          const lines=csvText.trim().split(/\r?\n/).filter(Boolean); const [headerLine,...dataLines]=lines; if(!headerLine)throw new Error('CSV header is required.'); const headers=headerLine.split(',').map(x=>x.trim()); const rows=dataLines.map(line=>{const cells=line.split(',');return Object.fromEntries(headers.map((h,i)=>[h,(cells[i]??'').trim()]))});
           const created=await supabase.rpc('create_interop_import',{p_school_id:school.id,p_entity_type:'learners',p_file_name:'manual-paste.csv',p_format:'csv',p_rows:rows,p_mapping:{}}); if(created.error)throw created.error;
           const id=(created.data as {id?:string})?.id; if(!id)throw new Error('Import staging did not return an id.');
           const validated=await supabase.rpc('validate_interop_import',{p_import_id:id}); if(validated.error)throw validated.error;
