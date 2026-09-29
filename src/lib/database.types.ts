@@ -3200,6 +3200,10 @@ export type Database = {
         Args: { p_school_id: string };
         Returns: Json;
       };
+      get_operations_workspace: {
+        Args: { p_school_id: string };
+        Returns: Json;
+      };
       export_data_subject_package: {
         Args: { p_request_id: string };
         Returns: Json;
