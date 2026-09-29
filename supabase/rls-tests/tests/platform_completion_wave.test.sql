@@ -5,12 +5,18 @@ begin
  perform set_config('request.jwt.claims',test_util.jwt_claims('22222222-2222-2222-2222-222222222222','school_owner',v_school::text),true);
  execute 'set local role authenticated';
 
- insert into public.boarding_houses(school_id,name,code,capacity) values(v_school,'Test House','TH',10) returning id into v_house;
- insert into public.library_books(school_id,title) values(v_school,'Test Book') returning id into v_book;
- insert into public.sports_activities(school_id,name) values(v_school,'Test Sport') returning id into v_activity;
- insert into public.asset_categories(school_id,name,code) values(v_school,'Test Assets','TA') returning id into v_asset_cat;
- insert into public.procurement_suppliers(school_id,name) values(v_school,'Test Supplier') returning id into v_supplier;
- insert into public.school_events(school_id,title,event_type,starts_at,ends_at) values(v_school,'Test Event','academic',now()+interval '1 day',now()+interval '2 days') returning id into v_event;
+ perform public.create_operation_record('boarding_house',v_school,jsonb_build_object('name','Test House','code','TH','capacity',10));
+ select id into v_house from public.boarding_houses where school_id=v_school and code='TH' limit 1;
+ perform public.create_operation_record('library_book',v_school,jsonb_build_object('title','Test Book'));
+ select id into v_book from public.library_books where school_id=v_school and title='Test Book' limit 1;
+ perform public.create_operation_record('sports_activity',v_school,jsonb_build_object('name','Test Sport','category','sport'));
+ select id into v_activity from public.sports_activities where school_id=v_school and name='Test Sport' limit 1;
+ perform public.create_operation_record('asset_category',v_school,jsonb_build_object('name','Test Assets','code','TA'));
+ select id into v_asset_cat from public.asset_categories where school_id=v_school and code='TA' limit 1;
+ perform public.create_operation_record('supplier',v_school,jsonb_build_object('name','Test Supplier'));
+ select id into v_supplier from public.procurement_suppliers where school_id=v_school and name='Test Supplier' limit 1;
+ perform public.create_operation_record('event',v_school,jsonb_build_object('title','Test Event','event_type','academic','starts_at',(now()+interval '1 day')::text,'ends_at',(now()+interval '2 days')::text));
+ select id into v_event from public.school_events where school_id=v_school and title='Test Event' limit 1;
  call test_util.record('operations masters are writable to manager',v_house is not null and v_book is not null and v_activity is not null and v_asset_cat is not null and v_supplier is not null and v_event is not null,'master creation failed');
 
  v_req:=public.create_data_subject_request(v_school,p_request_type=>'access');
