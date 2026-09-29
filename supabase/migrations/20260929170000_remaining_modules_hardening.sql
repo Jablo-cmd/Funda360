@@ -368,6 +368,7 @@ select jsonb_build_object(
    'charges',(select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active),
    'payments',(select coalesce(sum(amount),0) from public.learner_fee_payments where school_id=p_school_id),
    'outstanding',(select greatest(0,(select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active)-(select coalesce(sum(amount),0) from public.learner_fee_payments where school_id=p_school_id))),
+ ),
  'admissions',jsonb_build_object(
    'submitted',(select count(*) from public.admission_applications where school_id=p_school_id and status='submitted'),
    'accepted',(select count(*) from public.admission_applications where school_id=p_school_id and status='accepted'),
