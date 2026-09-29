@@ -77,7 +77,7 @@ function Rows({rows,fields}:{rows:Row[];fields:string[]}) {
 function Form({title,fields,onSubmit,busy}:{title:string;fields:string[];onSubmit:(v:Record<string,string>)=>Promise<void>;busy:boolean}) {
   const [v,setV]=useState<Record<string,string>>({});
   const submit=async(e:FormEvent)=>{e.preventDefault();await onSubmit(v);setV({});};
-  return <form onSubmit={submit} className="space-y-3"><h3 className="text-sm font-semibold text-content-primary">{title}</h3>{fields.map(f=><input key={f} className={input} placeholder={f.replaceAll('_',' ')} value={v[f]??''} onChange={e=>setV(x=>({...x,[f]:e.target.value}))} required={['name','title','summary','card_number','gate','document_type'].includes(f)}/>}<Button disabled={busy}>Save</Button></form>;
+  return <form onSubmit={submit} className="space-y-3"><h3 className="text-sm font-semibold text-content-primary">{title}</h3>{fields.map(f=><input key={f} className={input} placeholder={f.replaceAll('_',' ')} value={v[f]??''} onChange={e=>setV(x=>({...x,[f]:e.target.value}))} required={['name','title','summary','card_number','gate','document_type'].includes(f))}/>}<Button disabled={busy}>Save</Button></form>;
 }
 
 function Command({center}:{center:Center}) {
