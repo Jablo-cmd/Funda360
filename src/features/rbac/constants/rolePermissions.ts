@@ -22,6 +22,8 @@ import type { Permission } from '@/features/rbac/types/permission.types';
  */
 export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   platform_owner: [
+    'transport.view',
+    'transport.manage',
     'school.view',
     'school.manage',
     'tenant.switch',
@@ -59,6 +61,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   super_administrator: [
+    'transport.view',
+    'transport.manage',
     'school.view',
     'school.manage',
     'tenant.switch',
@@ -96,6 +100,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   platform_administrator: [
+    'transport.view',
+    'transport.manage',
     'school.view',
     'school.manage',
     'tenant.switch',
@@ -134,7 +140,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   ],
   support_engineer: ['school.view', 'profile.view_any'],
   school_owner: [
-    'school.view',
+    'transport.view',
+    'transport.manage',    'school.view',
     'school.manage',
     'profile.view_any',
     'profile.manage_any',
@@ -170,7 +177,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   principal: [
-    'school.view',
+    'transport.view',
+    'transport.manage',    'school.view',
     'school.manage',
     'profile.view_any',
     'profile.manage_any',
@@ -203,7 +211,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   vice_principal: [
-    'school.view',
+    'transport.view',    'school.view',
     'profile.view_any',
     'reportcard.view',
     'admission.view',
@@ -246,7 +254,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   librarian: ['school.view'],
-  transport_coordinator: ['school.view'],
+  transport_coordinator: ['school.view', 'transport.view', 'transport.manage'],
   sports_coordinator: ['school.view'],
   medical_officer: [
     'school.view',
@@ -258,7 +266,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   ],
   auditor: ['school.view', 'profile.view_any'],
   teacher: [
-    'school.view',
+    'transport.view',    'school.view',
     'academic.view',
     'timetable.view',
     'attendance.view',
@@ -270,7 +278,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.view',
   ],
   class_teacher: [
-    'school.view',
+    'transport.view',    'school.view',
     'academic.view',
     'timetable.view',
     'attendance.view',
@@ -282,7 +290,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.view',
   ],
   subject_teacher: [
-    'school.view',
+    'transport.view',    'school.view',
     'academic.view',
     'timetable.view',
     'attendance.view',
