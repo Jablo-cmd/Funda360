@@ -3152,6 +3152,10 @@ export type Database = {
         Args: { p_learner_id: string; p_fee_structure_id: string; p_due_date?: string | null; p_notes?: string | null };
         Returns: any;
       };
+      create_transport_schedule: {
+        Args: { p_school_id: string; p_route_id: string; p_vehicle_id: string; p_driver_id?: string | null; p_service_date?: string; p_departure_time?: string | null; p_notes?: string | null };
+        Returns: TransportScheduleRow;
+      };
       set_transport_assignment_status: {
         Args: { p_assignment_id: string; p_status: TransportAssignmentStatus };
         Returns: TransportAssignmentRow;
