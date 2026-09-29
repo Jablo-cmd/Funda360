@@ -565,3 +565,59 @@ begin
   );
 end $$;
 revoke execute on function public.get_operations_workspace(uuid) from public;
+
+
+-- Concurrency protections for scarce resources.
+create unique index if not exists boarding_one_active_per_bed on public.boarding_allocations(bed_id) where status='active';
+create unique index if not exists library_one_active_loan_per_copy on public.library_loans(copy_id) where returned_at is null and status in ('borrowed','overdue');
+
+create or replace function public.library_checkout(p_school_id uuid,p_copy_id uuid,p_learner_id uuid,p_due_at timestamptz)
+returns public.library_loans language plpgsql security definer set search_path=public as $$
+declare r public.library_loans;
+begin
+ if not public.operations_role_allowed(p_school_id,array['school_owner','principal','vice_principal','librarian','platform_owner','platform_administrator','super_administrator']) then raise exception 'insufficient_privilege'; end if;
+ if p_due_at<=now() then raise exception 'validation_error: due date must be in the future'; end if;
+ if not exists(select 1 from public.learners where id=p_learner_id and school_id=p_school_id) then raise exception 'validation_error: learner not in school'; end if;
+ perform 1 from public.library_copies where id=p_copy_id and school_id=p_school_id and status='available' for update;
+ if not found then raise exception 'validation_error: copy unavailable'; end if;
+ insert into public.library_loans(school_id,copy_id,learner_id,due_at) values(p_school_id,p_copy_id,p_learner_id,p_due_at) returning * into r;
+ update public.library_copies set status='borrowed' where id=p_copy_id;
+ perform public.write_audit_log(p_school_id,auth.uid(),'library_checkout','library_loans',r.id,null,to_jsonb(r));
+ return r;
+exception when unique_violation then
+ raise exception 'validation_error: copy is already checked out';
+end $$;
+
+create or replace function public.library_return(p_loan_id uuid)
+returns public.library_loans language plpgsql security definer set search_path=public as $$
+declare r public.library_loans;
+begin
+ select * into r from public.library_loans where id=p_loan_id for update;
+ if r.id is null or not public.operations_role_allowed(r.school_id,array['school_owner','principal','vice_principal','librarian','platform_owner','platform_administrator','super_administrator']) then raise exception 'insufficient_privilege'; end if;
+ if r.returned_at is not null then return r; end if;
+ update public.library_loans set returned_at=now(),status='returned' where id=p_loan_id returning * into r;
+ update public.library_copies set status='available' where id=r.copy_id;
+ perform public.write_audit_log(r.school_id,auth.uid(),'library_return','library_loans',r.id,null,to_jsonb(r));
+ return r;
+end $$;
+
+create or replace function public.transition_purchase_request(p_request_id uuid,p_status text)
+returns public.purchase_requests language plpgsql security definer set search_path=public as $$
+declare r public.purchase_requests; allowed boolean:=false;
+begin
+ select * into r from public.purchase_requests where id=p_request_id for update;
+ if r.id is null or not public.can_manage_operations(r.school_id) then raise exception 'insufficient_privilege'; end if;
+ if p_status='submitted' and r.status='draft' then allowed:=true;
+ elsif p_status='approved' and r.status='submitted' then allowed:=true;
+ elsif p_status='rejected' and r.status in ('submitted','approved') then allowed:=true;
+ elsif p_status='ordered' and r.status='approved' then allowed:=true;
+ elsif p_status='closed' and r.status='ordered' then allowed:=true;
+ end if;
+ if not allowed then raise exception 'validation_error: invalid procurement transition'; end if;
+ update public.purchase_requests set status=p_status where id=p_request_id returning * into r;
+ perform public.write_audit_log(r.school_id,auth.uid(),'purchase_request_status_changed','purchase_requests',r.id,null,jsonb_build_object('status',p_status));
+ return r;
+end $$;
+revoke execute on function public.library_checkout(uuid,uuid,uuid,timestamptz) from public;
+revoke execute on function public.library_return(uuid) from public;
+revoke execute on function public.transition_purchase_request(uuid,text) from public;
