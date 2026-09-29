@@ -982,7 +982,7 @@ export async function installAttendanceRecordsMock(page: Page, records: ReturnTy
 /** Mocks the `attendanceService.saveAttendance` upsert (POST). */
 export async function installAttendanceUpsertMock(page: Page, records: ReturnType<typeof buildMockAttendanceRecordRow>[]) {
   await page.route('**/rest/v1/attendance_records*', async (route: Route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
+    if (!['POST', 'PUT'].includes(route.request().method())) return route.fallback();
     await fulfillJson(route, records);
   });
 }
