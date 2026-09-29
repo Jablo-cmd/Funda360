@@ -303,7 +303,7 @@ returns public.governance_meetings language plpgsql security definer set search_
 declare r public.governance_meetings;
 begin
  if not public.operations_role_allowed(p_school_id,array['school_owner','principal','vice_principal','governance_officer','platform_owner','platform_administrator','super_administrator']) then raise exception 'insufficient_privilege'; end if;
- insert into public.governance_meetings(school_id,title,meeting_date,location) values(p_school_id,p_title,p_meeting_date,p_location) returning * into r;
+ insert into public.governance_meetings(school_id,title,meeting_date,venue) values(p_school_id,p_title,p_meeting_date,p_location) returning * into r;
  perform public.write_audit_log(p_school_id,auth.uid(),'governance_meeting_created','governance_meetings',r.id,null,to_jsonb(r));
  return r;
 end $$;
@@ -312,7 +312,7 @@ create or replace function public.create_governance_resolution(p_school_id uuid,
 returns public.governance_resolutions language plpgsql security definer set search_path=public as $$
 declare r public.governance_resolutions;
 begin
- if not public.can_view_governance(p_school_id) then raise exception 'insufficient_privilege'; end if;
+ if not public.operations_role_allowed(p_school_id,array['school_owner','principal','vice_principal','governance_officer','platform_owner','platform_administrator','super_administrator']) then raise exception 'insufficient_privilege'; end if;
  if not exists(select 1 from public.governance_meetings where id=p_meeting_id and school_id=p_school_id) then raise exception 'validation_error'; end if;
  insert into public.governance_resolutions(school_id,meeting_id,resolution_number,title,decision,due_date)
  values(p_school_id,p_meeting_id,'RES-'||to_char(clock_timestamp(),'YYYYMMDDHH24MISSMS'),p_title,p_decision,p_due_date) returning * into r;
