@@ -1130,7 +1130,7 @@ export async function installAssessmentResultsUpsertMock(page: Page, results: Re
  */
 export async function installStorageUploadMock(page: Page, bucket: string, status = 200) {
   await page.route(`**/storage/v1/object/${bucket}/**`, async (route: Route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
+    if (!['POST', 'PUT'].includes(route.request().method())) return route.fallback();
     if (status >= 400) {
       await fulfillJson(route, { statusCode: String(status), error: 'Error', message: 'Upload failed.' }, status);
       return;
