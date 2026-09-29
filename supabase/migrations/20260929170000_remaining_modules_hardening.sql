@@ -472,7 +472,29 @@ begin
  ) loop
    execute 'revoke execute on function '||f.sig||' from public';
  end loop;
-end $$;
+end $;
+
+-- Keep the operational RPC surface callable by authenticated clients while retaining
+-- authorization checks inside every function. Anonymous execution remains revoked.
+do $
+declare f record;
+begin
+ for f in select p.oid::regprocedure::text as sig
+   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='public'
+     and p.proname in (
+       'operations_role_allowed','can_manage_operations','can_view_operations','operations_validate_tenant',
+       'boarding_allocate_learner','boarding_record_attendance','boarding_transition_leave',
+       'library_reserve','library_renew','sports_add_player','sports_record_fixture_result',
+       'asset_transfer','asset_set_lifecycle','create_purchase_request','add_purchase_request_item',
+       'create_purchase_order','record_goods_receipt','transition_supplier_invoice',
+       'create_governance_meeting','create_governance_resolution','create_school_event',
+       'create_event_participant','save_analytics_view','get_advanced_analytics','set_automation_job',
+       'transition_data_subject_request'
+     ) loop
+   execute 'grant execute on function '||f.sig||' to authenticated';
+ end loop;
+end $;
 
 create index if not exists library_reservations_book_status_idx on public.library_reservations(school_id,book_id,status);
 create index if not exists sports_players_team_active_idx on public.sports_players(school_id,team_id,active);
