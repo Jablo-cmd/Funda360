@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
-import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -105,7 +104,7 @@ function Boarding({schoolId,workspace,canManage,busy,run}:{workspace:Workspace;c
  return <div className="grid gap-6 lg:grid-cols-2">
   <Section title="Boarding register"><Rows rows={workspace.boarding??[]} fields={['house','room','bed_code','effective_from']}/></Section>
   {canManage&&<Section title="Allocate boarder"><div className="space-y-3"><Field label="Learner"><Select value={learner} onChange={setLearner}><option value="">Select learner</option>{learners.map(x=><option key={String(x.id)} value={String(x.id)}>{String(x.first_name)} {String(x.last_name)}</option>)}</Select></Field><Field label="Bed"><Select value={bed} onChange={setBed}><option value="">Select bed</option>{beds.map(x=><option key={String(x.id)} value={String(x.id)}>{String(x.house)} / {String(x.room)} / {String(x.bed_code)}</option>)}</Select></Field><input className={input} type="date" value={date} onChange={e=>setDate(e.target.value)}/><Button disabled={busy||!learner||!bed} onClick={()=>void run(()=>supabase.rpc('boarding_allocate_learner',{p_school_id:schoolId,p_learner_id:learner,p_bed_id:bed,p_effective_from:date}), 'Boarding allocation saved.')}>Allocate</Button></div></Section>}
-  {canManage&&<Section title="Boarding master data"><Form title="Add house" fields={['name','code','capacity']} busy={busy} onSubmit={v=>run(()=>supabase.rpc('create_operation_record',{p_entity:'boarding_house',p_school_id:(window as unknown as {__fundaSchoolId?:string}).__fundaSchoolId??'',p_payload:v}),'Boarding house created.')}/></Section>}
+  {canManage&&<Section title="Boarding master data"><Form title="Add house" fields={['name','code','capacity']} busy={busy} onSubmit={v=>run(()=>supabase.rpc('create_operation_record',{p_entity:'boarding_house',p_school_id:schoolId,p_payload:v}),'Boarding house created.')}/></Section>}
  </div>;
 }
 
