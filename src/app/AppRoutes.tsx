@@ -291,6 +291,7 @@ const ParentProfilePage = named(
   () => import('@/features/parentPortal/pages/ParentProfilePage'),
   'ParentProfilePage',
 );
+const ParentTransportPage = named(() => import('@/features/transport/pages/ParentTransportPage'), 'ParentTransportPage');
 
 export function AppRoutes() {
   return (
@@ -458,6 +459,7 @@ export function AppRoutes() {
                 />
                 <Route path="/parent/homework" element={<ParentHomeworkPage />} />
                 <Route path="/parent/homework/:assignmentId" element={<ParentHomeworkPage />} />
+                <Route path="/parent/transport" element={<ParentTransportPage />} />
               </Route>
             </Route>
 
