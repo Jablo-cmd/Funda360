@@ -601,3 +601,18 @@ begin
 end $$;
 grant execute on function public.export_data_subject_package(uuid) to authenticated;
 revoke execute on function public.export_data_subject_package(uuid) from public;
+
+
+create or replace function public.get_operations_workspace(p_school_id uuid)
+returns jsonb language sql security definer stable set search_path=public as $$
+select jsonb_build_object(
+ 'library_copies',(select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (select c.id,c.barcode,c.status,b.title from public.library_copies c join public.library_books b on b.id=c.book_id where c.school_id=p_school_id order by b.title,c.barcode limit 50)x),
+ 'library_loans',(select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (select l.id,l.copy_id,l.learner_id,l.due_at,l.status,b.title from public.library_loans l join public.library_copies c on c.id=l.copy_id join public.library_books b on b.id=c.book_id where l.school_id=p_school_id and l.status in ('borrowed','overdue') order by l.due_at limit 50)x),
+ 'learners',(select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (select id,learner_number,first_name,last_name from public.learners where school_id=p_school_id and status in ('enrolled','active') order by last_name,first_name limit 100)x),
+ 'purchase_requests',(select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (select id,description,estimated_amount,status,created_at from public.purchase_requests where school_id=p_school_id order by created_at desc limit 50)x),
+ 'events',(select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (select id,title,event_type,starts_at,ends_at,venue,status from public.school_events where school_id=p_school_id order by starts_at desc limit 50)x),
+ 'dsar',(select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from (select id,request_type,status,requested_at,subject_profile_id,subject_learner_id from public.data_subject_requests where school_id=p_school_id order by requested_at desc limit 50)x)
+);
+$$;
+grant execute on function public.get_operations_workspace(uuid) to authenticated;
+revoke execute on function public.get_operations_workspace(uuid) from public;
