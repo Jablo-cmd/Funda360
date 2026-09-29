@@ -3158,27 +3158,27 @@ export type Database = {
       };
       library_checkout: {
         Args: { p_school_id: string; p_copy_id: string; p_learner_id: string; p_due_at: string };
-        Returns: LibraryLoanRow;
+        Returns: Json;
       };
       library_return: {
         Args: { p_loan_id: string };
-        Returns: LibraryLoanRow;
+        Returns: Json;
       };
       transition_purchase_request: {
         Args: { p_request_id: string; p_status: string };
-        Returns: PurchaseRequestRow;
+        Returns: Json;
       };
       set_event_participation: {
         Args: { p_participant_id: string; p_status: string };
-        Returns: EventParticipantRow;
+        Returns: Json;
       };
       create_data_subject_request: {
         Args: { p_school_id: string; p_subject_profile_id?: string | null; p_subject_learner_id?: string | null; p_request_type?: string; p_reason?: string | null };
-        Returns: DataSubjectRequestRow;
+        Returns: Json;
       };
       transition_data_subject_request: {
         Args: { p_request_id: string; p_status: string; p_outcome?: string | null };
-        Returns: DataSubjectRequestRow;
+        Returns: Json;
       };
       get_operations_analytics: {
         Args: { p_school_id: string };
