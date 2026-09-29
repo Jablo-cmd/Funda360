@@ -16,7 +16,7 @@ create table public.transport_vehicles (
   fleet_number text,
   make text,
   model text,
-  year integer check (year is null or year between 1950 and extract(year from current_date)::int + 1),
+  year integer check (year is null or year between 1950 and 2100),
   capacity integer not null check (capacity > 0),
   status public.transport_vehicle_status not null default 'active',
   notes text,
@@ -263,11 +263,19 @@ create policy transport_drivers_select on public.transport_drivers for select to
 create policy transport_drivers_insert on public.transport_drivers for insert to authenticated with check (public.can_manage_transport(school_id));
 create policy transport_drivers_update on public.transport_drivers for update to authenticated using (public.can_manage_transport(school_id)) with check (public.can_manage_transport(school_id));
 
-create policy transport_routes_select on public.transport_routes for select to authenticated using (public.can_view_transport(school_id));
+create policy transport_routes_select on public.transport_routes for select to authenticated using (
+  public.can_view_transport(school_id)
+  or exists (select 1 from public.transport_assignments a where a.route_id = transport_routes.id and public.is_learner_guardian(a.learner_id))
+  or exists (select 1 from public.transport_assignments a where a.route_id = transport_routes.id and public.is_learner_self(a.learner_id))
+);
 create policy transport_routes_insert on public.transport_routes for insert to authenticated with check (public.can_manage_transport(school_id));
 create policy transport_routes_update on public.transport_routes for update to authenticated using (public.can_manage_transport(school_id)) with check (public.can_manage_transport(school_id));
 
-create policy transport_stops_select on public.transport_stops for select to authenticated using (public.can_view_transport(school_id));
+create policy transport_stops_select on public.transport_stops for select to authenticated using (
+  public.can_view_transport(school_id)
+  or exists (select 1 from public.transport_assignments a where (a.pickup_stop_id = transport_stops.id or a.dropoff_stop_id = transport_stops.id) and public.is_learner_guardian(a.learner_id))
+  or exists (select 1 from public.transport_assignments a where (a.pickup_stop_id = transport_stops.id or a.dropoff_stop_id = transport_stops.id) and public.is_learner_self(a.learner_id))
+);
 create policy transport_stops_insert on public.transport_stops for insert to authenticated with check (public.can_manage_transport(school_id));
 create policy transport_stops_update on public.transport_stops for update to authenticated using (public.can_manage_transport(school_id)) with check (public.can_manage_transport(school_id));
 
@@ -309,7 +317,7 @@ begin
   if not public.can_manage_transport(v_school) then raise exception 'insufficient_privilege: cannot manage transport'; end if;
   update public.transport_assignments set status=p_status where id=p_assignment_id returning * into v_result;
   perform public.write_audit_log(v_school,'transport_assignment_status_changed', 'transport_assignments', p_assignment_id,
-    jsonb_build_object('status',p_status));
+    null, jsonb_build_object('status',p_status));
   return v_result;
 end; $$;
 grant execute on function public.set_transport_assignment_status(uuid, public.transport_assignment_status) to authenticated;
@@ -355,7 +363,7 @@ begin
   end if;
 
   perform public.write_audit_log(v_school,'transport_attendance_recorded','transport_attendance',v_result.id,
-    jsonb_build_object('learner_id',p_learner_id,'status',p_status));
+    null, jsonb_build_object('learner_id',p_learner_id,'status',p_status));
   return v_result;
 end; $$;
 grant execute on function public.record_transport_attendance(uuid,uuid,public.transport_attendance_status,text) to authenticated;
