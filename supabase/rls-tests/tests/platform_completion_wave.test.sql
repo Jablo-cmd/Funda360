@@ -1,6 +1,6 @@
 -- Platform completion-wave RLS and workflow regression suite.
 do $$
-declare v_school uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; v_house uuid; v_book uuid; v_activity uuid; v_asset_cat uuid; v_supplier uuid; v_event uuid; v_req uuid; v_visible int; v_error text;
+declare v_school uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; v_house uuid; v_book uuid; v_activity uuid; v_asset_cat uuid; v_supplier uuid; v_event uuid; v_req public.data_subject_requests; v_visible int; v_error text;
 begin
  perform set_config('request.jwt.claims',test_util.jwt_claims('22222222-2222-2222-2222-222222222222','school_owner',v_school),true);
  execute 'set local role authenticated';
@@ -17,7 +17,7 @@ begin
  select id into v_supplier from public.procurement_suppliers where school_id=v_school and name='Test Supplier' limit 1;
  perform public.create_operation_record('event',v_school,jsonb_build_object('title','Test Event','event_type','academic','starts_at',(now()+interval '1 day')::text,'ends_at',(now()+interval '2 days')::text));
  select id into v_event from public.school_events where school_id=v_school and title='Test Event' limit 1;
- call test_util.record('operations masters are writable to manager',v_house is not null and v_book is not null and v_activity is not null and v_asset_cat is not null and v_supplier is not null and v_event is not null,'master creation failed');
+ call test_util.record('operations masters are writable to manager',(select count(*) from public.boarding_houses where id=v_house)=1 and (select count(*) from public.library_books where id=v_book)=1 and (select count(*) from public.sports_activities where id=v_activity)=1 and (select count(*) from public.asset_categories where id=v_asset_cat)=1 and (select count(*) from public.procurement_suppliers where id=v_supplier)=1 and (select count(*) from public.school_events where id=v_event)=1,'one or more master records missing');
 
  v_req:=public.create_data_subject_request(v_school,p_request_type=>'access');
  call test_util.record('DSAR request is auditable',v_req is not null,'request not created');
