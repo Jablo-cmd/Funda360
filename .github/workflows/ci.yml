@@ -106,6 +106,7 @@ jobs:
           retention-days: 7
 
   deploy:
+    if: github.event_name == 'push'
     name: Deploy to GitHub Pages
     needs: [quality, edge-functions, rls-tests, e2e]
     runs-on: ubuntu-latest
