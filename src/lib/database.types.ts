@@ -3152,6 +3152,38 @@ export type Database = {
         Args: { p_learner_id: string; p_fee_structure_id: string; p_due_date?: string | null; p_notes?: string | null };
         Returns: any;
       };
+      create_operation_record: {
+        Args: { p_entity: string; p_school_id: string; p_payload: Json };
+        Returns: Json;
+      };
+      library_checkout: {
+        Args: { p_school_id: string; p_copy_id: string; p_learner_id: string; p_due_at: string };
+        Returns: LibraryLoanRow;
+      };
+      library_return: {
+        Args: { p_loan_id: string };
+        Returns: LibraryLoanRow;
+      };
+      transition_purchase_request: {
+        Args: { p_request_id: string; p_status: string };
+        Returns: PurchaseRequestRow;
+      };
+      set_event_participation: {
+        Args: { p_participant_id: string; p_status: string };
+        Returns: EventParticipantRow;
+      };
+      create_data_subject_request: {
+        Args: { p_school_id: string; p_subject_profile_id?: string | null; p_subject_learner_id?: string | null; p_request_type?: string; p_reason?: string | null };
+        Returns: DataSubjectRequestRow;
+      };
+      transition_data_subject_request: {
+        Args: { p_request_id: string; p_status: string; p_outcome?: string | null };
+        Returns: DataSubjectRequestRow;
+      };
+      get_operations_analytics: {
+        Args: { p_school_id: string };
+        Returns: Json;
+      };
       create_transport_schedule: {
         Args: { p_school_id: string; p_route_id: string; p_vehicle_id: string; p_driver_id?: string | null; p_service_date?: string; p_departure_time?: string | null; p_notes?: string | null };
         Returns: TransportScheduleRow;
