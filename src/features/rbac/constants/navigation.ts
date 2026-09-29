@@ -129,6 +129,12 @@ export const NAV_MODEL: NavGroupDef[] = [
     ],
   },
   {
+    label: 'Transport',
+    items: [
+      { label: 'Transport Operations', path: '/transport', icon: CalendarIcon, permission: 'transport.view', end: true },
+    ],
+  },
+  {
     label: 'Finance',
     items: [
       { label: 'Finance Overview', path: '/fees', icon: WalletIcon, permission: 'learner.view_financial', end: true },
