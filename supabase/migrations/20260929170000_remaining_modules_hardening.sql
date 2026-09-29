@@ -471,3 +471,71 @@ create index if not exists sports_players_team_active_idx on public.sports_playe
 create index if not exists asset_movements_asset_date_idx on public.asset_movements(school_id,asset_id,moved_at desc);
 create index if not exists supplier_invoices_school_status_idx on public.supplier_invoices(school_id,status,received_at);
 create index if not exists event_participants_event_idx on public.event_participants(school_id,event_id);
+
+
+-- SECURITY DEFINER analytics/workspace RPCs must enforce tenant authorization
+-- inside the function; RLS does not protect the function body.
+create or replace function public.get_operations_analytics(p_school_id uuid)
+returns jsonb language plpgsql security definer stable set search_path=public as $$
+begin
+  if not public.can_view_operations(p_school_id) then raise exception 'insufficient_privilege'; end if;
+  return jsonb_build_object(
+    'boarding',jsonb_build_object('houses',(select count(*) from public.boarding_houses where school_id=p_school_id and active),'boarders',(select count(*) from public.boarding_allocations where school_id=p_school_id and status='active')),
+    'library',jsonb_build_object('books',(select count(*) from public.library_books where school_id=p_school_id and active),'loans',(select count(*) from public.library_loans where school_id=p_school_id and status in ('borrowed','overdue')),'overdue',(select count(*) from public.library_loans where school_id=p_school_id and due_at<now() and returned_at is null)),
+    'sports',jsonb_build_object('activities',(select count(*) from public.sports_activities where school_id=p_school_id and active),'teams',(select count(*) from public.sports_teams where school_id=p_school_id and active),'players',(select count(*) from public.sports_players where school_id=p_school_id and active)),
+    'assets',jsonb_build_object('assets',(select count(*) from public.assets where school_id=p_school_id and status='active'),'maintenance',(select count(*) from public.asset_maintenance where school_id=p_school_id and status='open'),'warranty_expiring',(select count(*) from public.assets where school_id=p_school_id and warranty_until between current_date and current_date+30)),
+    'procurement',jsonb_build_object('requests',(select count(*) from public.purchase_requests where school_id=p_school_id and status in ('submitted','approved','ordered')),'open_invoices',(select count(*) from public.supplier_invoices where school_id=p_school_id and status in ('received','approved'))),
+    'governance',jsonb_build_object('meetings',(select count(*) from public.governance_meetings where school_id=p_school_id),'open_resolutions',(select count(*) from public.governance_resolutions where school_id=p_school_id and status<>'complete')),
+    'events',jsonb_build_object('upcoming',(select count(*) from public.school_events where school_id=p_school_id and status='scheduled' and starts_at>=now())),
+    'compliance',jsonb_build_object('open_dsar',(select count(*) from public.data_subject_requests where school_id=p_school_id and status not in ('completed','rejected')))
+  );
+end $$;
+
+create or replace function public.get_advanced_analytics(p_school_id uuid)
+returns jsonb language plpgsql security definer stable set search_path=public as $$
+begin
+  if not public.can_view_operations(p_school_id) then raise exception 'insufficient_privilege'; end if;
+  return jsonb_build_object(
+    'attendance',jsonb_build_object(
+      'present',(select count(*) from public.attendance_records where school_id=p_school_id and status='present'),
+      'absent',(select count(*) from public.attendance_records where school_id=p_school_id and status='absent'),
+      'late',(select count(*) from public.attendance_records where school_id=p_school_id and status='late')),
+    'finance',jsonb_build_object(
+      'charges',(select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active),
+      'payments',(select coalesce(sum(amount),0) from public.learner_fee_payments where school_id=p_school_id),
+      'outstanding',greatest(0,(select coalesce(sum(amount),0) from public.learner_fee_charges where school_id=p_school_id and active)-(select coalesce(sum(amount),0) from public.learner_fee_payments where school_id=p_school_id))),
+    'admissions',jsonb_build_object(
+      'submitted',(select count(*) from public.admission_applications where school_id=p_school_id and status='submitted'),
+      'accepted',(select count(*) from public.admission_applications where school_id=p_school_id and status='accepted'),
+      'enrolled',(select count(*) from public.admission_applications where school_id=p_school_id and status='enrolled')),
+    'discipline',jsonb_build_object(
+      'total',(select count(*) from public.behaviour_incidents where school_id=p_school_id and active),
+      'high',(select count(*) from public.behaviour_incidents where school_id=p_school_id and active and severity='high')),
+    'transport',jsonb_build_object(
+      'trips',(select count(*) from public.transport_schedules where school_id=p_school_id),
+      'no_show',(select count(*) from public.transport_attendance where school_id=p_school_id and status='no_show')),
+    'operations',public.get_operations_analytics(p_school_id)
+  );
+end $$;
+
+create or replace function public.get_operations_workspace(p_school_id uuid)
+returns jsonb language plpgsql security definer stable set search_path=public as $$
+begin
+  if not public.can_view_operations(p_school_id) then raise exception 'insufficient_privilege'; end if;
+  return jsonb_build_object(
+    'boarding',coalesce((select jsonb_agg(to_jsonb(x)) from (select a.id,l.first_name||' '||l.last_name learner,b.code bed_code,h.name house,a.effective_from from public.boarding_allocations a join public.learners l on l.id=a.learner_id join public.boarding_beds b on b.id=a.bed_id join public.boarding_rooms rm on rm.id=b.room_id join public.boarding_houses h on h.id=rm.house_id where a.school_id=p_school_id and a.status='active' order by l.last_name limit 50)x),'[]'::jsonb),
+    'library',coalesce((select jsonb_agg(to_jsonb(x)) from (select l.id,b.title,le.first_name||' '||le.last_name learner,l.due_at,l.status from public.library_loans l join public.library_copies c on c.id=l.copy_id join public.library_books b on b.id=c.book_id join public.learners le on le.id=l.learner_id where l.school_id=p_school_id and l.returned_at is null order by l.due_at limit 50)x),'[]'::jsonb),
+    'sports',coalesce((select jsonb_agg(to_jsonb(x)) from (select f.id,t.name team,f.fixture_date,f.opponent,f.venue,f.status,f.score_for,f.score_against from public.sports_fixtures f join public.sports_teams t on t.id=f.team_id where f.school_id=p_school_id order by f.fixture_date desc limit 50)x),'[]'::jsonb),
+    'assets',coalesce((select jsonb_agg(to_jsonb(x)) from (select a.id,a.asset_number,a.description,a.location,a.condition,a.status,a.warranty_until from public.assets a where a.school_id=p_school_id order by a.asset_number limit 100)x),'[]'::jsonb),
+    'procurement',coalesce((select jsonb_agg(to_jsonb(x)) from (select r.id,r.description,r.estimated_amount,r.status,r.created_at from public.purchase_requests r where r.school_id=p_school_id order by r.created_at desc limit 50)x),'[]'::jsonb),
+    'governance',coalesce((select jsonb_agg(to_jsonb(x)) from (select m.id,m.title,m.meeting_date,m.location from public.governance_meetings m where m.school_id=p_school_id order by m.meeting_date desc limit 50)x),'[]'::jsonb),
+    'events',coalesce((select jsonb_agg(to_jsonb(x)) from (select e.id,e.title,e.event_type,e.starts_at,e.ends_at,e.venue,e.status from public.school_events e where e.school_id=p_school_id and e.starts_at>=now() order by e.starts_at limit 50)x),'[]'::jsonb),
+    'interop',coalesce((select jsonb_agg(to_jsonb(x)) from (select i.id,i.entity_type,i.file_name,i.status,i.total_rows,i.valid_rows,i.error_rows,i.created_at from public.interop_imports i where i.school_id=p_school_id order by i.created_at desc limit 50)x),'[]'::jsonb),
+    'dsar',coalesce((select jsonb_agg(to_jsonb(x)) from (select d.id,d.request_type,d.status,d.requested_at,d.subject_profile_id,d.subject_learner_id from public.data_subject_requests d where d.school_id=p_school_id order by d.requested_at desc limit 50)x),'[]'::jsonb),
+    'automation',coalesce((select jsonb_agg(to_jsonb(x)) from (select j.id,j.job_key,j.cron_expression,j.enabled,j.last_run_at,j.last_result from public.automation_jobs j where j.school_id=p_school_id order by j.job_key)x),'[]'::jsonb)
+  );
+end $$;
+
+revoke execute on function public.get_operations_analytics(uuid) from public;
+revoke execute on function public.get_advanced_analytics(uuid) from public;
+revoke execute on function public.get_operations_workspace(uuid) from public;
