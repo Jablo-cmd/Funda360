@@ -22,6 +22,8 @@ import type { Permission } from '@/features/rbac/types/permission.types';
  */
 export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   platform_owner: [
+    'operations.view',
+    'operations.manage',
     'transport.view',
     'transport.manage',
     'school.view',
@@ -61,6 +63,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   super_administrator: [
+    'operations.view',
+    'operations.manage',
     'transport.view',
     'transport.manage',
     'school.view',
@@ -100,6 +104,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   platform_administrator: [
+    'operations.view',
+    'operations.manage',
     'transport.view',
     'transport.manage',
     'school.view',
@@ -140,6 +146,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   ],
   support_engineer: ['school.view', 'profile.view_any'],
   school_owner: [
+    'operations.view',
+    'operations.manage',
     'transport.view',
     'transport.manage',
     'school.view',
@@ -178,6 +186,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   principal: [
+    'operations.view',
+    'operations.manage',
     'transport.view',
     'transport.manage',
     'school.view',
@@ -213,6 +223,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   vice_principal: [
+    'operations.view',
+    'operations.manage',
     'transport.view',
     'school.view',
     'profile.view_any',
@@ -256,9 +268,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.view',
     'reports.export',
   ],
-  librarian: ['school.view'],
-  transport_coordinator: ['school.view', 'transport.view', 'transport.manage'],
-  sports_coordinator: ['school.view'],
+  librarian: ['school.view', 'operations.view', 'operations.manage'],
+  transport_coordinator: ['school.view', 'transport.view', 'transport.manage', 'operations.view', 'operations.manage'],
+  sports_coordinator: ['school.view', 'operations.view', 'operations.manage'],
   medical_officer: [
     'school.view',
     'learner.view',
