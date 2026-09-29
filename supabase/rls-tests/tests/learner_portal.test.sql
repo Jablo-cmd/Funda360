@@ -16,6 +16,10 @@ begin
   perform set_config('request.jwt.claims',
     test_util.jwt_claims('22222222-2222-2222-2222-222222222222', 'school_owner', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), true);
   execute 'set local role authenticated';
+  -- Learner A1 is under 13: since 20260930100000_compliance_framework.sql a
+  -- login needs recorded parental consent first (here, a paper form).
+  perform public.record_parental_consent('11110000-0000-0000-0000-000000000001', 'online_learner_account', 'granted',
+    'Parent A1 (paper form)', 'paper_form_recorded_by_staff');
   select user_id into v_uid from public.provision_learner_login('11110000-0000-0000-0000-000000000001', 'lernA1@schoola.test');
   call test_util.record('staff can provision a learner login', v_uid is not null, 'uid: ' || coalesce(v_uid::text, 'null'));
 

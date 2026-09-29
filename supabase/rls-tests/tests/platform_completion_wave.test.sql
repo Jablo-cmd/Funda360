@@ -20,7 +20,7 @@ begin
  select (count(*) filter(where id=v_house)=1) and (select count(*) from public.library_books where id=v_book)=1 and (select count(*) from public.sports_activities where id=v_activity)=1 and (select count(*) from public.asset_categories where id=v_asset_cat)=1 and (select count(*) from public.procurement_suppliers where id=v_supplier)=1 and (select count(*) from public.school_events where id=v_event)=1 into v_ok from public.boarding_houses where id=v_house;
  call test_util.record('operations masters are writable to manager',coalesce(v_ok,false),'one or more master records missing');
 
- v_req:=public.create_data_subject_request(v_school,p_request_type=>'access');
+ v_req:=public.create_data_subject_request(v_school,p_subject_profile_id=>auth.uid(),p_request_type=>'access');
  call test_util.record('DSAR request is auditable',v_req.id is not null,'request not created');
  execute 'reset role';
 
