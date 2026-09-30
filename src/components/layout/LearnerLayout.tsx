@@ -25,7 +25,7 @@ export function LearnerLayout() {
           <LearnerNav onNavigate={closeMobileNav} />
         </MobileNavDrawer>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
           <ErrorBoundary context="learner-route" resetKey={pathname}>
             <Outlet />
           </ErrorBoundary>

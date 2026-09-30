@@ -189,6 +189,9 @@
     min-height: 100%;
   }
 
+  /* Both, not just body: mobile browsers only honour a body-level rule when
+     html is also clipped, and otherwise let the page pan sideways. */
+  html,
   body {
     overflow-x: hidden;
   }

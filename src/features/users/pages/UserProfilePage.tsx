@@ -48,7 +48,7 @@ export function UserProfilePage() {
   const canManage = canManageUser(actorRole, user.role);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
       <button
         type="button"
         onClick={() => navigate('/users')}
@@ -63,11 +63,11 @@ export function UserProfilePage() {
             {user.firstName[0]}
             {user.lastName[0]}
           </span>
-          <div>
-            <h1 className="text-xl font-bold text-content-primary">
+          <div className="min-w-0">
+            <h1 className="break-words text-xl font-bold text-content-primary">
               {user.firstName} {user.lastName}
             </h1>
-            <p className="text-sm text-content-secondary">{user.email}</p>
+            <p className="break-all text-sm text-content-secondary">{user.email}</p>
           </div>
         </div>
 

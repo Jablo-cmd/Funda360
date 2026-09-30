@@ -48,7 +48,7 @@ export function DashboardLayout() {
           <DashboardSidebar onNavigate={closeMobileNav} />
         </MobileNavDrawer>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
           <MfaRequiredBanner />
           <ErrorBoundary context="staff-route" resetKey={pathname}>
             <Outlet />

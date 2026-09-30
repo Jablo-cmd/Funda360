@@ -61,13 +61,20 @@ async function horizontalOverflow(page: Page) {
   return page.evaluate(() => {
     const vw = window.innerWidth;
     const de = document.documentElement;
+    // A deliberate table scroller excuses what is inside it, but <main> never does: anything wider than <main> makes the whole page pan sideways on a phone.
     const inScroller = (el: Element) => {
-      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      for (
+        let p = el.parentElement;
+        p && p !== document.body && p.tagName !== 'MAIN';
+        p = p.parentElement
+      ) {
         const o = getComputedStyle(p).overflowX;
         if (o === 'auto' || o === 'scroll') return true;
       }
       return false;
     };
+    const main = document.querySelector('main');
+    const mainOverflow = main ? main.scrollWidth - main.clientWidth : 0;
     const offenders = Array.from(document.querySelectorAll('body *'))
       .filter((el) => {
         const r = el.getBoundingClientRect();
@@ -78,7 +85,7 @@ async function horizontalOverflow(page: Page) {
       })
       .map((el) => `${el.tagName.toLowerCase()}[${(el.textContent ?? '').trim().slice(0, 24)}]`)
       .slice(0, 5);
-    return { pageOverflow: de.scrollWidth - de.clientWidth, offenders };
+    return { pageOverflow: Math.max(de.scrollWidth - de.clientWidth, mainOverflow), offenders };
   });
 }
 
@@ -91,6 +98,14 @@ const STAFF_ROUTES = [
   '/reports',
   '/attendance',
   '/transport',
+  // Regressions found on real phones: hand-rolled page containers and header actions.
+  '/users/x',
+  '/my-profile',
+  '/employees/x',
+  '/academic/teaching-assignments',
+  '/homework',
+  '/guardians',
+  '/fees/reconciliation',
 ];
 
 for (const vp of VIEWPORTS) {

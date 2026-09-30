@@ -133,7 +133,7 @@ export function SchoolProfileForm() {
 
   if (!school) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full min-w-0 max-w-3xl px-4 py-8 sm:px-6">
         <h1 className="mb-4 text-2xl font-bold text-content-primary">School Profile</h1>
         <NoActiveSchoolNotice resource="a school's profile" />
       </div>
@@ -144,7 +144,7 @@ export function SchoolProfileForm() {
     <form
       noValidate
       onSubmit={handleSubmit(onValid)}
-      className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6"
+      className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-8 px-4 py-8 sm:px-6"
     >
       <div>
         <h1 className="text-2xl font-bold text-content-primary">School Profile</h1>

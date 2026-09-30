@@ -21,6 +21,7 @@ Prettier is **not** enforced: about 430 legacy files are unformatted. Format onl
 ## UI rules (keep them)
 
 - Mobile first: no page-level horizontal scroll at 320px; wide tables go inside `TableScrollContainer`.
+- The scrolling page area is `<main>` (not the document), so audit `main.scrollWidth`, never only `documentElement`. Page roots need `w-full min-w-0` (use `PageContainer`); a hand-rolled `mx-auto max-w-*` container without them grows to its widest child (a long email) and pans the whole page sideways. `<main>` also clips `overflow-x` as a safety net, so the e2e guard checks content width, not scrolling. `PageHeader` stacks until `lg`.
 - Icon controls are 44px (`h-11 w-11`) below `lg`; use the shared `Modal` and `MobileNavDrawer`, never hand-rolled overlays.
 - Every form control needs a visible label or an `aria-label`; never placeholder-only.
 - Red: use `text-danger-600` for text and `bg-danger-700` for solid fills under white text (never `bg-danger-600 text-white`: it fails contrast in dark mode).

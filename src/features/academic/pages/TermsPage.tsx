@@ -78,7 +78,7 @@ export function TermsPage() {
 
   if (academicYears.length === 0) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-8 sm:px-6">
         <h1 className="text-2xl font-bold text-content-primary">Terms</h1>
         <p className="mt-2 text-sm text-content-secondary">
           Add an academic year first — terms belong to a specific academic year.
