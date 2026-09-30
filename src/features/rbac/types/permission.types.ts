@@ -43,4 +43,6 @@ export type Permission =
   | 'transport.view'
   | 'transport.manage'
   | 'operations.view'
-  | 'operations.manage';
+  | 'operations.manage'
+  | 'compliance.view'
+  | 'compliance.manage';

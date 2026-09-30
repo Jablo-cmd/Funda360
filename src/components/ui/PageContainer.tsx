@@ -22,7 +22,10 @@ const WIDTH_CLASSES: Record<NonNullable<PageContainerProps['width']>, string> = 
  */
 export function PageContainer({ children, width = 'lg', className }: PageContainerProps) {
   return (
-    <div className={cn('mx-auto flex flex-col gap-6 px-4 py-8 sm:px-6', WIDTH_CLASSES[width], className)}>
+    // w-full + min-w-0: as a flex item of the layout's <main>, the container
+    // must not grow to its widest child (a table, a tab strip) — otherwise the
+    // whole page scrolls sideways on phones instead of just that child.
+    <div className={cn('mx-auto flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6', WIDTH_CLASSES[width], className)}>
       {children}
     </div>
   );

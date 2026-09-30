@@ -31,6 +31,14 @@
   --brand-800: 12 35 61;
   --brand-900: 11 31 58;
 
+  /* Orange accent (compliance layer, highlights). Use accent-500/600 for
+     fills, icons and borders; accent-700 for text on white (5.18:1, AA). */
+  --accent-50: 255 247 237;
+  --accent-100: 255 237 213;
+  --accent-500: 249 115 22;
+  --accent-600: 234 88 12;
+  --accent-700: 194 65 12;
+
   --surface: 255 255 255;
   --surface-raised: 255 255 255;
   --surface-sunken: 238 241 244;
@@ -102,6 +110,12 @@
   --brand-700: 43 87 130;
   --brand-800: 32 66 101;
   --brand-900: 22 46 74;
+
+  --accent-50: 67 20 7;
+  --accent-100: 124 45 18;
+  --accent-500: 251 146 60;
+  --accent-600: 249 115 22;
+  --accent-700: 253 186 116;
 
   --surface: 10 16 28;
   --surface-raised: 17 27 45;

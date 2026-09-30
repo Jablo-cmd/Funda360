@@ -148,7 +148,7 @@ test('principal can upload a school logo', async ({ page }) => {
   });
 
   await expect(page.getByText('Uploading…')).toHaveCount(0);
-  expect(patchedLogoUrl).toBe(buildMockSchoolRow().id + '/logo');
+  await expect.poll(() => patchedLogoUrl).toBe(buildMockSchoolRow().id + '/logo');
 });
 
 test('an unsupported logo file type is rejected before any upload request is made', async ({ page }) => {

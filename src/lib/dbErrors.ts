@@ -49,12 +49,21 @@ const SQLSTATE_MESSAGES: Record<string, string> = {
 /** Matches `conflict: <detail>` — unlike RAISED_MESSAGE_PATTERNS, the detail after the prefix is shown as-is: these messages (timetable_entries_check_conflicts()) are hand-authored, user-facing sentences naming no table/column/constraint, not raw schema text, so passing them through is exactly what the feature promises ("a clear rejection"), not a leak. */
 const CONFLICT_MESSAGE_PATTERN = /^conflict:\s*(.+)$/i;
 
+/** Compliance-layer rejections (20260930100000_compliance_framework.sql). Like `conflict:`, the detail is a hand-authored sentence written for the end user, so it is shown as-is — a parent must be told *why* consent or a policy blocked them. */
+const COMPLIANCE_MESSAGE_PATTERN = /^(?:consent_required|content_blocked|unsafe_upload|mfa_required):\s*(.+)$/i;
+
 export function getDbErrorMessage(error: unknown, fallback: string): string {
   if (isPostgrestLikeError(error)) {
     console.error(error);
 
     const conflictMatch = CONFLICT_MESSAGE_PATTERN.exec(error.message);
     if (conflictMatch?.[1]) return conflictMatch[1];
+
+    const complianceMatch = COMPLIANCE_MESSAGE_PATTERN.exec(error.message);
+    if (complianceMatch?.[1]) {
+      const detail = complianceMatch[1];
+      return detail.charAt(0).toUpperCase() + detail.slice(1);
+    }
 
     for (const [pattern, message] of RAISED_MESSAGE_PATTERNS) {
       if (pattern.test(error.message)) return message;

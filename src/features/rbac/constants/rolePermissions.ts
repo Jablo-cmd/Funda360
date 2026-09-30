@@ -22,6 +22,8 @@ import type { Permission } from '@/features/rbac/types/permission.types';
  */
 export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   platform_owner: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -63,6 +65,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   super_administrator: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -104,6 +108,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   platform_administrator: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -146,6 +152,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   ],
   support_engineer: ['school.view', 'profile.view_any'],
   school_owner: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -186,6 +194,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   principal: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',

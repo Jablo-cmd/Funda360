@@ -687,7 +687,8 @@ end $$;
 -- — POPIA s.14(1)(a)/GDPR Art. 17(3)(b) legal-obligation exemption. Free
 -- text, identifiers, contacts, medical data and documents are removed, and
 -- the PII copies inside audit_log are redacted. Storage object paths are
--- returned so the caller can delete the files through the Storage API.
+-- returned grouped by bucket so the caller can delete the files through the
+-- Storage API (SQL cannot remove stored objects).
 
 create or replace function public.execute_learner_erasure(p_request_id uuid, p_confirm_learner_number text)
 returns jsonb language plpgsql security definer set search_path = public, auth
@@ -696,6 +697,7 @@ declare
   v_req public.data_subject_requests;
   v_learner public.learners;
   v_paths text[] := array[]::text[];
+  v_submission_paths text[] := array[]::text[];
   v_counts jsonb := '{}'::jsonb;
   n integer;
 begin
@@ -723,7 +725,7 @@ begin
   select coalesce(array_agg(file_url), array[]::text[]) into v_paths from public.learner_documents where learner_id = v_learner.id;
   update public.learner_documents set active = false, notes = null, file_name = '[erased]' where learner_id = v_learner.id;
   get diagnostics n = row_count; v_counts := v_counts || jsonb_build_object('documents_deactivated', n);
-  v_paths := v_paths || coalesce((select array_agg(storage_path) from public.assignment_submission_files where learner_id = v_learner.id), array[]::text[]);
+  v_submission_paths := coalesce((select array_agg(storage_path) from public.assignment_submission_files where learner_id = v_learner.id), array[]::text[]);
   delete from public.assignment_submission_files where learner_id = v_learner.id;
 
   -- Special-category and contact data: deleted outright.
@@ -781,9 +783,13 @@ begin
 
   perform public.write_access_log(v_learner.id, 'erasure', 'Right-to-erasure executed for request ' || v_req.id);
   perform public.write_audit_log(v_req.school_id, auth.uid(), 'learner_erased', 'learners', v_learner.id, null,
-    v_counts || jsonb_build_object('request_id', v_req.id, 'files_to_remove', cardinality(v_paths)));
+    v_counts || jsonb_build_object('request_id', v_req.id, 'files_to_remove', cardinality(v_paths) + cardinality(v_submission_paths)));
 
-  return jsonb_build_object('learner_id', v_learner.id, 'summary', v_counts, 'storage_paths', to_jsonb(v_paths));
+  return jsonb_build_object(
+    'learner_id', v_learner.id,
+    'summary', v_counts,
+    'storage', jsonb_build_object('learner-documents', to_jsonb(v_paths), 'assignment-files', to_jsonb(v_submission_paths))
+  );
 end $$;
 
 -- ============================================================================

@@ -2,6 +2,21 @@ import { describe, it, expect } from 'vitest';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 
 describe('getDbErrorMessage', () => {
+  it('passes compliance rejections through as readable sentences', () => {
+    const consent = {
+      message: 'consent_required: a guardian must grant online-account consent before this learner can submit content',
+      code: 'P0001',
+    };
+    expect(getDbErrorMessage(consent, 'fallback')).toBe(
+      'A guardian must grant online-account consent before this learner can submit content',
+    );
+    const blocked = {
+      message: "content_blocked: this content was blocked by the school's safe-content policy (adult)",
+      code: '23514',
+    };
+    expect(getDbErrorMessage(blocked, 'fallback')).toBe("This content was blocked by the school's safe-content policy (adult)");
+  });
+
   it('maps a custom insufficient_privilege RAISE EXCEPTION to safe copy', () => {
     const error = { message: 'insufficient_privilege: cannot manage learners for this school', code: 'P0001' };
     expect(getDbErrorMessage(error, 'fallback')).toBe("You don't have permission to do this.");

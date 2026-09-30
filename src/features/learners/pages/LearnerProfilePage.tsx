@@ -6,6 +6,7 @@ import { FullScreenNotice } from '@/components/ui/FullScreenNotice';
 import { Tabs } from '@/components/ui/Tabs';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
+import { useRecordAccessLog } from '@/features/compliance/hooks/useRecordAccessLog';
 import { useLearner } from '@/features/learners/hooks/useLearner';
 import { LearnerFormModal } from '@/features/learners/components/LearnerFormModal';
 import { LearnerLoginModal } from '@/features/learners/components/LearnerLoginModal';
@@ -268,6 +269,7 @@ export function LearnerProfilePage() {
   ];
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  useRecordAccessLog(id, `Staff learner profile — ${activeTab} tab`);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);

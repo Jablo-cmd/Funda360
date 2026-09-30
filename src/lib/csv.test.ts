@@ -31,6 +31,21 @@ describe('toCsv', () => {
     expect(csv).toBe('Note\r\n"line one\nline two"');
   });
 
+  it('neutralises spreadsheet formulas so exports cannot execute them', () => {
+    const csv = toCsv(
+      [{ v: '=HYPERLINK("http://x")' }, { v: '+1+1' }, { v: '@SUM(A1)' }, { v: '-2+3' }, { v: '-150.00' }, { v: 'Naledi' }],
+      [{ key: 'v', header: 'V' }],
+    );
+    expect(csv.split('\r\n').slice(1)).toEqual([
+      `"'=HYPERLINK(""http://x"")"`,
+      "'+1+1",
+      "'@SUM(A1)",
+      "'-2+3",
+      '-150.00',
+      'Naledi',
+    ]);
+  });
+
   it('renders null and undefined as an empty cell', () => {
     const csv = toCsv([{ value: null }, { value: undefined }], [{ key: 'value', header: 'Value' }]);
     expect(csv).toBe('Value\r\n\r\n');

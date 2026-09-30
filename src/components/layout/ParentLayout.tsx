@@ -4,6 +4,7 @@ import { ParentHeader } from '@/components/layout/ParentHeader';
 import { ParentNav } from '@/components/layout/ParentNav';
 import { AppFooter } from '@/components/layout/AppFooter';
 import { CloseIcon } from '@/components/ui/icons';
+import { ConsentOnboardingGate } from '@/features/compliance/components/ConsentOnboardingGate';
 
 /** Mirrors DashboardLayout's shell shape (header + collapsible mobile nav + main + footer) with a purpose-built, simpler nav — see ParentNav. */
 export function ParentLayout() {
@@ -43,7 +44,9 @@ export function ParentLayout() {
         )}
 
         <main className="min-w-0 flex-1 overflow-y-auto">
-          <Outlet />
+          <ConsentOnboardingGate>
+            <Outlet />
+          </ConsentOnboardingGate>
         </main>
       </div>
 

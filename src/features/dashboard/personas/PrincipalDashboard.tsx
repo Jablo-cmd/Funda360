@@ -32,6 +32,7 @@ import {
   type QuickAction,
 } from '@/features/dashboard/components/DashboardPrimitives';
 import { formatStat, todayIsoDate } from '@/features/dashboard/utils';
+import { ComplianceStatusCard } from '@/features/compliance/components/ComplianceStatusCard';
 
 /** Whole-school oversight dashboard — principal, vice principal, school owner. */
 export function PrincipalDashboard() {
@@ -189,6 +190,8 @@ export function PrincipalDashboard() {
           )}
         </div>
       </div>
+
+      <ComplianceStatusCard />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <InfoPanel title="Attendance Overview">
