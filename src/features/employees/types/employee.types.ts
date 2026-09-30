@@ -11,25 +11,49 @@ export type { EmploymentType, EmploymentStatus };
  */
 export const PROVISIONABLE_ROLES = [
   'hr_manager',
+  'finance_manager',
+  'vice_principal',
   'teacher',
+  'class_teacher',
+  'subject_teacher',
   'department_head',
   'receptionist',
   'accountant',
   'librarian',
   'admissions_officer',
   'medical_officer',
+  'transport_coordinator',
+  'sports_coordinator',
+  'auditor',
+  'asset_manager',
+  'boarding_manager',
+  'events_coordinator',
+  'governance_officer',
+  'procurement_officer',
 ] as const;
 export type ProvisionableRole = (typeof PROVISIONABLE_ROLES)[number];
 
 export const PROVISIONABLE_ROLE_LABELS: Record<ProvisionableRole, string> = {
   hr_manager: 'HR Manager',
+  finance_manager: 'Finance Manager',
+  vice_principal: 'Vice Principal',
   teacher: 'Teacher',
+  class_teacher: 'Class Teacher',
+  subject_teacher: 'Subject Teacher',
   department_head: 'Department Head',
   receptionist: 'Receptionist',
   accountant: 'Accountant',
   librarian: 'Librarian',
   admissions_officer: 'Admissions Officer',
   medical_officer: 'Medical Officer',
+  transport_coordinator: 'Transport Coordinator',
+  sports_coordinator: 'Sports Coordinator',
+  auditor: 'Auditor',
+  asset_manager: 'Asset Manager',
+  boarding_manager: 'Boarding Manager',
+  events_coordinator: 'Events Coordinator',
+  governance_officer: 'Governance Officer',
+  procurement_officer: 'Procurement Officer',
 };
 
 export interface ProvisionLoginResult {

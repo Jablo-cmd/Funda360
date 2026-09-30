@@ -28,6 +28,12 @@ export const USER_ROLES = [
   'learner',
   'guest',
   'auditor',
+  // Operations-module staff roles (20260930120000_roles_and_references.sql).
+  'asset_manager',
+  'boarding_manager',
+  'events_coordinator',
+  'governance_officer',
+  'procurement_officer',
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];

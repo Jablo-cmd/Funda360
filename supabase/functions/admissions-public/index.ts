@@ -223,8 +223,9 @@ Deno.serve(async (req) => {
         resume_token?: string | null;
         application?: { learner_first_name?: string | null; learner_date_of_birth?: string | null };
       };
-      // Email + reference alone are guessable (references are sequential), so
-      // the learner's date of birth is required too, and a mismatch looks
+      // References issued before 20260930121000 are sequential and guessable
+      // (newer ones carry a random suffix), so the learner's date of birth is
+      // required too, and a mismatch looks
       // exactly like "not found". Only the first name is returned, to confirm
       // the right application — never the full record.
       if (!result.found || normaliseDate(result.application?.learner_date_of_birth) !== dateOfBirth) {

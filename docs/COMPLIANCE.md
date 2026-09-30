@@ -58,7 +58,7 @@ Compliance icons: `src/components/ui/complianceIcons.tsx` (FERPA Shield, COPPA C
 - **Access logging covers application paths.** The app logs every learner-profile view (per tab), every export and every compliance action. PostgreSQL cannot log `SELECT`s made directly against the API, so a staff member who queries the REST API by hand is constrained by RLS but not access-logged. To close this, enable `pgaudit` object auditing on the hosted project.
 - **Content filtering is rule-based** (case-insensitive regular expressions). It does not classify images. Upload safety is file-type and size based; malware and image scanning would need an external scanning service.
 - **CIPA** legally binds US schools and libraries receiving E-rate funding. Funda360 implements its safe-content controls for every school.
-- **MFA** is enforced by the database for erasure only. The login-level MFA requirement for privileged roles is still UI-driven (audit finding P1-2).
+- **MFA** is enforced by the database: once a user has a verified factor, an `aal1` session resolves no tenant (`current_tenant_id()`, `is_platform_admin()` and the membership helpers return nothing) until it steps up to `aal2` (20260930110000). Users who have never enrolled a factor are not forced to enrol by the database; erasure always requires `aal2`.
 - **Erasure deletes stored files through the Storage API** after the database transaction. The UI reports any file that could not be removed.
 
 ## Deployment note

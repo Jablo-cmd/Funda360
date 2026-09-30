@@ -1,67 +1,3 @@
-# Proposal: RLS performance (P1-4) + server-side MFA (P1-2) — IMPLEMENTED
-
-Status: **implemented** in `supabase/migrations/20260930110000_rls_performance_and_mfa.sql`
-(written with explicit approval; not yet applied to production). Compared with
-the draft below, the migration also:
-
-- is idempotent (a second `rls_optimize_policies()` run rewrites 0 policies);
-- makes the membership helpers (`is_learner_guardian`, `is_learner_self`,
-  `is_teacher_of_enrolled_learner`, `is_conversation_participant` and the
-  `my_*_ids()` arrays) return nothing without an active, MFA-satisfied tenant;
-- makes `admin_create_user` refuse a caller with no active school instead of
-  falling through to the JWT tenant.
-
-Result on the benchmark database: 239 policies rewritten, identical row
-fingerprints for all 1,984 identity x table pairs, and `count(*)` on 100k
-attendance rows went from 10.8-29.6 s to 15-38 ms per caller. Regression
-tests: `supabase/rls-tests/tests/rls_performance_and_mfa.test.sql`.
-
-## Evidence (disposable Postgres 16 with every migration and the RLS fixtures, 100k attendance rows)
-
-| Caller | `select count(*) from attendance_records` |
-|---|---|
-| postgres (RLS off) | 16 ms |
-| principal | 10.2 s |
-| guardian | 22.0 s |
-| teacher | 10.7 s |
-| other school's owner (0 visible rows) | 22.8 s |
-
-Root cause: policies call helpers per row. Postgres cannot inline them because
-they are SECURITY DEFINER, have a `SET search_path` clause, or contain a
-sub-select in the body. So each row re-parses the JWT and re-reads `profiles`.
-
-## Design
-
-1. **MFA choke point:** `current_tenant_id()` and `is_platform_admin()`
-   return no access when the caller has a verified factor in
-   `auth.mfa_factors` but the JWT `aal` is not `aal2`. Users without MFA are
-   unaffected, and the UI already routes enrolled users through the challenge.
-   The RLS harness stub needs an `auth.mfa_factors` table.
-2. **Policy rewrite (not helper rewrite).** For single-school helpers that
-   satisfy `h(x) ⇒ is_platform_admin() ∨ x = current_tenant_id()` (verified
-   for all 31 listed in the draft):
-   `h(col) ⇒ ((select is_platform_admin()) and h(col)) or (col = (select current_tenant_id()) and (select h((select current_tenant_id()))))`.
-   Row-membership helpers become `col = any((select my_guardian_learner_ids())::uuid[])`
-   and the equivalent for self, taught learners and conversations.
-3. **Verification plan:** capture a visibility fingerprint (row count plus an
-   md5 of all visible rows, per identity per table, 16 identities × 124
-   tables) before and after; require them to be identical. Then run the
-   RLS suite and re-run the benchmark (target: under 1 s).
-
-## Known gap in the draft below
-
-`rls_optimize_expression()` is not yet idempotent. It relies on an
-`rls_optimized` marker it never writes, so re-running it would re-wrap
-already-optimized calls. The intended fix is to drop the marker and add
-negative lookbehinds so the patterns skip calls that are already optimized:
-`(?<!SELECT )` for the bare session calls, and
-`(?<!is_platform_admin\) AND )` for the admin-guarded helper copy. Also add
-an RLS-suite lint that fails on any policy calling a session helper outside
-an InitPlan.
-
-## Draft SQL
-
-```sql
 -- ============================================================================
 -- RLS performance (audit P1-4) + server-side MFA enforcement (audit P1-2)
 -- ============================================================================
@@ -147,20 +83,137 @@ revoke execute on function public.session_mfa_satisfied() from public, anon;
 grant execute on function public.session_mfa_satisfied() to authenticated;
 
 -- ---------------------------------------------------------------------------
--- B1. Per-query membership sets
+-- A2. Membership checks honour account status and MFA too.
+-- Guardian / learner / teacher / conversation access used to bypass
+-- current_tenant_id(), so a deactivated guardian (or an MFA-pending session)
+-- could still read their child's records. Every membership helper now also
+-- requires an active, MFA-satisfied session in a school.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.is_learner_guardian(p_learner_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select public.current_tenant_id() is not null and exists (
+    select 1 from public.learner_guardians
+    where learner_id = p_learner_id and guardian_profile_id = auth.uid() and active
+  )
+$$;
+
+create or replace function public.is_learner_self(p_learner_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select public.current_tenant_id() is not null
+     and exists (select 1 from public.learners where id = p_learner_id and profile_id = auth.uid())
+$$;
+
+create or replace function public.is_teacher_of_enrolled_learner(p_learner_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select public.current_tenant_id() is not null and exists (
+    select 1
+    from public.learner_enrollments le
+    join public.class_teacher_assignments cta on cta.class_id = le.class_id
+    where le.learner_id = p_learner_id
+      and le.enrollment_status = 'enrolled'
+      and cta.teacher_profile_id = auth.uid()
+      and cta.active
+  )
+$$;
+
+create or replace function public.is_conversation_participant(p_conversation_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select public.current_tenant_id() is not null and exists (
+    select 1 from public.conversation_participants
+    where conversation_id = p_conversation_id and profile_id = auth.uid()
+  )
+$$;
+
+-- Account provisioning (audit finding): a caller with no active school — a
+-- deactivated principal whose JWT has not expired, or an MFA-pending session
+-- — could still create tenantless accounts, because only the role was
+-- checked. Only platform admins may create users outside an active school.
+-- Emails are also compared case-insensitively (GoTrue stores them lower-case).
+create or replace function public.admin_create_user(p_email text, p_first_name text, p_last_name text, p_phone text, p_role user_role, p_tenant_id uuid default null::uuid)
+returns table(user_id uuid, temporary_password text)
+language plpgsql
+security definer
+set search_path to 'public', 'auth', 'extensions'
+as $function$
+declare
+  v_effective_tenant uuid;
+  v_new_user_id uuid;
+  v_temp_password text;
+begin
+  perform public.check_rate_limit('account_provisioning', 20, interval '1 hour');
+
+  if public.is_platform_admin() then
+    v_effective_tenant := coalesce(p_tenant_id, public.current_tenant_id());
+  else
+    v_effective_tenant := public.current_tenant_id();
+  end if;
+
+  if not public.is_platform_admin()
+     and (v_effective_tenant is null or not public.can_manage_profiles(v_effective_tenant)) then
+    raise exception 'insufficient_privilege: no active school to create users in';
+  end if;
+
+  if not public.can_assign_role(p_role, null) then
+    raise exception 'insufficient_privilege: cannot create a user with role %', p_role;
+  end if;
+
+  if exists (select 1 from auth.users u where lower(u.email) = lower(trim(p_email))) then
+    raise exception 'email_taken: % is already registered', p_email;
+  end if;
+
+  v_new_user_id := gen_random_uuid();
+  v_temp_password := encode(gen_random_bytes(18), 'base64');
+
+  insert into auth.users (
+    instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, recovery_token, email_change_token_new, email_change
+  ) values (
+    '00000000-0000-0000-0000-000000000000', v_new_user_id, 'authenticated', 'authenticated', p_email,
+    crypt(v_temp_password, gen_salt('bf')), now(),
+    jsonb_build_object(
+      'provider', 'email', 'providers', jsonb_build_array('email'),
+      'role', p_role, 'tenant_id', v_effective_tenant
+    ),
+    jsonb_build_object('first_name', p_first_name, 'last_name', p_last_name),
+    now(), now(), '', '', '', ''
+  );
+
+  insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+  values (
+    gen_random_uuid(), v_new_user_id,
+    jsonb_build_object('sub', v_new_user_id::text, 'email', p_email),
+    'email', v_new_user_id::text, now(), now(), now()
+  );
+
+  insert into public.profiles (id, tenant_id, first_name, last_name, email, phone, role, status)
+  values (v_new_user_id, v_effective_tenant, p_first_name, p_last_name, p_email, p_phone, p_role, 'active');
+
+  return query select v_new_user_id, v_temp_password;
+end;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- B1. Per-query membership sets (same active-session requirement as A2)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.my_guardian_learner_ids()
 returns uuid[] language sql stable security definer set search_path = public
 as $$
   select coalesce(array_agg(learner_id), '{}') from public.learner_guardians
-  where guardian_profile_id = auth.uid() and active
+  where guardian_profile_id = auth.uid() and active and public.current_tenant_id() is not null
 $$;
 
 create or replace function public.my_self_learner_ids()
 returns uuid[] language sql stable security definer set search_path = public
 as $$
-  select coalesce(array_agg(id), '{}') from public.learners where profile_id = auth.uid()
+  select coalesce(array_agg(id), '{}') from public.learners
+  where profile_id = auth.uid() and public.current_tenant_id() is not null
 $$;
 
 create or replace function public.my_taught_learner_ids()
@@ -170,12 +223,14 @@ as $$
   from public.learner_enrollments le
   join public.class_teacher_assignments cta on cta.class_id = le.class_id
   where le.enrollment_status = 'enrolled' and cta.teacher_profile_id = auth.uid() and cta.active
+    and public.current_tenant_id() is not null
 $$;
 
 create or replace function public.my_conversation_ids()
 returns uuid[] language sql stable security definer set search_path = public
 as $$
-  select coalesce(array_agg(conversation_id), '{}') from public.conversation_participants where profile_id = auth.uid()
+  select coalesce(array_agg(conversation_id), '{}') from public.conversation_participants
+  where profile_id = auth.uid() and public.current_tenant_id() is not null
 $$;
 
 do $$
@@ -217,30 +272,29 @@ declare
   col constant text := '([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)?)';
 begin
   if e is null then return null; end if;
-  -- Idempotence: an expression that already carries the optimized markers is left alone.
-  if e ~ 'rls_optimized' then return e; end if;
+  -- Idempotent by construction: every pattern skips a call that is already in
+  -- optimized form. pg_get_expr prints a wrapped call as "( SELECT f() AS f)"
+  -- and the admin-guarded helper copy as "... AS is_platform_admin) AND h(col)".
 
-  -- 3. Bare session calls (done first so the text we insert below is not re-wrapped).
-  e := regexp_replace(e, '(?<![a-z_.])auth\.uid\(\)', '(select auth.uid())', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])uid\(\)', '(select auth.uid())', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])auth\.jwt\(\)', '(select auth.jwt())', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])jwt\(\)', '(select auth.jwt())', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])(?:public\.)?current_tenant_id\(\)', '(select public.current_tenant_id())', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])(?:public\.)?is_platform_admin\(\)', '(select public.is_platform_admin())', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])(?:public\.)?is_family_role\(\)', '(select public.is_family_role())', 'g');
+  -- 3. Bare session calls (first, so text inserted below is not re-wrapped).
+  e := regexp_replace(e, '(?<![a-z_.])(?<!SELECT )(auth\.)?uid\(\)', '(select auth.uid())', 'g');
+  e := regexp_replace(e, '(?<![a-z_.])(?<!SELECT )(auth\.)?jwt\(\)', '(select auth.jwt())', 'g');
+  e := regexp_replace(e, '(?<![a-z_.])(?<!SELECT )(public\.)?current_tenant_id\(\)', '(select public.current_tenant_id())', 'g');
+  e := regexp_replace(e, '(?<![a-z_.])(?<!SELECT )(public\.)?is_platform_admin\(\)', '(select public.is_platform_admin())', 'g');
+  e := regexp_replace(e, '(?<![a-z_.])(?<!SELECT )(public\.)?is_family_role\(\)', '(select public.is_family_role())', 'g');
 
   -- 2. Row-membership helpers.
-  e := regexp_replace(e, '(?<![a-z_.])(?:public\.)?is_learner_guardian\(' || col || '\)', '(\1 = any ((select public.my_guardian_learner_ids())::uuid[]))', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])(?:public\.)?is_learner_self\(' || col || '\)', '(\1 = any ((select public.my_self_learner_ids())::uuid[]))', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])(?:public\.)?is_teacher_of_enrolled_learner\(' || col || '\)', '(\1 = any ((select public.my_taught_learner_ids())::uuid[]))', 'g');
-  e := regexp_replace(e, '(?<![a-z_.])(?:public\.)?is_conversation_participant\(' || col || '\)', '(\1 = any ((select public.my_conversation_ids())::uuid[]))', 'g');
+  e := regexp_replace(e, '(?<![a-z_.])(public\.)?is_learner_guardian\(' || col || '\)', '(\2 = any ((select public.my_guardian_learner_ids())::uuid[]))', 'g');
+  e := regexp_replace(e, '(?<![a-z_.])(public\.)?is_learner_self\(' || col || '\)', '(\2 = any ((select public.my_self_learner_ids())::uuid[]))', 'g');
+  e := regexp_replace(e, '(?<![a-z_.])(public\.)?is_teacher_of_enrolled_learner\(' || col || '\)', '(\2 = any ((select public.my_taught_learner_ids())::uuid[]))', 'g');
+  e := regexp_replace(e, '(?<![a-z_.])(public\.)?is_conversation_participant\(' || col || '\)', '(\2 = any ((select public.my_conversation_ids())::uuid[]))', 'g');
 
-  -- 1. Single-school helpers.
+  -- 1. Single-school helpers (skipping the admin-guarded copy this function emits).
   foreach h in array public.rls_single_school_helpers() loop
     e := regexp_replace(
       e,
-      '(?<![a-z_.])(?:public\.)?' || h || '\(' || col || '\)',
-      '(((select public.is_platform_admin()) and public.' || h || '(\1)) or (\1 = (select public.current_tenant_id()) and (select public.' || h || '((select public.current_tenant_id())))))',
+      '(?<![a-z_.])(?<!is_platform_admin\) AND )(?<!is_platform_admin\(\)\) and )(public\.)?' || h || '\(' || col || '\)',
+      '(((select public.is_platform_admin()) and public.' || h || '(\2)) or (\2 = (select public.current_tenant_id()) and (select public.' || h || '((select public.current_tenant_id())))))',
       'g'
     );
   end loop;
@@ -285,4 +339,3 @@ end $$;
 revoke execute on function public.rls_optimize_policies() from public, anon, authenticated;
 
 select public.rls_optimize_policies();
-```
