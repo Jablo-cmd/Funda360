@@ -62,13 +62,13 @@ jobs:
           deno-version: v2.x
       - name: Type-check Edge Functions
         working-directory: supabase/functions
-        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts _shared/providers/providers.test.ts
+        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts _shared/providers/providers.test.ts _shared/providers/binding.test.ts
       - name: Lint Edge Functions
         working-directory: supabase/functions
         run: deno lint
       - name: Payment provider adapter tests
         working-directory: supabase/functions
-        run: deno test --allow-env --allow-net _shared/providers/providers.test.ts
+        run: deno test --allow-env --allow-net _shared/providers/
 
   rls-tests:
     name: RLS / trigger / SECURITY DEFINER regression suite
