@@ -133,6 +133,16 @@ export function TrustPage() {
     };
   }, []);
 
+  // This public page is designed white-on-white. A visitor who saved the dark theme would otherwise get light dark-mode text on a hard-coded white background, so render it in light mode while it is open and restore their theme on the way out (the stored preference is not touched).
+  useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains('dark');
+    root.classList.remove('dark');
+    return () => {
+      if (wasDark) root.classList.add('dark');
+    };
+  }, []);
+
   return (
     <div className="min-h-dvh bg-white text-slate-900">
       <header className="border-b border-slate-200">

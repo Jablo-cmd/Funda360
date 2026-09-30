@@ -23,6 +23,8 @@ Prettier is **not** enforced: about 430 legacy files are unformatted. Format onl
 - Mobile first: no page-level horizontal scroll at 320px; wide tables go inside `TableScrollContainer`.
 - Icon controls are 44px (`h-11 w-11`) below `lg`; use the shared `Modal` and `MobileNavDrawer`, never hand-rolled overlays.
 - Every form control needs a visible label or an `aria-label`; never placeholder-only.
+- Red: use `text-danger-600` for text and `bg-danger-700` for solid fills under white text (never `bg-danger-600 text-white`: it fails contrast in dark mode).
+- Charts are sized from their container (see `AttendanceTrendChart`), never a fixed-width `viewBox` scaled down.
 - Links inside sentences stay underlined (global rule in `index.css`); opt out with `no-underline` only for button-styled links.
 
 ## Architecture rules (keep them)
@@ -53,11 +55,13 @@ Done and pushed on branch `ccr-3b8a9155-845trs` (not yet merged to `main`):
 
 11. Launch-ready UI/UX pass (2026-09-30): shared `MobileNavDrawer` (dialog semantics, Escape, focus trap, closes on route change) used by all three shells; footer scrolls with content on phones; compact 2FA banner; headers reflow at 320-1024px (44px touch targets below `lg`, search reachable on phones, theme toggle moves into the account menu on phones); `formatStat` no longer zero-pads ("2", not "00,002"); 16px form fields on phones (stops iOS zoom); in-text links underlined; labelled every Transport/Operations control; `Modal` restores focus and no longer depends on `onClose` identity. Permanent guard: `e2e/responsive-layout.spec.ts` (overflow at 320/390/768/1280, drawer, dialogs). Evidence: 810 route x viewport layout measurements (90 routes, 9 viewports from 320x568 to 1920x1080) and 180 axe scans (WCAG 2.1 A/AA) with 0 violations; the only flagged "overlap" is the intentional show-password icon inside its field.
 
+12. UI follow-up (2026-09-30): `AttendanceTrendChart` draws at its container's real pixel width (11px axis text at every width; it used to shrink to ~5px on phones) with y-axis labels, hover titles and a legend; `SchoolsTable` renders cards on phones (the switch action is no longer behind a sideways swipe) and a `TableScrollContainer` table from `sm`; dark-mode contrast: dark `--danger-600` is now the lighter text colour (6.3:1 on `--danger-50`, was 4.28:1) and solid red fills with white text use the new `danger-700` token; any `text-brand-600` is drawn as brand-300 in dark mode (base-layer rule), the logo wordmark has a dark variant, and `/trust` always renders light. Dark mode: 180 axe scans over all routes, 0 violations.
+
 Last green run (2026-09-30):
 
 - typecheck, lint and build pass;
 - 282 unit tests, RLS 759/759, Deno check/lint/test 20/20;
-- Playwright 272/272 (0 retries).
+- Playwright 275/275 (0 retries).
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 

@@ -3,11 +3,18 @@ import type { Page, Route } from '@playwright/test';
 import { fulfillJson, seedAuthenticatedSession } from './utils/mockAuth';
 import {
   buildMockAcademicYearRow,
+  buildMockAttendanceRecordRow,
+  buildMockClassRow,
   buildMockLearnerRow,
   buildMockProfileRow,
   buildMockSchoolRow,
+  installAcademicListMock,
+  installAttendanceRecordsMock,
   installDataMocks,
+  installEmployeesListMock,
   installLearnersListMock,
+  installReportRowsMock,
+  installUsersListMock,
 } from './utils/mockData';
 
 /**
@@ -221,4 +228,93 @@ test.describe('dialogs on a small phone', () => {
     await expect(fields.nth(1)).toBeFocused();
     await expect(fields.nth(1)).toHaveValue('Thandiwe');
   });
+});
+
+test.describe('phone-specific fixes', () => {
+  test.use({ viewport: { width: 320, height: 640 } });
+
+  test('the attendance trend chart is drawn at its real width so axis text stays readable', async ({
+    page,
+  }) => {
+    await seedAuthenticatedSession(page, { role: 'principal' });
+    await installDataMocks(page, {
+      profile: buildMockProfileRow(),
+      school: buildMockSchoolRow(),
+      academicYears: [buildMockAcademicYearRow()],
+    });
+    await installAcademicListMock(page, 'classes', [buildMockClassRow()]);
+    await installAttendanceRecordsMock(
+      page,
+      Array.from({ length: 14 }, (_, i) =>
+        buildMockAttendanceRecordRow({
+          id: `a${i}`,
+          learnerId: 'learner-1',
+          attendanceDate: `2026-08-${String(i + 1).padStart(2, '0')}`,
+          status: i % 3 === 0 ? 'absent' : 'present',
+        }),
+      ),
+    );
+    await installReportRowsMock(page, 'learners', [
+      buildMockLearnerRow({ id: 'learner-1', firstName: 'Naledi', lastName: 'Dube' }),
+    ]);
+    await installLearnersListMock(page, []);
+    await installEmployeesListMock(page, []);
+    await installUsersListMock(page, [buildMockProfileRow()]);
+
+    await page.goto('/reports/attendance');
+    const chart = page.getByRole('img', { name: /Attendance rate trend/ });
+    await expect(chart).toBeVisible();
+    const { svgWidth, containerWidth, axisFontPx } = await chart.evaluate((svg) => {
+      const text = svg.querySelector('text') as SVGTextElement;
+      const scale = (svg as unknown as SVGSVGElement).getScreenCTM()?.a ?? 1;
+      return {
+        svgWidth: svg.getBoundingClientRect().width,
+        containerWidth: (svg.parentElement as HTMLElement).getBoundingClientRect().width,
+        axisFontPx: parseFloat(getComputedStyle(text).fontSize) * scale,
+      };
+    });
+    expect(Math.abs(svgWidth - containerWidth)).toBeLessThanOrEqual(1);
+    expect(axisFontPx).toBeGreaterThanOrEqual(10.5);
+    await expect(page.getByText(/attention line/)).toBeVisible();
+  });
+
+  test('the schools list shows every school with its switch action on screen, no sideways swipe', async ({
+    page,
+  }) => {
+    await seedAuthenticatedSession(page, { role: 'super_administrator' });
+    await installDataMocks(page, {
+      profile: buildMockProfileRow({ role: 'super_administrator', tenantId: null }),
+      school: buildMockSchoolRow(),
+    });
+    const names = [
+      'Riverside Secondary School of Excellence and Innovation',
+      'St. Bartholomew-Mandela Comprehensive Combined School and Early Learning Centre',
+    ];
+    await page.route('**/rest/v1/schools*', async (route: Route) => {
+      const single = (route.request().headers()['accept'] ?? '').includes('vnd.pgrst.object');
+      const list = names.map((name, i) => buildMockSchoolRow({ id: `school-${i}`, name }));
+      return fulfillJson(route, single ? list[0] : list);
+    });
+    await page.goto('/schools');
+    const switchButtons = page.getByRole('button', { name: 'Switch to this school' });
+    await expect(switchButtons).toHaveCount(2);
+    for (const button of await switchButtons.all()) {
+      await button.scrollIntoViewIfNeeded();
+      await expect(button).toBeInViewport();
+      const box = await button.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(320);
+    }
+    const { pageOverflow } = await horizontalOverflow(page);
+    expect(pageOverflow).toBeLessThanOrEqual(0);
+  });
+});
+
+test('the public trust page stays readable when the visitor has the dark theme saved', async ({
+  page,
+}) => {
+  await page.addInitScript(() => window.localStorage.setItem('funda360-theme', 'dark'));
+  await page.goto('/trust');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
 });

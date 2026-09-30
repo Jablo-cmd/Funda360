@@ -53,7 +53,7 @@ export function VoidInvoiceModal({ invoice, onClose, onVoided }: VoidInvoiceModa
           type="button"
           onClick={() => void handleVoid()}
           isLoading={isSubmitting}
-          className="!bg-danger-600 hover:!bg-danger-500"
+          className="!bg-danger-700 hover:!bg-danger-700/90"
         >
           {isSubmitting ? 'Voiding…' : 'Void invoice'}
         </Button>

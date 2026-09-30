@@ -44,6 +44,7 @@ export default {
           50: 'rgb(var(--danger-50) / <alpha-value>)',
           500: 'rgb(var(--danger-500) / <alpha-value>)',
           600: 'rgb(var(--danger-600) / <alpha-value>)',
+          700: 'rgb(var(--danger-700) / <alpha-value>)',
         },
         success: {
           500: 'rgb(var(--success-500) / <alpha-value>)',

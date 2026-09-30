@@ -28,7 +28,7 @@ export function Logo({ variant = 'default', showWordmark = true, className }: Lo
 
       {showWordmark && (
         <span className={cn('text-lg font-bold tracking-tight', wordmarkClass)}>
-          Funda<span className="text-brand-500">360</span>
+          Funda<span className="text-brand-500 dark:text-brand-400">360</span>
         </span>
       )}
     </div>

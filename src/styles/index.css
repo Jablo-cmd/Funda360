@@ -72,6 +72,10 @@
      "Failed to load…" error alert text). This value measures 5.405:1
      against --danger-50 and 5.913:1 against white. */
   --danger-600: 196 30 30;
+  /* Solid fill behind white text (badges, destructive buttons). Same value as
+     --danger-600 in light mode; dark mode needs its own because --danger-600
+     is the lighter text colour there. */
+  --danger-700: 196 30 30;
 
   /* WCAG AA fix (FND-SEC-007): the previous value (34 150 94) measured
      3.75:1 against white and 3.357:1 against its own translucent
@@ -135,7 +139,10 @@
 
   --danger-50: 69 10 10;
   --danger-500: 248 113 113;
-  --danger-600: 239 68 68;
+  /* Text on --danger-50: 6.3:1. The previous 239 68 68 measured 4.28:1. */
+  --danger-600: 248 113 113;
+  /* White text on this: 6.5:1. */
+  --danger-700: 185 28 28;
 
   --success-500: 74 222 128;
 
@@ -190,6 +197,15 @@
   [role='button'],
   a {
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* brand-600 is the solid button/fill colour, so its dark value stays mid-blue
+     (white text on it passes). As *text* on a dark surface it measures only 3.1:1,
+     so in dark mode any text-brand-600 is drawn with brand-300 instead. A
+     component's own `dark:text-*` class still wins because utilities load after
+     this base layer. */
+  .dark .text-brand-600 {
+    color: rgb(var(--brand-300));
   }
 
   input,
