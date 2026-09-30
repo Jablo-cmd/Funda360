@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ParentHeader } from '@/components/layout/ParentHeader';
 import { LearnerNav } from '@/components/layout/LearnerNav';
 import { AppFooter } from '@/components/layout/AppFooter';
@@ -7,6 +8,7 @@ import { CloseIcon } from '@/components/ui/icons';
 
 /** Mirrors ParentLayout's shell with the learner's own navigation. */
 export function LearnerLayout() {
+  const { pathname } = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   return (
@@ -43,7 +45,9 @@ export function LearnerLayout() {
         )}
 
         <main className="min-w-0 flex-1 overflow-y-auto">
-          <Outlet />
+          <ErrorBoundary context="learner-route" resetKey={pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

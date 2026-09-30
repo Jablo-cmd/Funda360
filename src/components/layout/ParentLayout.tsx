@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ParentHeader } from '@/components/layout/ParentHeader';
 import { ParentNav } from '@/components/layout/ParentNav';
 import { AppFooter } from '@/components/layout/AppFooter';
@@ -8,6 +9,7 @@ import { ConsentOnboardingGate } from '@/features/compliance/components/ConsentO
 
 /** Mirrors DashboardLayout's shell shape (header + collapsible mobile nav + main + footer) with a purpose-built, simpler nav — see ParentNav. */
 export function ParentLayout() {
+  const { pathname } = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   return (
@@ -45,7 +47,9 @@ export function ParentLayout() {
 
         <main className="min-w-0 flex-1 overflow-y-auto">
           <ConsentOnboardingGate>
+            <ErrorBoundary context="parent-route" resetKey={pathname}>
             <Outlet />
+          </ErrorBoundary>
           </ConsentOnboardingGate>
         </main>
       </div>

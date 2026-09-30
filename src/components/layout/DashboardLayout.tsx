@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 import { AppFooter } from '@/components/layout/AppFooter';
@@ -9,6 +10,7 @@ import { CommandPalette } from '@/features/search/components/CommandPalette';
 import { usePermissions } from '@/hooks/usePermissions';
 
 export function DashboardLayout() {
+  const { pathname } = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { can } = usePermissions();
@@ -67,7 +69,9 @@ export function DashboardLayout() {
 
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <MfaRequiredBanner />
-          <Outlet />
+          <ErrorBoundary context="staff-route" resetKey={pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 
