@@ -95,6 +95,7 @@ export const NAV_MODEL: NavGroupDef[] = [
       { label: 'Grades', path: '/academic/grades', icon: LayersIcon, permission: 'academic.manage' },
       { label: 'Classes', path: '/academic/classes', icon: ChalkboardIcon, permission: 'academic.manage' },
       { label: 'Subjects', path: '/academic/subjects', icon: BookIcon, permission: 'academic.manage' },
+      { label: 'Curriculum Setup', path: '/learning/setup', icon: LayersIcon, permission: 'academic.manage' },
       {
         label: 'Teaching Assignments',
         path: '/academic/teaching-assignments',
@@ -121,6 +122,7 @@ export const NAV_MODEL: NavGroupDef[] = [
   {
     label: 'Teaching',
     items: [
+      { label: 'Learning', path: '/learning', icon: BookIcon, permission: 'learning.view', end: true },
       { label: 'Attendance', path: '/attendance', icon: CheckIcon, permission: 'attendance.view' },
       { label: 'Assessments', path: '/academic/assessments', icon: ChartIcon, permission: 'assessment.view' },
       { label: 'Homework', path: '/homework', icon: BookIcon, permission: 'assessment.view' },

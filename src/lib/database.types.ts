@@ -2939,6 +2939,106 @@ export type DataSubjectRequestRow = {
 };
 
 /** Tables written only through SECURITY DEFINER RPCs — clients never insert/update them directly. */
+// ---------------------------------------------------------------------------
+// Curriculum engine (20261001090000 / 20261001100000)
+// ---------------------------------------------------------------------------
+export type ContentStatus = 'draft' | 'review' | 'approved' | 'published' | 'retired';
+export type ToolkitStage = 'explain' | 'show' | 'try' | 'practise' | 'check' | 'support' | 'challenge' | 'print';
+export type ContentDifficulty = 'foundational' | 'standard' | 'advanced';
+export type ConnectivityNeed = 'none' | 'low' | 'online';
+export type DeviceNeed = 'none' | 'teacher_device' | 'shared_device' | 'learner_device';
+export type LearnerProgressStatus = 'not_started' | 'in_progress' | 'completed' | 'needs_support' | 'mastered';
+export type ResourceKind =
+  | 'teacher_explanation' | 'simplified_explanation' | 'worked_example' | 'diagram' | 'illustration' | 'animation' | 'video'
+  | 'classroom_activity' | 'group_activity' | 'practical_activity' | 'exercise' | 'differentiated_exercise'
+  | 'quick_assessment' | 'formative_questions' | 'remediation' | 'extension' | 'worksheet' | 'teacher_resource';
+
+export type CurriculumVersionRow = {
+  id: string; code: string; name: string; version_label: string; source: string; source_reference: string | null;
+  license_notes: string | null; status: ContentStatus; effective_from: string | null; effective_to: string | null;
+  supersedes_version_id: string | null; created_at: string; updated_at: string;
+};
+export type CurriculumGradeRow = { id: string; version_id: string; phase_id: string; grade_number: number; name: string; sort_order: number };
+export type CurriculumSubjectRow = { id: string; version_id: string; code: string; name: string; language: string; sort_order: number };
+export type CurriculumGradeSubjectRow = { id: string; version_id: string; grade_id: string; subject_id: string };
+export type CurriculumTermRow = { id: string; version_id: string; grade_subject_id: string; term_number: number; weeks: number | null };
+export type CurriculumTopicRow = {
+  id: string; version_id: string; term_id: string; code: string; title: string; description: string | null;
+  language: string; status: ContentStatus; sort_order: number;
+};
+export type CurriculumObjectiveRow = {
+  id: string; version_id: string; topic_id: string; subtopic_id: string | null; code: string; description: string;
+  language: string; source_reference: string | null; status: ContentStatus; sort_order: number;
+};
+export type LessonRow = {
+  id: string; lineage_id: string; version_number: number; curriculum_version_id: string; grade_subject_id: string; topic_id: string;
+  title: string; description: string | null; estimated_minutes: number | null; difficulty: ContentDifficulty; language: string;
+  status: ContentStatus; teacher_notes: string | null; learner_instructions: string | null; sort_order: number;
+  accessibility: Json; origin: 'authored' | 'ai_draft'; ai_disclosure: string | null; created_at: string; updated_at: string;
+};
+export type LessonObjectiveRow = { lesson_id: string; objective_id: string; curriculum_version_id: string; is_primary: boolean };
+export type TeachingResourceRow = {
+  id: string; lineage_id: string; version_number: number; curriculum_version_id: string; grade_subject_id: string; topic_id: string;
+  stage: ToolkitStage; resource_kind: ResourceKind; title: string; summary: string | null; body: Json; difficulty: ContentDifficulty;
+  language: string; estimated_minutes: number | null; delivery_formats: string[]; connectivity: ConnectivityNeed; device: DeviceNeed;
+  projector_required: boolean; printable: boolean; cacheable: boolean; size_kb: number | null; media_path: string | null;
+  accessibility: Json; origin: 'authored' | 'ai_draft'; ai_disclosure: string | null; status: ContentStatus; created_at: string; updated_at: string;
+};
+export type LessonResourceRow = { lesson_id: string; resource_id: string; curriculum_version_id: string; sort_order: number };
+export type ResourceObjectiveRow = { resource_id: string; objective_id: string; curriculum_version_id: string };
+export type LearningActivityRow = {
+  id: string; lesson_id: string; curriculum_version_id: string; title: string; instructions: string; activity_type: string;
+  grouping: 'individual' | 'pair' | 'small_group' | 'whole_class'; difficulty: ContentDifficulty; estimated_minutes: number | null;
+  resource_id: string | null; sort_order: number;
+};
+export type LearningAssessmentRow = {
+  id: string; curriculum_version_id: string; grade_subject_id: string; topic_id: string; lesson_id: string | null; title: string;
+  purpose: 'diagnostic' | 'formative' | 'summative_check'; difficulty: ContentDifficulty; estimated_minutes: number | null;
+  mastery_percent: number; support_below_percent: number; language: string; status: ContentStatus;
+};
+export type AssessmentObjectiveRow = { assessment_id: string; objective_id: string; curriculum_version_id: string };
+export type AssessmentQuestionRow = {
+  id: string; assessment_id: string; curriculum_version_id: string; position: number;
+  question_type: 'multiple_choice' | 'true_false' | 'numeric' | 'short_answer'; prompt: string; options: Json; marks: number; objective_id: string | null;
+};
+export type SchoolCurriculumAdoptionRow = {
+  id: string; school_id: string; curriculum_version_id: string; status: 'active' | 'ended'; adopted_at: string; ended_at: string | null;
+};
+export type SchoolGradeCurriculumMapRow = {
+  id: string; school_id: string; school_grade_id: string; curriculum_version_id: string; curriculum_grade_id: string; created_at: string;
+};
+export type SchoolGradeCurriculumMapInsert = Pick<SchoolGradeCurriculumMapRow, 'school_id' | 'school_grade_id' | 'curriculum_version_id' | 'curriculum_grade_id'>;
+export type SchoolSubjectCurriculumMapRow = {
+  id: string; school_id: string; school_subject_id: string; curriculum_version_id: string; curriculum_subject_id: string; created_at: string;
+};
+export type SchoolSubjectCurriculumMapInsert = Pick<SchoolSubjectCurriculumMapRow, 'school_id' | 'school_subject_id' | 'curriculum_version_id' | 'curriculum_subject_id'>;
+export type ClassTopicPlanRow = {
+  id: string; school_id: string; class_id: string; school_subject_id: string; curriculum_version_id: string; topic_id: string;
+  status: 'planned' | 'in_progress' | 'completed'; started_on: string | null; completed_on: string | null;
+};
+export type ClassLearningAssignmentRow = {
+  id: string; school_id: string; class_id: string; school_subject_id: string; lesson_id: string | null; activity_id: string | null;
+  assessment_id: string | null; title: string; instructions: string | null; due_at: string | null; status: 'assigned' | 'closed'; created_at: string;
+};
+export type LearningAttemptRow = {
+  id: string; school_id: string; learner_id: string; class_id: string | null; assessment_id: string | null; activity_id: string | null;
+  lesson_id: string | null; attempt_number: number; score: number | null; max_score: number | null; percent: number | null;
+  completed: boolean; created_at: string;
+};
+export type LearnerObjectiveProgressRow = {
+  id: string; school_id: string; learner_id: string; objective_id: string; status: LearnerProgressStatus; evidence_count: number;
+  latest_percent: number | null; best_percent: number | null; last_evidence_at: string | null; mastered_at: string | null;
+};
+export type LearningRecommendationRow = {
+  id: string; school_id: string; learner_id: string; objective_id: string; kind: 'remediation' | 'extension' | 'reassess';
+  resource_id: string | null; reason: string; evidence: Json; status: 'open' | 'accepted' | 'dismissed' | 'completed';
+  intervention_id: string | null; created_at: string; resolved_at: string | null;
+};
+export type ClassObjectiveProgressRow = {
+  learner_id: string; first_name: string; last_name: string; learner_number: string; status: LearnerProgressStatus;
+  latest_percent: number | null; evidence_count: number; last_evidence_at: string | null;
+};
+
 type RpcWrittenTable<Row> = { Row: Row; Insert: never; Update: never };
 
 export type Database = {
@@ -3296,6 +3396,30 @@ export type Database = {
       content_safety_rules: RpcWrittenTable<ContentSafetyRuleRow>;
       content_safety_events: RpcWrittenTable<ContentSafetyEventRow>;
       data_subject_requests: RpcWrittenTable<DataSubjectRequestRow>;
+      curriculum_versions: RpcWrittenTable<CurriculumVersionRow>;
+      curriculum_grades: RpcWrittenTable<CurriculumGradeRow>;
+      curriculum_subjects: RpcWrittenTable<CurriculumSubjectRow>;
+      curriculum_grade_subjects: RpcWrittenTable<CurriculumGradeSubjectRow>;
+      curriculum_terms: RpcWrittenTable<CurriculumTermRow>;
+      curriculum_topics: RpcWrittenTable<CurriculumTopicRow>;
+      curriculum_objectives: RpcWrittenTable<CurriculumObjectiveRow>;
+      lessons: RpcWrittenTable<LessonRow>;
+      lesson_objectives: RpcWrittenTable<LessonObjectiveRow>;
+      teaching_resources: RpcWrittenTable<TeachingResourceRow>;
+      lesson_resources: RpcWrittenTable<LessonResourceRow>;
+      resource_objectives: RpcWrittenTable<ResourceObjectiveRow>;
+      learning_activities: RpcWrittenTable<LearningActivityRow>;
+      learning_assessments: RpcWrittenTable<LearningAssessmentRow>;
+      assessment_objectives: RpcWrittenTable<AssessmentObjectiveRow>;
+      assessment_questions: RpcWrittenTable<AssessmentQuestionRow>;
+      school_curriculum_adoptions: RpcWrittenTable<SchoolCurriculumAdoptionRow>;
+      school_grade_curriculum_map: { Row: SchoolGradeCurriculumMapRow; Insert: SchoolGradeCurriculumMapInsert; Update: Partial<SchoolGradeCurriculumMapInsert>; };
+      school_subject_curriculum_map: { Row: SchoolSubjectCurriculumMapRow; Insert: SchoolSubjectCurriculumMapInsert; Update: Partial<SchoolSubjectCurriculumMapInsert>; };
+      class_topic_plans: RpcWrittenTable<ClassTopicPlanRow>;
+      class_learning_assignments: RpcWrittenTable<ClassLearningAssignmentRow>;
+      learning_attempts: RpcWrittenTable<LearningAttemptRow>;
+      learner_objective_progress: RpcWrittenTable<LearnerObjectiveProgressRow>;
+      learning_recommendations: RpcWrittenTable<LearningRecommendationRow>;
 
     };
     Views: Record<string, never>;
@@ -3913,6 +4037,26 @@ export type Database = {
         Returns: SchoolComplianceSettingsRow;
       };
       get_my_privacy_overview: { Args: Record<string, never>; Returns: Json };
+      adopt_curriculum_version: { Args: { p_school_id: string; p_version_id: string }; Returns: string };
+      set_class_current_topic: { Args: { p_class_id: string; p_school_subject_id: string; p_topic_id: string }; Returns: string };
+      assign_learning_to_class: {
+        Args: {
+          p_class_id: string; p_school_subject_id: string; p_lesson_id?: string | null; p_activity_id?: string | null;
+          p_assessment_id?: string | null; p_title?: string | null; p_instructions?: string | null; p_due_at?: string | null;
+        };
+        Returns: string;
+      };
+      record_learning_attempt: {
+        Args: {
+          p_learner_id: string; p_assessment_id?: string | null; p_activity_id?: string | null; p_score?: number | null;
+          p_max_score?: number | null; p_completed?: boolean; p_responses?: Json; p_assignment_id?: string | null;
+        };
+        Returns: LearningAttemptRow;
+      };
+      class_objective_progress: { Args: { p_class_id: string; p_objective_id: string }; Returns: ClassObjectiveProgressRow[] };
+      generate_learning_recommendations: { Args: { p_class_id: string; p_objective_id: string }; Returns: number };
+      update_recommendation_status: { Args: { p_id: string; p_status: 'accepted' | 'dismissed' | 'completed'; p_intervention_id?: string | null }; Returns: undefined };
+      content_transition: { Args: { p_entity: string; p_id: string; p_to: ContentStatus; p_note?: string | null }; Returns: undefined };
     };
   };
 };

@@ -58,6 +58,8 @@ Done and pushed on branch `ccr-3b8a9155-845trs` (not yet merged to `main`):
 
 12. UI follow-up (2026-09-30): `AttendanceTrendChart` draws at its container's real pixel width (11px axis text at every width; it used to shrink to ~5px on phones) with y-axis labels, hover titles and a legend; `SchoolsTable` renders cards on phones (the switch action is no longer behind a sideways swipe) and a `TableScrollContainer` table from `sm`; dark-mode contrast: dark `--danger-600` is now the lighter text colour (6.3:1 on `--danger-50`, was 4.28:1) and solid red fills with white text use the new `danger-700` token; any `text-brand-600` is drawn as brand-300 in dark mode (base-layer rule), the logo wordmark has a dark variant, and `/trust` always renders light. Dark mode: 180 axe scans over all routes, 0 violations.
 
+13. Curriculum Engine foundation (2026-10-01, NOT yet applied to production): `20261001090000_curriculum_engine.sql` (versioned global curriculum version→phase→grade→subject→term→topic→subtopic→objective→skill, lessons, toolkit resources, activities, assessments with keys in a separate table, review events; tenant adoption/mapping, class topic plans, assignments, attempts, evidence-derived progress, recommendations) and `20261001100000_curriculum_engine_rpcs.sql` (`content_transition`, `adopt_curriculum_version`, `set_class_current_topic`, `assign_learning_to_class`, `record_learning_attempt`, `class_objective_progress`, `generate_learning_recommendations`). Only published content is visible to ordinary users; status changes are RPC-only and platform-admin only. Teacher UI: `/learning` (Learning hub) and `/learning/setup` in `src/features/learning/`. Grade 4 Maths Term 1 draft pack: `supabase/content/grade4-mathematics-term1.sql` (loaded by the RLS harness; DRAFT, unverified against official CAPS, invisible to teachers until a platform admin publishes it). Any migration that adds policies must end with `select public.rls_optimize_policies();`. Design: `docs/proposals/curriculum-engine.md`. Evidence: RLS 832/832, 294 unit tests, Playwright 323/323.
+
 Last green run (2026-09-30):
 
 - typecheck, lint and build pass;
@@ -87,7 +89,7 @@ All code-side criteria are met. What remains is applying the migrations to produ
    - add GitHub `github-pages` environment secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` and `SUPABASE_PROJECT_REF=rzkybmkzhpwovpvrjkxk`, then merge to `main` (the CI `migrate` job runs `supabase db push`); or
    - explicitly approve applying them in a session.
 
-   Production currently lacks: `20260919090001`, `20260929090000`, `20260929100000`, `20260929120000`, `20260929170000`, `20260930090000`, `20260930100000`, `20260930110000`, `20260930120000`, `20260930121000` and anything newer.
+   Production currently lacks: `20260919090001`, `20260929090000`, `20260929100000`, `20260929120000`, `20260929170000`, `20260930090000`, `20260930100000`, `20260930110000`, `20260930120000`, `20260930121000`, `20261001090000`, `20261001100000` and anything newer.
 
 2. **Password resets.** Anyone who relied on a demo account must be re-issued a password by the platform owner.
 3. **Confirm the super-admin sessions.** Sessions from 41.116.x (Android) and 102.33.32.62 (Windows) were revoked; the owner should confirm those were theirs.

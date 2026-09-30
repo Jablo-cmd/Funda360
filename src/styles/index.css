@@ -266,3 +266,33 @@ dd a {
     min-height: 44px;
   }
 }
+
+/* Printing an open toolkit resource prints just that resource (low-resource schools rely on paper). */
+@media print {
+  #root {
+    display: none !important;
+  }
+  body > div:has([role='dialog']) {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+  }
+  body > div:has([role='dialog']) > [aria-hidden='true'] {
+    display: none !important;
+  }
+  [role='dialog'] {
+    position: static !important;
+    max-height: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+  [role='dialog'] button {
+    display: none !important;
+  }
+  [role='dialog'] * {
+    overflow: visible !important;
+  }
+}

@@ -186,6 +186,8 @@ const ParentHomeworkPage = named(
   () => import('@/features/homework/pages/ParentHomeworkPage'),
   'ParentHomeworkPage',
 );
+const LearningHubPage = named(() => import('@/features/learning/pages/LearningHubPage'), 'LearningHubPage');
+const LearningSetupPage = named(() => import('@/features/learning/pages/LearningSetupPage'), 'LearningSetupPage');
 const TeacherWorkspacePage = named(
   () => import('@/features/teacherWorkspace/pages/TeacherWorkspacePage'),
   'TeacherWorkspacePage',
@@ -351,6 +353,13 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="profile.manage_any" />}>
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/users/:id" element={<UserProfilePage />} />
+              </Route>
+
+              <Route element={<RequirePermission permission="learning.view" />}>
+                <Route path="/learning" element={<LearningHubPage />} />
+              </Route>
+              <Route element={<RequirePermission permission="academic.manage" />}>
+                <Route path="/learning/setup" element={<LearningSetupPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="academic.view" />}>

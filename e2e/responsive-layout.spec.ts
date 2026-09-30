@@ -92,6 +92,8 @@ async function horizontalOverflow(page: Page) {
 const STAFF_ROUTES = [
   '/dashboard',
   '/learners',
+  '/learning',
+  '/learning/setup',
   '/users',
   '/academic',
   '/fees',
