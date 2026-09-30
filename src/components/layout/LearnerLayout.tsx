@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ParentHeader } from '@/components/layout/ParentHeader';
 import { LearnerNav } from '@/components/layout/LearnerNav';
 import { AppFooter } from '@/components/layout/AppFooter';
-import { CloseIcon } from '@/components/ui/icons';
+import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer';
 
 /** Mirrors ParentLayout's shell with the learner's own navigation. */
 export function LearnerLayout() {
   const { pathname } = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const closeMobileNav = useCallback(() => setIsMobileNavOpen(false), []);
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-surface-sunken">
@@ -20,38 +21,19 @@ export function LearnerLayout() {
           <LearnerNav />
         </aside>
 
-        {isMobileNavOpen && (
-          <div className="fixed inset-0 z-30 md:hidden">
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setIsMobileNavOpen(false)}
-              aria-hidden="true"
-            />
-            <div className="absolute inset-y-0 left-0 flex w-64 max-w-[80vw] flex-col border-r border-sidebar-border bg-sidebar shadow-card dark:shadow-card-dark">
-              <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
-                <span className="text-sm font-semibold uppercase tracking-wide text-white/90">Menu</span>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileNavOpen(false)}
-                  aria-label="Close menu"
-                  className="focus-ring touch-target flex items-center justify-center rounded-md p-1.5 text-white/70 hover:text-white"
-                >
-                  <CloseIcon className="h-5 w-5" />
-                </button>
-              </div>
-              <LearnerNav onNavigate={() => setIsMobileNavOpen(false)} />
-            </div>
-          </div>
-        )}
+        <MobileNavDrawer isOpen={isMobileNavOpen} onClose={closeMobileNav} widthClassName="w-64">
+          <LearnerNav onNavigate={closeMobileNav} />
+        </MobileNavDrawer>
 
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <ErrorBoundary context="learner-route" resetKey={pathname}>
             <Outlet />
           </ErrorBoundary>
+          <AppFooter className="mt-auto md:hidden" />
         </main>
       </div>
 
-      <AppFooter />
+      <AppFooter className="max-md:hidden" />
     </div>
   );
 }

@@ -22,7 +22,7 @@ export function NotificationBell({ to }: NotificationBellProps) {
     <Link
       to={to}
       aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-      className="focus-ring relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-content-secondary transition-colors hover:bg-surface-sunken hover:text-content-primary"
+      className="focus-ring relative flex h-11 w-11 shrink-0 lg:h-9 lg:w-9 items-center justify-center rounded-md text-content-secondary transition-colors hover:bg-surface-sunken hover:text-content-primary"
     >
       <BellIcon className="h-5 w-5" />
       {unreadCount > 0 && (

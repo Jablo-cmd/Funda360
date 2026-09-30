@@ -110,8 +110,8 @@ test('dashboard shows today\'s attendance summary once registers have been taken
 
   await page.goto('/dashboard');
   const attendancePanel = page.locator('section', { has: page.getByRole('heading', { name: 'Attendance Overview' }) });
-  await expect(attendancePanel.getByText('00,002', { exact: true })).toBeVisible();
-  await expect(attendancePanel.getByText('00,001', { exact: true })).toBeVisible();
+  await expect(attendancePanel.getByText('2', { exact: true })).toBeVisible();
+  await expect(attendancePanel.getByText('1', { exact: true })).toBeVisible();
 });
 
 test('dashboard shows a 30-day attendance rate KPI, computed from the trailing 30 days of records', async ({ page }) => {

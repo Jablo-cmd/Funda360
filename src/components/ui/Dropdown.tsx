@@ -71,7 +71,7 @@ export function Dropdown({ trigger, children, align = 'right', menuLabel }: Drop
           role="menu"
           aria-label={menuLabel}
           className={cn(
-            'absolute z-20 mt-2 w-56 rounded-card border border-border bg-surface-raised p-1.5 shadow-card dark:shadow-card-dark',
+            'absolute z-20 mt-2 w-56 max-w-[calc(100vw-1rem)] rounded-card border border-border bg-surface-raised p-1.5 shadow-card dark:shadow-card-dark',
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >
@@ -94,7 +94,7 @@ export function DropdownItem({ onClick, children, icon, variant = 'default' }: D
         closeMenu?.();
       }}
       className={cn(
-        'focus-ring flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm',
+        'focus-ring flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm lg:min-h-0',
         variant === 'danger'
           ? 'text-danger-600 hover:bg-danger-50'
           : 'text-content-secondary hover:bg-surface-sunken hover:text-content-primary',
