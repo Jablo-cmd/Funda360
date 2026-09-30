@@ -37,17 +37,32 @@ Done and pushed on branch `ccr-3b8a9155-845trs` (not yet merged to `main`):
 3. Compliance framework (POPIA/FERPA/COPPA/CIPA/GDPR): `20260930100000_compliance_framework.sql`, `src/features/compliance/`, `/compliance` Trust Center, `/parent/privacy`, `/learner/privacy`, `/trust`, consent onboarding gate. See `docs/COMPLIANCE.md`.
 4. Mobile: `PageContainer` gets `w-full min-w-0`, so no sideways page scroll at 375px.
 
-Last green run: typecheck, lint, 276 unit tests, build, RLS 738/738, Playwright 227/227 (0 retries).
+5. P1-7 error boundaries and client error reporting (`src/lib/errorReporting.ts`, `src/components/ui/ErrorBoundary.tsx`).
+6. P1-5 payment settlement binding (`supabase/functions/_shared/providers/binding.ts`).
+7. P1-6 admissions abuse controls (`supabase/functions/_shared/admissions/guards.ts`).
+8. Notification dispatcher claims rows before sending.
 
-## Remaining acceptance criteria (work these in order)
+Last green run (2026-09-30):
 
-- [ ] P1-7 root error boundary + client error monitoring
-- [ ] P1-2 server-side MFA: an MFA-enrolled user's aal1 session must not reach tenant data
-- [ ] P1-4 RLS performance: 100k-row count as principal was 12.9s and as guardian 35s (vs 16ms with no RLS). Target: under 1s
-- [ ] P1-5 payment settlement bound to the intent's provider, mode and merchant
-- [ ] P1-6 admissions endpoint: rate limiting, storage-path validation, unguessable references, no PII from resume
-- [ ] Edge Function deno check/lint/test run locally
-- [ ] P2: dead operations roles (`asset_manager`, `boarding_manager`, `events_coordinator`, `governance_officer`, `procurement_officer`); dispatch row claiming; school owner cannot provision finance or HR roles
+- typecheck, lint and build pass;
+- 282 unit tests, RLS 738/738, Deno check/lint/test 20/20;
+- Playwright 230/230 (0 retries).
+
+Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
+
+## Remaining acceptance criteria
+
+- [x] P1-7 root error boundary + client error monitoring
+- [x] P1-5 payment settlement bound to the intent's provider, mode and merchant
+- [x] P1-6 admissions endpoint: rate limiting, path validation, date-of-birth-gated PII-free resume
+- [x] Edge Function deno check/lint/test run locally
+- [x] P2: dispatch row claiming
+- [ ] **BLOCKED — needs a new migration** (see "Requires a human" #5):
+  - P1-2 server-side MFA
+  - P1-4 RLS performance (design, evidence and draft SQL in `docs/proposals/rls-performance-and-mfa.md`)
+  - P2 dead operations roles (`asset_manager`, `boarding_manager`, `events_coordinator`, `governance_officer`, `procurement_officer` are referenced by operations RPCs but absent from `user_role`)
+  - P2 school owners cannot provision finance_manager / vice_principal / class_teacher / subject_teacher logins (`can_assign_role`, `can_assign_employee_role`)
+  - P2 sequential admission references (`next_admission_reference`); mitigated by the date-of-birth check
 
 ## Requires a human (cannot be done from the sandbox)
 
@@ -60,3 +75,8 @@ Last green run: typecheck, lint, 276 unit tests, build, RLS 738/738, Playwright 
 2. **Password resets.** Anyone who relied on a demo account must be re-issued a password by the platform owner.
 3. **Confirm the super-admin sessions.** Sessions from 41.116.x (Android) and 102.33.32.62 (Windows) were revoked; the owner should confirm those were theirs.
 4. Enable leaked-password protection in Supabase Auth settings (dashboard only).
+5. **Approve new database migrations.** The agent's safety classifier blocked creating or editing files under `supabase/migrations/`, because CI's `migrate` job would push them to production. Every remaining item above needs a migration. To proceed, either:
+   - tell the agent explicitly that migrations may be written (and, separately, whether they may be applied to production); or
+   - add a Bash/Edit permission rule for `supabase/migrations/**` in the Claude Code settings.
+
+   Next step once allowed: implement `docs/proposals/rls-performance-and-mfa.md` (fix its noted idempotence gap), prove with the fingerprint diff and benchmark, then do the three P2 migrations.
