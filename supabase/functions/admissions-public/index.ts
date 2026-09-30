@@ -14,9 +14,16 @@
 //   save     { resumeToken, payload }              -> { ok: true }
 //   submit   { resumeToken }                       -> { referenceNumber }
 //   get      { resumeToken }                       -> { found, editable, status, application? }
-//   resume   { email, reference }                  -> { found, status, reference, application, resumeToken? }
-//   upload-url { resumeToken, fileName, mimeType } -> { uploadUrl, path, token }
+//   resume   { email, reference, dateOfBirth }     -> { found, status, reference_number, learner_first_name, resume_token? }
+//   upload-url { resumeToken, fileName, mimeType, sizeBytes } -> { uploadUrl, path, token }
 //   register-doc { resumeToken, label, path, mimeType, sizeBytes, requirementId? } -> { documentId }
+//
+// Abuse controls (audit P1-6): every action is rate-limited per client IP
+// (stored as a salted hash in rate_limit_events — never the raw IP); `start`
+// is also limited per applicant email; `resume` additionally requires the
+// learner's date of birth and returns no application details beyond the
+// learner's first name; documents must be PDF/PNG/JPEG up to 10 MB and can
+// only be registered inside their own application's storage folder.
 //
 // Error contract: the client only ever sees a small, stable set of codes —
 // `invalid_request` (400), `not_found` (404), `request_failed` (500), plus
@@ -27,6 +34,14 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, json } from '../_shared/cors.ts';
+import {
+  clientIp,
+  ipActorId,
+  isAcceptableDocument,
+  isOwnDocumentPath,
+  normaliseDate,
+  RATE_LIMITS,
+} from '../_shared/admissions/guards.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -73,6 +88,36 @@ function dbError(action: string, err: unknown): Response {
   return json({ error: 'request_failed' }, 500);
 }
 
+const rateLimitSalt = Deno.env.get('ADMISSIONS_RATE_LIMIT_SALT') ?? serviceKey;
+
+/**
+ * Rolling-window limit per client IP and action. Fails open (logs, allows)
+ * if the limiter itself errors, so a limiter fault never takes public
+ * admissions offline.
+ */
+async function rateLimited(s: ReturnType<typeof db>, action: string, req: Request): Promise<boolean> {
+  const limit = RATE_LIMITS[action];
+  if (!limit) return false;
+  try {
+    const actor = await ipActorId(clientIp(req.headers), rateLimitSalt);
+    const key = `admissions_public:${action}`;
+    const since = new Date(Date.now() - limit.windowMinutes * 60_000).toISOString();
+    const { count, error } = await s
+      .from('rate_limit_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('actor_profile_id', actor)
+      .eq('action_key', key)
+      .gt('occurred_at', since);
+    if (error) throw error;
+    if ((count ?? 0) >= limit.max) return true;
+    await s.from('rate_limit_events').insert({ actor_profile_id: actor, action_key: key });
+    return false;
+  } catch (err) {
+    console.error('admissions-public rate limiter unavailable', err);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
@@ -86,6 +131,10 @@ Deno.serve(async (req) => {
   const action = String(body.action ?? '');
   const s = db();
 
+  if (await rateLimited(s, action, req)) {
+    return json({ error: 'rate_limited' }, 429);
+  }
+
   try {
     if (action === 'config') {
       const schoolId = String(body.schoolId ?? '');
@@ -97,14 +146,34 @@ Deno.serve(async (req) => {
       if (schoolError) return dbError(action, schoolError);
       if (!school || school.status !== 'active') return json({ error: 'not_found' }, 404);
       const [{ data: years }, { data: grades }, { data: requirements }] = await Promise.all([
-        s.from('academic_years').select('id, name, start_date, is_active').eq('school_id', schoolId).order('start_date', { ascending: false }),
-        s.from('grades').select('id, name, sort_order').eq('school_id', schoolId).eq('active', true).order('sort_order'),
-        s.from('admission_document_requirements').select('id, label, description, required, grade_id').eq('school_id', schoolId).eq('active', true).order('sort_order'),
+        s.from('academic_years').select('id, name, start_date, is_active').eq('school_id', schoolId).order(
+          'start_date',
+          { ascending: false },
+        ),
+        s.from('grades').select('id, name, sort_order').eq('school_id', schoolId).eq('active', true).order(
+          'sort_order',
+        ),
+        s.from('admission_document_requirements').select('id, label, description, required, grade_id').eq(
+          'school_id',
+          schoolId,
+        ).eq('active', true).order('sort_order'),
       ]);
-      return json({ school: { id: school.id, name: school.name }, academicYears: years ?? [], grades: grades ?? [], requirements: requirements ?? [] });
+      return json({
+        school: { id: school.id, name: school.name },
+        academicYears: years ?? [],
+        grades: grades ?? [],
+        requirements: requirements ?? [],
+      });
     }
 
     if (action === 'start') {
+      const email = String(body.applicantEmail ?? '').trim().toLowerCase();
+      const { count: recent } = await s
+        .from('admission_applications')
+        .select('id', { count: 'exact', head: true })
+        .ilike('applicant_email', email.replace(/[%_\\]/g, (c) => `\\${c}`))
+        .gt('created_at', new Date(Date.now() - 60 * 60_000).toISOString());
+      if ((recent ?? 0) >= 5) return json({ error: 'rate_limited' }, 429);
       const { data, error } = await s.rpc('public_start_admission_application', {
         p_school_id: String(body.schoolId ?? ''),
         p_applicant_email: String(body.applicantEmail ?? ''),
@@ -140,12 +209,34 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'resume') {
+      const dateOfBirth = normaliseDate(body.dateOfBirth);
+      if (!dateOfBirth) return json({ error: 'invalid_request' }, 400);
       const { data, error } = await s.rpc('public_resume_admission_application', {
         p_email: String(body.email ?? ''),
         p_reference: String(body.reference ?? ''),
       });
       if (error) return dbError(action, error);
-      return json(data);
+      const result = (data ?? {}) as {
+        found?: boolean;
+        status?: string;
+        reference_number?: string;
+        resume_token?: string | null;
+        application?: { learner_first_name?: string | null; learner_date_of_birth?: string | null };
+      };
+      // Email + reference alone are guessable (references are sequential), so
+      // the learner's date of birth is required too, and a mismatch looks
+      // exactly like "not found". Only the first name is returned, to confirm
+      // the right application — never the full record.
+      if (!result.found || normaliseDate(result.application?.learner_date_of_birth) !== dateOfBirth) {
+        return json({ found: false });
+      }
+      return json({
+        found: true,
+        status: result.status,
+        reference_number: result.reference_number,
+        learner_first_name: result.application?.learner_first_name ?? null,
+        resume_token: result.resume_token ?? null,
+      });
     }
 
     if (action === 'upload-url') {
@@ -160,6 +251,9 @@ Deno.serve(async (req) => {
       if (!['draft', 'incomplete', 'submitted', 'under_review'].includes(app.status)) {
         return json({ error: 'documents_closed' }, 409);
       }
+      if (!isAcceptableDocument(body.mimeType, body.sizeBytes)) {
+        return json({ error: 'invalid_request' }, 400);
+      }
       const safeName = String(body.fileName ?? 'file').replace(/[^\w.\-]+/g, '_').slice(0, 120);
       const path = `${app.school_id}/${app.id}/${crypto.randomUUID()}-${safeName}`;
       const { data: signed, error } = await s.storage.from('admission-documents').createSignedUploadUrl(path);
@@ -168,6 +262,20 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'register-doc') {
+      const token = String(body.resumeToken ?? '');
+      const { data: app, error: appError } = await s
+        .from('admission_applications')
+        .select('id, school_id')
+        .eq('resume_token', token)
+        .maybeSingle();
+      if (appError) return dbError(action, appError);
+      if (!app) return json({ error: 'not_found' }, 404);
+      if (
+        !isOwnDocumentPath(String(body.path ?? ''), app.school_id, app.id) ||
+        !isAcceptableDocument(body.mimeType, body.sizeBytes)
+      ) {
+        return json({ error: 'invalid_request' }, 400);
+      }
       const { data, error } = await s.rpc('public_register_admission_document', {
         p_resume_token: String(body.resumeToken ?? ''),
         p_label: String(body.label ?? 'Document'),
