@@ -84,6 +84,8 @@ psql_exec < "$SCRIPT_DIR/11_fees_behaviour_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/12_guardian_management_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/13_parent_portal_fixtures.sql"
 psql_exec < "$SCRIPT_DIR/14_guardian_invitations_fixtures.sql"
+echo "==> loading content pack (Grade 4 Mathematics slice, draft)"
+psql_exec < "$REPO_ROOT/supabase/content/grade4-mathematics-term1.sql"
 
 echo "==> running regression tests"
 for test_file in "$SCRIPT_DIR"/tests/*.test.sql; do
