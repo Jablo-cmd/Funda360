@@ -97,3 +97,14 @@ alter default privileges in schema public grant all on tables to authenticated;
 grant all on all tables in schema public to anon;
 grant all on all sequences in schema public to anon;
 alter default privileges in schema public grant all on tables to anon;
+
+-- Minimal auth.mfa_factors (GoTrue): enough for session_mfa_satisfied()
+-- (20260930110000_rls_performance_and_mfa.sql) to be exercised. Tests insert
+-- a 'verified' factor and set the JWT "aal" claim to impersonate aal1/aal2.
+create table auth.mfa_factors (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  factor_type text not null default 'totp',
+  status      text not null default 'unverified',
+  created_at  timestamptz not null default now()
+);

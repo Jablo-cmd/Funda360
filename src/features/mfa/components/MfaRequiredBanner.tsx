@@ -30,9 +30,9 @@ export function MfaRequiredBanner() {
     // own (genuinely transient) success/error message using the same role
     // ("banner" is persistent chrome, not a one-off notification; a screen
     // reader user reaches it by regular content navigation instead).
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warning-500/30 bg-warning-50 px-4 py-2.5 text-sm text-warning-600 dark:bg-warning-500/10 dark:text-warning-500 sm:px-6">
-      <span>Your role requires two-factor authentication. Set it up to keep your account secure.</span>
-      <Link to="/my-profile#mfa-security" className="focus-ring rounded font-semibold underline hover:no-underline">
+    <div className="border-b border-warning-500/30 bg-warning-50 px-4 py-2 text-xs text-warning-600 dark:bg-warning-500/10 dark:text-warning-500 sm:px-6 sm:py-2.5 sm:text-sm">
+      Your role requires two-factor authentication. Set it up to keep your account secure.{' '}
+      <Link to="/my-profile#mfa-security" className="focus-ring inline-block whitespace-nowrap rounded font-semibold underline hover:no-underline">
         Set up now
       </Link>
     </div>

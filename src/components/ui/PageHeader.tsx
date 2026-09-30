@@ -14,12 +14,15 @@ export interface PageHeaderProps {
  */
 export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    // Stacks until `lg`: from `md` the sidebar leaves the page area only ~512px, too narrow for a title and an action side by side.
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="min-w-0">
         <h1 className="break-words text-2xl font-bold text-content-primary">{title}</h1>
-        {description && <p className="mt-1 break-words text-sm text-content-secondary">{description}</p>}
+        {description && (
+          <p className="mt-1 break-words text-sm text-content-secondary">{description}</p>
+        )}
       </div>
-      {action && <div className="min-w-0 w-full sm:w-auto">{action}</div>}
+      {action && <div className="w-full min-w-0 lg:w-auto lg:shrink-0">{action}</div>}
     </div>
   );
 }

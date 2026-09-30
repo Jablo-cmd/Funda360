@@ -156,3 +156,34 @@ test('the public application form renders for a valid school link', async ({ pag
   await expect(page.getByRole('button', { name: 'Submit application' })).toBeVisible();
   await expect(page.getByText('Birth certificate')).toBeVisible();
 });
+
+test('checking an application needs email, reference and date of birth, and reveals only the first name', async ({ page }) => {
+  let sent: Record<string, unknown> | null = null;
+  await page.route('**/functions/v1/admissions-public', async (route) => {
+    sent = route.request().postDataJSON() as Record<string, unknown>;
+    await fulfillJson(route, { found: true, status: 'submitted', reference_number: 'APP-2026-00042', learner_first_name: 'Naledi', resume_token: null });
+  });
+
+  await page.goto('/apply/resume');
+  const lookUp = page.getByRole('button', { name: 'Look up' });
+  await page.getByLabel('Email').fill('parent@example.com');
+  await page.getByLabel('Reference number').fill('APP-2026-00042');
+  await expect(lookUp).toBeDisabled();
+  await page.getByLabel("Child's date of birth").fill('2014-03-01');
+  await lookUp.click();
+
+  await expect(page.getByText('Naledi', { exact: true })).toBeVisible();
+  expect(sent).toMatchObject({ action: 'resume', email: 'parent@example.com', reference: 'APP-2026-00042', dateOfBirth: '2014-03-01' });
+});
+
+test('too many lookups show a friendly rate-limit message', async ({ page }) => {
+  await page.route('**/functions/v1/admissions-public', async (route) => {
+    await fulfillJson(route, { error: 'rate_limited' }, 429);
+  });
+  await page.goto('/apply/resume');
+  await page.getByLabel('Email').fill('parent@example.com');
+  await page.getByLabel('Reference number').fill('APP-2026-00001');
+  await page.getByLabel("Child's date of birth").fill('2014-03-01');
+  await page.getByRole('button', { name: 'Look up' }).click();
+  await expect(page.getByText('Too many attempts. Please wait a few minutes and try again.')).toBeVisible();
+});

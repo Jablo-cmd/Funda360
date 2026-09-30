@@ -2,6 +2,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
 import '@/styles/index.css';
+import { installGlobalErrorHandlers } from '@/lib/errorReporting';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+
+installGlobalErrorHandlers();
 
 const container = document.getElementById('root');
 
@@ -11,6 +15,8 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary context="root" fullScreen>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );

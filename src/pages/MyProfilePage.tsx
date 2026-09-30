@@ -57,7 +57,7 @@ export function MyProfilePage() {
   // linked to your account yet" empty state.
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <div>
         <h1 className="text-2xl font-bold text-content-primary">My Profile</h1>
         <p className="mt-1 text-sm text-content-secondary">Records linked to your account.</p>

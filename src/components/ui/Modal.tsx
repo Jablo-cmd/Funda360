@@ -15,13 +15,19 @@ export interface ModalProps {
 export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  // Callers often pass an inline `onClose`. Keeping the latest one in a ref means the effect below depends on `isOpen` only, so a parent re-render (every keystroke in a form, say) never re-runs it and steals focus back to the first field.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -46,14 +52,17 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
     document.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
 
-    const firstField = dialogRef.current?.querySelector<HTMLElement>('input, textarea, select, button');
+    const firstField = dialogRef.current?.querySelector<HTMLElement>(
+      'input, textarea, select, button',
+    );
     firstField?.focus();
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
+      previouslyFocused?.focus?.();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -75,13 +84,17 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="focus-ring rounded-md p-1.5 text-content-secondary hover:text-content-primary"
+            className="focus-ring -mr-2 flex h-11 w-11 items-center justify-center rounded-md text-content-secondary hover:text-content-primary lg:h-9 lg:w-9"
           >
             <CloseIcon className="h-5 w-5" />
           </button>
         </div>
         <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
-        {footer && <div className="shrink-0 border-t border-border px-4 py-3.5 sm:px-5 sm:py-4">{footer}</div>}
+        {footer && (
+          <div className="shrink-0 border-t border-border px-4 py-3.5 sm:px-5 sm:py-4">
+            {footer}
+          </div>
+        )}
       </div>
     </div>,
     document.body,

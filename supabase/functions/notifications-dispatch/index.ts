@@ -21,6 +21,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, json } from '../_shared/cors.ts';
+import { timingSafeEqual } from '../_shared/providers/types.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -34,6 +35,7 @@ const TWILIO_SMS_FROM = Deno.env.get('TWILIO_SMS_FROM') ?? '';
 const TWILIO_WHATSAPP_FROM = Deno.env.get('TWILIO_WHATSAPP_FROM') ?? '';
 
 const MAX_ATTEMPTS = 5;
+const LEASE_MINUTES = 10;
 
 interface DeliveryRow {
   id: string;
@@ -98,7 +100,7 @@ function deliver(row: DeliveryRow, notification: NotificationRow): Promise<Adapt
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
-  if (dispatchSecret.length === 0 || req.headers.get('x-dispatch-secret') !== dispatchSecret) {
+  if (dispatchSecret.length === 0 || !timingSafeEqual(req.headers.get('x-dispatch-secret') ?? '', dispatchSecret)) {
     return json({ error: 'unauthorized' }, 401);
   }
 
@@ -123,11 +125,29 @@ Deno.serve(async (req) => {
   if (error) return json({ error: error.message }, 500);
 
   const rows = (pending ?? []) as DeliveryRow[];
-  const result = { scanned: rows.length, sent: 0, failed: 0, skippedUnconfigured: 0 };
+  const result = { scanned: rows.length, sent: 0, failed: 0, skippedUnconfigured: 0, skippedClaimed: 0 };
 
   for (const row of rows) {
     if (!channelConfigured(row.channel)) {
       result.skippedUnconfigured += 1;
+      continue;
+    }
+
+    // Claim the row before sending: a compare-and-set on (status, attempts)
+    // that also leases it for LEASE_MINUTES by moving scheduled_for forward.
+    // A concurrent run's claim matches nothing and skips the row, so a
+    // message is never sent twice at the same time; if this run dies
+    // mid-send, the lease expires and the row is retried.
+    const claimedAttempts = row.attempts + 1;
+    const { data: claimed } = await s
+      .from('notification_deliveries')
+      .update({ attempts: claimedAttempts, scheduled_for: new Date(Date.now() + LEASE_MINUTES * 60_000).toISOString() })
+      .eq('id', row.id)
+      .eq('status', 'pending')
+      .eq('attempts', row.attempts)
+      .select('id');
+    if (!claimed || claimed.length === 0) {
+      result.skippedClaimed += 1;
       continue;
     }
 
@@ -155,19 +175,18 @@ Deno.serve(async (req) => {
         .update({
           status: 'sent',
           sent_at: new Date().toISOString(),
-          attempts: row.attempts + 1,
           provider_message_id: outcome.providerMessageId,
           error: null,
         })
         .eq('id', row.id);
       result.sent += 1;
     } else {
-      const nextAttempts = row.attempts + 1;
       await s
         .from('notification_deliveries')
         .update({
-          status: nextAttempts >= MAX_ATTEMPTS ? 'failed' : 'pending',
-          attempts: nextAttempts,
+          status: claimedAttempts >= MAX_ATTEMPTS ? 'failed' : 'pending',
+          // Exponential-ish backoff: 5, 10, 20, 40 minutes.
+          scheduled_for: new Date(Date.now() + 5 * 2 ** (claimedAttempts - 1) * 60_000).toISOString(),
           error: outcome.error,
         })
         .eq('id', row.id);

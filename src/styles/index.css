@@ -31,6 +31,14 @@
   --brand-800: 12 35 61;
   --brand-900: 11 31 58;
 
+  /* Orange accent (compliance layer, highlights). Use accent-500/600 for
+     fills, icons and borders; accent-700 for text on white (5.18:1, AA). */
+  --accent-50: 255 247 237;
+  --accent-100: 255 237 213;
+  --accent-500: 249 115 22;
+  --accent-600: 234 88 12;
+  --accent-700: 194 65 12;
+
   --surface: 255 255 255;
   --surface-raised: 255 255 255;
   --surface-sunken: 238 241 244;
@@ -64,6 +72,10 @@
      "Failed to load…" error alert text). This value measures 5.405:1
      against --danger-50 and 5.913:1 against white. */
   --danger-600: 196 30 30;
+  /* Solid fill behind white text (badges, destructive buttons). Same value as
+     --danger-600 in light mode; dark mode needs its own because --danger-600
+     is the lighter text colour there. */
+  --danger-700: 196 30 30;
 
   /* WCAG AA fix (FND-SEC-007): the previous value (34 150 94) measured
      3.75:1 against white and 3.357:1 against its own translucent
@@ -103,6 +115,12 @@
   --brand-800: 32 66 101;
   --brand-900: 22 46 74;
 
+  --accent-50: 67 20 7;
+  --accent-100: 124 45 18;
+  --accent-500: 251 146 60;
+  --accent-600: 249 115 22;
+  --accent-700: 253 186 116;
+
   --surface: 10 16 28;
   --surface-raised: 17 27 45;
   --surface-sunken: 6 10 20;
@@ -121,7 +139,10 @@
 
   --danger-50: 69 10 10;
   --danger-500: 248 113 113;
-  --danger-600: 239 68 68;
+  /* Text on --danger-50: 6.3:1. The previous 239 68 68 measured 4.28:1. */
+  --danger-600: 248 113 113;
+  /* White text on this: 6.5:1. */
+  --danger-700: 185 28 28;
 
   --success-500: 74 222 128;
 
@@ -168,6 +189,9 @@
     min-height: 100%;
   }
 
+  /* Both, not just body: mobile browsers only honour a body-level rule when
+     html is also clipped, and otherwise let the page pan sideways. */
+  html,
   body {
     overflow-x: hidden;
   }
@@ -176,6 +200,15 @@
   [role='button'],
   a {
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* brand-600 is the solid button/fill colour, so its dark value stays mid-blue
+     (white text on it passes). As *text* on a dark surface it measures only 3.1:1,
+     so in dark mode any text-brand-600 is drawn with brand-300 instead. A
+     component's own `dark:text-*` class still wins because utilities load after
+     this base layer. */
+  .dark .text-brand-600 {
+    color: rgb(var(--brand-300));
   }
 
   input,
@@ -194,9 +227,24 @@
   }
 }
 
+/* A link inside a sentence must not rely on colour alone (WCAG 1.4.1). The
+   `no-underline` utility opts out for links that are styled as buttons. */
+p a,
+li a,
+dd a {
+  text-decoration-line: underline;
+  text-underline-offset: 2px;
+}
+
 @media (max-width: 767px) {
   .focus-ring {
     @apply focus-visible:ring-offset-1;
+  }
+
+  /* iOS Safari zooms the whole page when a focused field's text is under
+     16px, which shoves the layout sideways and never zooms back out. */
+  :is(input, select, textarea):not([type='checkbox'], [type='radio'], [type='range'], [type='file']) {
+    font-size: 1rem;
   }
 
   /* Avoid accidental page-level horizontal overflow from long labels,

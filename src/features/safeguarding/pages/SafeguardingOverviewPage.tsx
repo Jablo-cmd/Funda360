@@ -16,7 +16,7 @@ const SEVERITY_STYLES: Record<SafeguardingSeverity, string> = {
   low: 'bg-surface-sunken text-content-tertiary',
   medium: 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500',
   high: 'bg-danger-50 text-danger-600',
-  critical: 'bg-danger-600 text-white',
+  critical: 'bg-danger-700 text-white',
 };
 
 const STATUS_LABELS: Record<SafeguardingStatus, string> = {

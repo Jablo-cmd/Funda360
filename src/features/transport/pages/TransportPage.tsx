@@ -196,54 +196,54 @@ export function TransportPage() {
         <>
           <div className="grid gap-6 xl:grid-cols-4">
             <FormCard title="Add vehicle">
-              <input className={inputClass} placeholder="Registration number" value={vehicleReg} onChange={e => setVehicleReg(e.target.value)} />
-              <input className={inputClass} type="number" min="1" placeholder="Capacity" value={vehicleCapacity} onChange={e => setVehicleCapacity(e.target.value)} />
+              <input className={inputClass} aria-label="Registration number" placeholder="Registration number" value={vehicleReg} onChange={e => setVehicleReg(e.target.value)} />
+              <input className={inputClass} type="number" min="1" aria-label="Capacity" placeholder="Capacity" value={vehicleCapacity} onChange={e => setVehicleCapacity(e.target.value)} />
               <Button disabled={busy || !vehicleReg.trim()} onClick={() => void create(async () => { await transportService.createVehicle(school.id, { registration_number: vehicleReg.trim(), capacity: Number(vehicleCapacity) }); setVehicleReg(''); })}>Add vehicle</Button>
             </FormCard>
             <FormCard title="Add driver">
-              <input className={inputClass} placeholder="First name" value={driverFirst} onChange={e => setDriverFirst(e.target.value)} />
-              <input className={inputClass} placeholder="Last name" value={driverLast} onChange={e => setDriverLast(e.target.value)} />
-              <input className={inputClass} placeholder="Phone" value={driverPhone} onChange={e => setDriverPhone(e.target.value)} />
+              <input className={inputClass} aria-label="First name" placeholder="First name" value={driverFirst} onChange={e => setDriverFirst(e.target.value)} />
+              <input className={inputClass} aria-label="Last name" placeholder="Last name" value={driverLast} onChange={e => setDriverLast(e.target.value)} />
+              <input className={inputClass} aria-label="Phone" placeholder="Phone" value={driverPhone} onChange={e => setDriverPhone(e.target.value)} />
               <Button disabled={busy || !driverFirst.trim() || !driverLast.trim()} onClick={() => void create(async () => { await transportService.createDriver(school.id, { first_name: driverFirst.trim(), last_name: driverLast.trim(), phone: driverPhone || null }); setDriverFirst(''); setDriverLast(''); setDriverPhone(''); })}>Add driver</Button>
             </FormCard>
             <FormCard title="Add route">
-              <input className={inputClass} placeholder="Route name" value={routeName} onChange={e => setRouteName(e.target.value)} />
-              <input className={inputClass} placeholder="Code" value={routeCode} onChange={e => setRouteCode(e.target.value)} />
-              <select className={inputClass} value={routeDirection} onChange={e => setRouteDirection(e.target.value as 'morning'|'afternoon'|'both')}><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="both">Both</option></select>
+              <input className={inputClass} aria-label="Route name" placeholder="Route name" value={routeName} onChange={e => setRouteName(e.target.value)} />
+              <input className={inputClass} aria-label="Code" placeholder="Code" value={routeCode} onChange={e => setRouteCode(e.target.value)} />
+              <select className={inputClass} aria-label="Route direction" value={routeDirection} onChange={e => setRouteDirection(e.target.value as 'morning'|'afternoon'|'both')}><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="both">Both</option></select>
               <Button disabled={busy || !routeName.trim() || !routeCode.trim()} onClick={() => void create(async () => { const r = await transportService.createRoute(school.id, { name: routeName.trim(), code: routeCode.trim(), direction: routeDirection }); setRouteName(''); setRouteCode(''); setSelectedRouteId(r.id); })}>Add route</Button>
             </FormCard>
             <FormCard title="Add stop">
-              <input className={inputClass} placeholder="Stop name" value={stopName} onChange={e => setStopName(e.target.value)} />
-              <input className={inputClass} placeholder="Address" value={stopAddress} onChange={e => setStopAddress(e.target.value)} />
+              <input className={inputClass} aria-label="Stop name" placeholder="Stop name" value={stopName} onChange={e => setStopName(e.target.value)} />
+              <input className={inputClass} aria-label="Address" placeholder="Address" value={stopAddress} onChange={e => setStopAddress(e.target.value)} />
               <Button disabled={busy || !stopName.trim()} onClick={() => void create(async () => { await transportService.createStop(school.id, { name: stopName.trim(), address: stopAddress || null }); setStopName(''); setStopAddress(''); })}>Add stop</Button>
             </FormCard>
           </div>
 
           <section className="grid gap-6 lg:grid-cols-2">
             <FormCard title="Build route stops">
-              <select className={inputClass} value={selectedRouteId} onChange={e => setSelectedRouteId(e.target.value)}><option value="">Select route</option>{routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
-              <select className={inputClass} value={routeStopId} onChange={e => setRouteStopId(e.target.value)}><option value="">Select stop</option>{stops.filter(s => !routeStops.some(rs => rs.stop_id === s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-              <input className={inputClass} type="number" min="1" value={routeStopOrder} onChange={e => setRouteStopOrder(e.target.value)} />
+              <select className={inputClass} aria-label="Route" value={selectedRouteId} onChange={e => setSelectedRouteId(e.target.value)}><option value="">Select route</option>{routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
+              <select className={inputClass} aria-label="Stop to add" value={routeStopId} onChange={e => setRouteStopId(e.target.value)}><option value="">Select stop</option>{stops.filter(s => !routeStops.some(rs => rs.stop_id === s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+              <input className={inputClass} type="number" min="1" aria-label="Stop order" value={routeStopOrder} onChange={e => setRouteStopOrder(e.target.value)} />
               <Button disabled={busy || !selectedRouteId || !routeStopId} onClick={() => void create(() => transportService.addRouteStop(selectedRouteId, routeStopId, Number(routeStopOrder)))}>Add stop to route</Button>
               <div className="space-y-2">{routeStops.map(rs => <Row key={rs.id} title={`#${rs.stop_order} · ${stops.find(s => s.id === rs.stop_id)?.name ?? 'Stop'}`} detail={rs.pickup_time ?? rs.dropoff_time ?? 'No scheduled time'} />)}</div>
             </FormCard>
 
             <FormCard title="Assign learner to transport">
-              <select className={inputClass} value={assignmentLearner} onChange={e => setAssignmentLearner(e.target.value)}><option value="">Select learner</option>{learners.map(l => <option key={l.id} value={l.id}>{l.last_name}, {l.first_name} · {l.learner_number}</option>)}</select>
-              <select className={inputClass} value={assignmentRoute} onChange={e => setAssignmentRoute(e.target.value)}><option value="">Select route</option>{routes.filter(r => r.active).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
-              <select className={inputClass} value={assignmentPickup} onChange={e => setAssignmentPickup(e.target.value)}><option value="">Pickup stop (optional)</option>{stops.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-              <select className={inputClass} value={assignmentDropoff} onChange={e => setAssignmentDropoff(e.target.value)}><option value="">Drop-off stop (optional)</option>{stops.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-              <input className={inputClass} type="date" value={assignmentFrom} onChange={e => setAssignmentFrom(e.target.value)} />
+              <select className={inputClass} aria-label="Learner" value={assignmentLearner} onChange={e => setAssignmentLearner(e.target.value)}><option value="">Select learner</option>{learners.map(l => <option key={l.id} value={l.id}>{l.last_name}, {l.first_name} · {l.learner_number}</option>)}</select>
+              <select className={inputClass} aria-label="Route" value={assignmentRoute} onChange={e => setAssignmentRoute(e.target.value)}><option value="">Select route</option>{routes.filter(r => r.active).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
+              <select className={inputClass} aria-label="Pickup stop" value={assignmentPickup} onChange={e => setAssignmentPickup(e.target.value)}><option value="">Pickup stop (optional)</option>{stops.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+              <select className={inputClass} aria-label="Drop-off stop" value={assignmentDropoff} onChange={e => setAssignmentDropoff(e.target.value)}><option value="">Drop-off stop (optional)</option>{stops.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+              <input className={inputClass} type="date" aria-label="Assignment start date" value={assignmentFrom} onChange={e => setAssignmentFrom(e.target.value)} />
               <Button disabled={busy || !assignmentLearner || !assignmentRoute} onClick={() => void create(() => transportService.createAssignment(school.id, { learner_id: assignmentLearner, route_id: assignmentRoute, pickup_stop_id: assignmentPickup || null, dropoff_stop_id: assignmentDropoff || null, effective_from: assignmentFrom }))}>Assign learner</Button>
             </FormCard>
           </section>
 
           <FormCard title="Schedule a trip">
             <div className="grid gap-3 md:grid-cols-5">
-              <select className={inputClass} value={tripRoute} onChange={e => setTripRoute(e.target.value)}><option value="">Route</option>{routes.filter(r => r.active).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
-              <select className={inputClass} value={tripVehicle} onChange={e => setTripVehicle(e.target.value)}><option value="">Vehicle</option>{vehicles.filter(v => v.status === 'active').map(v => <option key={v.id} value={v.id}>{v.registration_number} · {v.capacity} seats</option>)}</select>
-              <select className={inputClass} value={tripDriver} onChange={e => setTripDriver(e.target.value)}><option value="">Driver (optional)</option>{drivers.filter(d => d.status === 'active').map(d => <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>)}</select>
-              <input className={inputClass} type="date" value={tripDate} onChange={e => setTripDate(e.target.value)} />
+              <select className={inputClass} aria-label="Trip route" value={tripRoute} onChange={e => setTripRoute(e.target.value)}><option value="">Route</option>{routes.filter(r => r.active).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
+              <select className={inputClass} aria-label="Vehicle" value={tripVehicle} onChange={e => setTripVehicle(e.target.value)}><option value="">Vehicle</option>{vehicles.filter(v => v.status === 'active').map(v => <option key={v.id} value={v.id}>{v.registration_number} · {v.capacity} seats</option>)}</select>
+              <select className={inputClass} aria-label="Driver" value={tripDriver} onChange={e => setTripDriver(e.target.value)}><option value="">Driver (optional)</option>{drivers.filter(d => d.status === 'active').map(d => <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>)}</select>
+              <input className={inputClass} type="date" aria-label="Trip date" value={tripDate} onChange={e => setTripDate(e.target.value)} />
               <Button disabled={busy || !tripRoute || !tripVehicle} onClick={() => void create(async () => { const trip = await transportService.createSchedule(school.id, { route_id: tripRoute, vehicle_id: tripVehicle, driver_id: tripDriver || null, service_date: tripDate }); setSelectedScheduleId(trip.id); })}>Schedule trip</Button>
             </div>
           </FormCard>
@@ -270,7 +270,7 @@ export function TransportPage() {
       {canManage && selectedTrip && (
         <DataCard title={`Trip register · ${selectedTrip.service_date}`}>
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <select className={inputClass + ' max-w-sm'} value={selectedScheduleId} onChange={e => setSelectedScheduleId(e.target.value)}>{schedules.map(s => <option key={s.id} value={s.id}>{s.service_date} · {routes.find(r => r.id === s.route_id)?.name ?? 'Route'}</option>)}</select>
+            <select className={inputClass + ' max-w-sm'} aria-label="Trip schedule" value={selectedScheduleId} onChange={e => setSelectedScheduleId(e.target.value)}>{schedules.map(s => <option key={s.id} value={s.id}>{s.service_date} · {routes.find(r => r.id === s.route_id)?.name ?? 'Route'}</option>)}</select>
             <Button variant="secondary" onClick={exportRoster} disabled={roster.length === 0}>Export roster</Button>
             <Button disabled={busy} onClick={() => void create(() => transportService.setTripStatus(selectedTrip.id, selectedTrip.status === 'scheduled' ? 'boarding' : selectedTrip.status === 'boarding' ? 'in_progress' : 'completed'))}>{selectedTrip.status === 'scheduled' ? 'Start boarding' : selectedTrip.status === 'boarding' ? 'Start trip' : selectedTrip.status === 'in_progress' ? 'Complete trip' : selectedTrip.status}</Button>
           </div>
@@ -282,9 +282,9 @@ export function TransportPage() {
         <FormCard title="Transport fee integration">
           <p className="text-xs text-content-tertiary">Charges use Funda360's existing fee ledger and active transport fee structures. Duplicate matching charges are rejected.</p>
           <div className="grid gap-3 md:grid-cols-4">
-            <select className={inputClass} value={feeLearner} onChange={e => setFeeLearner(e.target.value)}>{learners.map(l => <option key={l.id} value={l.id}>{l.last_name}, {l.first_name}</option>)}</select>
-            <select className={inputClass} value={feeStructure} onChange={e => setFeeStructure(e.target.value)}>{feeStructures.map(f => <option key={f.id} value={f.id}>{f.name} · R{Number(f.amount).toFixed(2)}</option>)}</select>
-            <input className={inputClass} type="date" value={feeDueDate} onChange={e => setFeeDueDate(e.target.value)} />
+            <select className={inputClass} aria-label="Learner to bill" value={feeLearner} onChange={e => setFeeLearner(e.target.value)}>{learners.map(l => <option key={l.id} value={l.id}>{l.last_name}, {l.first_name}</option>)}</select>
+            <select className={inputClass} aria-label="Fee structure" value={feeStructure} onChange={e => setFeeStructure(e.target.value)}>{feeStructures.map(f => <option key={f.id} value={f.id}>{f.name} · R{Number(f.amount).toFixed(2)}</option>)}</select>
+            <input className={inputClass} type="date" aria-label="Fee due date" value={feeDueDate} onChange={e => setFeeDueDate(e.target.value)} />
             <Button disabled={busy || !feeLearner || !feeStructure} onClick={() => void create(() => transportService.createTransportCharge(feeLearner, feeStructure, feeDueDate || null))}>Raise transport charge</Button>
           </div>
         </FormCard>

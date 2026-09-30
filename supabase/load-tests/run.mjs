@@ -66,7 +66,12 @@ if (!SUPABASE_ANON_KEY) {
   throw new Error('VITE_SUPABASE_ANON_KEY not found in the environment or .env.local.');
 }
 
-const DEMO_PASSWORD = 'Funda360!DEMO-ONLY-2026';
+// The seed generates a fresh random password on every `supabase db reset`
+// and prints it in the reset output — pass it in here, never hard-code it.
+const DEMO_PASSWORD = process.env.FUNDA360_SEED_PASSWORD;
+if (!DEMO_PASSWORD) {
+  throw new Error('Set FUNDA360_SEED_PASSWORD to the password printed by `supabase db reset` (supabase/seed.sql).');
+}
 
 // Real seeded Auris Academy accounts spanning the roles that exercise
 // meaningfully different RLS/query shapes — not a synthetic actor set.

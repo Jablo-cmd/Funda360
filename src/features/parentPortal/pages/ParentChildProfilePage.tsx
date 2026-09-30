@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useRecordAccessLog } from '@/features/compliance/hooks/useRecordAccessLog';
 import { Link } from 'react-router-dom';
 import { FullScreenSpinner } from '@/components/ui/FullScreenSpinner';
 import { FullScreenNotice } from '@/components/ui/FullScreenNotice';
@@ -61,6 +62,7 @@ export function ParentChildProfilePage() {
   const { school } = useSchool();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  useRecordAccessLog(learnerId, `Parent portal — ${activeTab} tab`);
 
   if (isLoading) {
     return <FullScreenSpinner label="Loading…" />;
@@ -85,7 +87,7 @@ export function ParentChildProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <button
         type="button"
         onClick={() => navigate('/parent/children')}

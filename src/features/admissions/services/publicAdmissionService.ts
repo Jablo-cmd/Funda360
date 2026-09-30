@@ -35,7 +35,12 @@ export interface PublicApplicationPayload {
 
 async function invoke<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke<T & { error?: string }>('admissions-public', { body });
-  if (error) throw new Error('Could not reach the admissions service. Please try again.');
+  if (error) {
+    const status = (error as { context?: { status?: number } }).context?.status;
+    if (status === 429) throw new Error('Too many attempts. Please wait a few minutes and try again.');
+    if (status === 400) throw new Error('Please check the details you entered and try again.');
+    throw new Error('Could not reach the admissions service. Please try again.');
+  }
   if (data && typeof data === 'object' && 'error' in data && data.error) {
     throw new Error(String(data.error));
   }
@@ -56,14 +61,15 @@ export const publicAdmissionService = {
 
   submit: (resumeToken: string) => invoke<{ referenceNumber: string }>({ action: 'submit', resumeToken }),
 
-  resume: (email: string, reference: string) =>
+  /** Requires the learner's date of birth as well: email + reference alone are guessable. Returns no application details beyond the first name. */
+  resume: (email: string, reference: string, dateOfBirth: string) =>
     invoke<{
       found: boolean;
       status?: string;
       reference_number?: string;
+      learner_first_name?: string | null;
       resume_token?: string | null;
-      application?: Record<string, unknown>;
-    }>({ action: 'resume', email, reference }),
+    }>({ action: 'resume', email, reference, dateOfBirth }),
 
   async uploadDocument(resumeToken: string, file: File, label: string, requirementId?: string): Promise<void> {
     const { uploadUrl, path } = await invoke<{ uploadUrl: string; path: string; token: string }>({
@@ -71,6 +77,7 @@ export const publicAdmissionService = {
       resumeToken,
       fileName: file.name,
       mimeType: file.type,
+      sizeBytes: file.size,
     });
     const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
     if (!put.ok) throw new Error('The file upload failed. Please try again.');

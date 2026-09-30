@@ -294,6 +294,9 @@ const ParentProfilePage = named(
 );
 const ParentTransportPage = named(() => import('@/features/transport/pages/ParentTransportPage'), 'ParentTransportPage');
 const LearnerTransportPage = named(() => import('@/features/transport/pages/LearnerTransportPage'), 'LearnerTransportPage');
+const ComplianceCenterPage = named(() => import('@/features/compliance/pages/ComplianceCenterPage'), 'ComplianceCenterPage');
+const PrivacyCenterPage = named(() => import('@/features/compliance/pages/PrivacyCenterPage'), 'PrivacyCenterPage');
+const TrustPage = named(() => import('@/features/compliance/pages/TrustPage'), 'TrustPage');
 
 export function AppRoutes() {
   return (
@@ -309,6 +312,7 @@ export function AppRoutes() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/mfa-challenge" element={<MfaChallengePage />} />
         <Route path="/apply" element={<PublicApplyPage />} />
+        <Route path="/trust" element={<TrustPage />} />
         <Route path="/apply/resume" element={<PublicApplyResumePage />} />
 
         <Route element={<ProtectedRoute />}>
@@ -401,6 +405,9 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="transport.view" />}>
                 <Route path="/transport" element={<TransportPage />} />
               </Route>
+              <Route element={<RequirePermission permission="compliance.view" />}>
+                <Route path="/compliance" element={<ComplianceCenterPage />} />
+              </Route>
               <Route element={<RequirePermission permission="operations.view" />}>
                 <Route path="/operations" element={<OperationsHubPage />} />
               </Route>
@@ -465,6 +472,7 @@ export function AppRoutes() {
                 <Route path="/parent/homework" element={<ParentHomeworkPage />} />
                 <Route path="/parent/homework/:assignmentId" element={<ParentHomeworkPage />} />
                 <Route path="/parent/transport" element={<ParentTransportPage />} />
+                <Route path="/parent/privacy" element={<PrivacyCenterPage />} />
               </Route>
             </Route>
 
@@ -478,6 +486,7 @@ export function AppRoutes() {
                 <Route path="/learner/report-cards" element={<LearnerReportCardsPage />} />
                 <Route path="/learner/attendance" element={<LearnerAttendancePage />} />
                 <Route path="/learner/transport" element={<LearnerTransportPage />} />
+                <Route path="/learner/privacy" element={<PrivacyCenterPage />} />
                 <Route path="/learner/documents" element={<LearnerDocumentsPage />} />
                 <Route path="/learner/announcements" element={<AnnouncementsPage />} />
                 <Route path="/learner/notifications" element={<NotificationsPage />} />

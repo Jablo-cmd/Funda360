@@ -11,8 +11,22 @@ export interface CsvColumn<T> {
   header: string;
 }
 
+/**
+ * CSV/formula injection guard (OWASP): a cell that a spreadsheet would
+ * evaluate as a formula — leading `=`, `+`, `@`, tab or carriage return, or a
+ * `-` that does not start a plain number — is prefixed with an apostrophe so
+ * it is shown as text. Values such as names arrive from the unauthenticated
+ * admissions form, so exports must never execute them. Plain negative
+ * numbers (`-150.00`) are left untouched.
+ */
+function neutraliseFormula(raw: string): string {
+  if (/^[=+@\t\r]/.test(raw)) return `'${raw}`;
+  if (raw.startsWith('-') && !/^-\d+(\.\d+)?$/.test(raw)) return `'${raw}`;
+  return raw;
+}
+
 function escapeCsvCell(value: unknown): string {
-  const raw = value === null || value === undefined ? '' : String(value);
+  const raw = neutraliseFormula(value === null || value === undefined ? '' : String(value));
   if (/["\n,]/.test(raw)) {
     return `"${raw.replace(/"/g, '""')}"`;
   }

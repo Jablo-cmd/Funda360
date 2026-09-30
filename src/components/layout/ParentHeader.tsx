@@ -16,32 +16,35 @@ export interface ParentHeaderProps {
  * no tenant switcher, no academic-year label. A parent should never feel
  * like they're looking at the school's admin backend.
  */
-export function ParentHeader({ onMenuClick, notificationsPath = '/parent/notifications' }: ParentHeaderProps) {
+export function ParentHeader({
+  onMenuClick,
+  notificationsPath = '/parent/notifications',
+}: ParentHeaderProps) {
   const { school } = useSchool();
 
   return (
-    <header className="flex h-[4.5rem] shrink-0 items-center justify-between gap-4 border-b border-border bg-surface-raised px-4 sm:px-6">
-      <div className="flex min-w-0 items-center gap-3">
+    <header className="flex h-16 shrink-0 items-center justify-between gap-1 border-b border-border bg-surface-raised px-2 sm:h-[4.5rem] sm:gap-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-1 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
           aria-label="Open menu"
-          className="focus-ring -ml-1 shrink-0 rounded-md p-1.5 text-content-secondary hover:text-content-primary md:hidden"
+          className="focus-ring touch-target flex shrink-0 items-center justify-center rounded-md text-content-secondary hover:text-content-primary md:hidden"
         >
           <MenuIcon className="h-5 w-5" />
         </button>
         <Logo />
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-3">
         {school && (
-          <span className="hidden max-w-[16rem] truncate text-sm font-medium text-content-secondary sm:block">
+          <span className="hidden max-w-[16rem] truncate text-sm font-medium text-content-secondary md:block">
             {school.name}
           </span>
         )}
-        <div className="hidden h-9 w-px bg-border sm:block" />
+        <div className="hidden h-9 w-px bg-border md:block" />
         <NotificationBell to={notificationsPath} />
-        <ThemeToggle />
+        <ThemeToggle className="hidden sm:inline-flex" />
         <UserMenu />
       </div>
     </header>

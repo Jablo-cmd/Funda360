@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageContainer } from '@/components/ui/PageContainer';
+import { FamilyDataProtectionCard } from '@/features/compliance/components/FamilyDataProtectionCard';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import { useProfile } from '@/features/profile/context/profileContext';
@@ -105,6 +106,8 @@ export function ParentDashboardPage() {
           )}
         </div>
       )}
+
+      <FamilyDataProtectionCard />
     </PageContainer>
   );
 }

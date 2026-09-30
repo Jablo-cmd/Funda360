@@ -6,6 +6,7 @@ import {
   GridIcon,
   GraduationCapIcon,
   MegaphoneIcon,
+  ShieldIcon,
   UsersIcon,
   WalletIcon,
 } from '@/components/ui/icons';
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { label: 'Transport', path: '/parent/transport', icon: CalendarIcon },
   { label: 'Messages', path: '/parent/messages', icon: ChatIcon },
   { label: 'Announcements', path: '/parent/announcements', icon: MegaphoneIcon },
+  { label: 'Privacy & Records', path: '/parent/privacy', icon: ShieldIcon },
   { label: 'My Profile', path: '/parent/profile', icon: UsersIcon },
 ];
 

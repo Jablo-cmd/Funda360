@@ -27,6 +27,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Migration versions are unique
+        # Supabase records one row per migration version. Two files sharing a
+        # version means one of them is silently never applied to a hosted
+        # project (this happened with 20260919090000 — audit 2026-09-29).
+        run: |
+          dupes=$(ls supabase/migrations/*.sql | xargs -n1 basename | cut -d_ -f1 | sort | uniq -d)
+          if [ -n "$dupes" ]; then
+            echo "::error::Duplicate migration versions: $dupes"
+            exit 1
+          fi
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -51,13 +62,13 @@ jobs:
           deno-version: v2.x
       - name: Type-check Edge Functions
         working-directory: supabase/functions
-        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts _shared/providers/providers.test.ts
+        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts _shared/providers/providers.test.ts _shared/providers/binding.test.ts _shared/admissions/guards.test.ts
       - name: Lint Edge Functions
         working-directory: supabase/functions
         run: deno lint
       - name: Payment provider adapter tests
         working-directory: supabase/functions
-        run: deno test --allow-env --allow-net _shared/providers/providers.test.ts
+        run: deno test --allow-env --allow-net _shared/
 
   rls-tests:
     name: RLS / trigger / SECURITY DEFINER regression suite
@@ -105,10 +116,63 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  migrate:
+    # The hosted database must be at least as new as the frontend that is
+    # about to be deployed. Before this job existed, migrations were applied
+    # by hand and production drifted five migrations behind the deployed UI
+    # (audit 2026-09-29, finding P0-2). `supabase db push` applies only the
+    # migrations the remote history does not yet contain, in version order,
+    # and fails the pipeline — blocking the deploy — if any of them fails.
+    if: github.event_name == 'push'
+    name: Apply database migrations to production
+    needs: [quality, edge-functions, rls-tests, e2e]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify migration credentials
+        run: |
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub Actions secret $name in the github-pages environment. Production migrations cannot be applied, so the deploy is blocked."
+              exit 1
+            fi
+          done
+
+      - name: Link hosted project
+        run: npx supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply pending migrations
+        run: npx supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Confirm no drift remains
+        run: |
+          npx supabase migration list --password "$SUPABASE_DB_PASSWORD" | tee migration-list.txt
+          # A row with a local version but an empty remote column means the
+          # push did not apply it.
+          if awk -F'|' 'NR>2 && $1 ~ /[0-9]/ && $2 !~ /[0-9]/' migration-list.txt | grep -q .; then
+            echo "::error::Local migrations are still missing from production after db push."
+            exit 1
+          fi
+
   deploy:
     if: github.event_name == 'push'
     name: Deploy to GitHub Pages
-    needs: [quality, edge-functions, rls-tests, e2e]
+    needs: [quality, edge-functions, rls-tests, e2e, migrate]
     runs-on: ubuntu-latest
     permissions:
       contents: read

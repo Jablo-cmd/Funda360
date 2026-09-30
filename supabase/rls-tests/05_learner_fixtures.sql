@@ -54,6 +54,17 @@ values
 insert into public.profiles (id, tenant_id, first_name, last_name, email, role, status) values
   ('30303030-3030-3030-3030-303030303030', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Learner', 'A2', 'learner.a2@schoola.test', 'learner', 'active');
 
-insert into public.learners (id, school_id, profile_id, learner_number, admission_number, first_name, last_name, date_of_birth, status, admission_date) values
-  ('11110000-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '30303030-3030-3030-3030-303030303030',
+-- This learner is under the COPPA consent age, so (since
+-- 20260930100000_compliance_framework.sql) a login can only be linked after
+-- verifiable parental consent for an online account is on record — the
+-- same order real onboarding follows: create learner, record consent, link.
+insert into public.learners (id, school_id, learner_number, admission_number, first_name, last_name, date_of_birth, status, admission_date) values
+  ('11110000-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
    'LRN-A0002', 'ADM-A0002', 'Thabo', 'A2', '2014-06-01', 'active', '2024-01-15');
+
+insert into public.parental_consents (school_id, learner_id, purpose, decision, method, attested_name, policy_version) values
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-0000-0000-000000000002', 'online_learner_account', 'granted',
+   'paper_form_recorded_by_staff', 'Fixture Guardian', '2026-09');
+
+update public.learners set profile_id = '30303030-3030-3030-3030-303030303030'
+  where id = '11110000-0000-0000-0000-000000000002';

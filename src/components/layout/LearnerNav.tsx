@@ -7,6 +7,7 @@ import {
   ClipboardListIcon,
   GridIcon,
   MegaphoneIcon,
+  ShieldIcon,
   UsersIcon,
 } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { label: 'Transport', path: '/learner/transport', icon: CalendarIcon },
   { label: 'Documents', path: '/learner/documents', icon: BookIcon },
   { label: 'Announcements', path: '/learner/announcements', icon: MegaphoneIcon },
+  { label: 'Privacy & Records', path: '/learner/privacy', icon: ShieldIcon },
   { label: 'My Profile', path: '/learner/profile', icon: UsersIcon },
 ];
 

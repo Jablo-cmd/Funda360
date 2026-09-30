@@ -30,3 +30,17 @@ Public intake is exposed through `/apply` and the `admissions-public` edge funct
 
 ### Boundary
 Admissions is implemented as an operational intake workflow. Advanced CRM, marketing automation, application-fee payments and broad external admissions integrations are not assumed unless separately evidenced.
+## Abuse controls on the public endpoint (audit P1-6, 2026-09-30)
+
+`admissions-public` is unauthenticated, so it defends itself:
+
+- **Per-IP rate limits for every action** (`_shared/admissions/guards.ts` → `RATE_LIMITS`). For example, `start` allows 10 per hour and `resume` 10 per 15 minutes.
+  - Events are stored in `rate_limit_events` under a salted SHA-256 of the IP, never the raw address. Set the salt with `ADMISSIONS_RATE_LIMIT_SALT` (it falls back to a server secret).
+  - Exceeding a limit returns HTTP 429, which the UI shows as a friendly message.
+  - If the limiter itself fails, it fails open and logs, so admissions stay available.
+- **Per-email limit:** at most 5 new applications per applicant email per hour.
+- **Resume needs the learner's date of birth** as well as email and reference; reference numbers are sequential, so those two alone are guessable.
+  - A mismatch looks exactly like "not found".
+  - The response carries only status, reference and the learner's first name. The full application is no longer returned.
+- **Documents:** PDF, PNG or JPEG only, at most 10 MB. This is checked before a signed upload URL is issued, again at registration, and by the bucket's own limits.
+- **Document paths:** a document can only be registered at a path inside its own application's folder (`<school>/<application>/<file>`), so an applicant cannot attach another applicant's file.

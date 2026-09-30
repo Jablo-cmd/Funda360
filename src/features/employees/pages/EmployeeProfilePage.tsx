@@ -68,7 +68,7 @@ export function EmployeeProfilePage() {
   const departmentName = departments.find((department) => department.id === employee.departmentId)?.name ?? '—';
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
       <button
         type="button"
         onClick={() => navigate('/employees')}

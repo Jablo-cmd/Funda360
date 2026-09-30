@@ -15,7 +15,7 @@ function InvalidInvitationNotice() {
       </div>
       <Link
         to="/login"
-        className="focus-ring self-start rounded text-sm font-medium text-brand-600 hover:text-brand-700 hover:underline"
+        className="focus-ring self-start rounded text-sm font-medium text-brand-600 hover:text-brand-700 hover:underline dark:hover:text-brand-200"
       >
         Go to sign in
       </Link>

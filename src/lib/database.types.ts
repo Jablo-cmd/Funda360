@@ -2781,6 +2781,166 @@ export type TransportAttendanceRow = {
 export type TransportAttendanceInsert = never;
 export type TransportAttendanceUpdate = never;
 
+
+// ---------------------------------------------------------------------------
+// Compliance framework (20260930100000_compliance_framework.sql)
+// ---------------------------------------------------------------------------
+
+export type ComplianceFramework = 'POPIA' | 'FERPA' | 'COPPA' | 'CIPA' | 'GDPR';
+export type ConsentPurpose =
+  | 'core_educational_processing'
+  | 'online_learner_account'
+  | 'directory_information'
+  | 'third_party_sharing'
+  | 'photo_media_use';
+export type ConsentDecision = 'granted' | 'refused' | 'withdrawn';
+export type ConsentMethod = 'in_app_attestation' | 'paper_form_recorded_by_staff';
+export type AmendmentStatus = 'submitted' | 'under_review' | 'approved' | 'denied' | 'hearing_requested' | 'closed';
+export type AmendmentRecordArea =
+  | 'personal_details'
+  | 'attendance'
+  | 'assessment'
+  | 'report_card'
+  | 'behaviour'
+  | 'medical'
+  | 'financial'
+  | 'other';
+export type DisclosureRecipientType =
+  | 'school_official'
+  | 'transfer_school'
+  | 'education_authority'
+  | 'health_safety_emergency'
+  | 'court_order_or_subpoena'
+  | 'parental_consent'
+  | 'directory_information'
+  | 'other_lawful_basis';
+export type RecordAccessType = 'view' | 'export' | 'print' | 'disclosure' | 'amendment' | 'erasure';
+export type ContentSafetyCategory = 'adult' | 'gambling' | 'violence' | 'self_harm' | 'bullying' | 'drugs' | 'hate' | 'custom';
+export type ContentSafetyEventStatus = 'open' | 'reviewed_no_action' | 'escalated' | 'resolved';
+export type DsarRequestType = 'access' | 'correction' | 'restriction' | 'deletion' | 'portability';
+export type DsarStatus = 'received' | 'identity_verified' | 'processing' | 'completed' | 'rejected';
+
+export type SchoolComplianceSettingsRow = {
+  school_id: string;
+  frameworks: ComplianceFramework[];
+  coppa_consent_age: number;
+  gdpr_digital_consent_age: number;
+  ferpa_amendment_response_days: number;
+  dsar_response_days: number;
+  content_filter_enabled: boolean;
+  information_officer_name: string | null;
+  information_officer_email: string | null;
+  privacy_notice_version: string;
+  updated_by: string | null;
+  updated_at: string;
+};
+
+export type ParentalConsentRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  guardian_profile_id: string | null;
+  purpose: ConsentPurpose;
+  decision: ConsentDecision;
+  method: ConsentMethod;
+  attested_name: string | null;
+  policy_version: string;
+  recorded_by: string | null;
+  decided_at: string;
+};
+
+export type StudentRecordAccessLogRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  actor_profile_id: string | null;
+  actor_role: string;
+  access_type: RecordAccessType;
+  context: string;
+  created_at: string;
+};
+
+export type RecordAmendmentRequestRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  requested_by: string | null;
+  record_area: AmendmentRecordArea;
+  record_reference: string | null;
+  current_value: string | null;
+  requested_change: string;
+  reason: string;
+  status: AmendmentStatus;
+  decision_notes: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  due_by: string;
+  disagreement_statement: string | null;
+  hearing_requested_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecordDisclosureRow = {
+  id: string;
+  school_id: string;
+  learner_id: string;
+  disclosed_to: string;
+  recipient_type: DisclosureRecipientType;
+  legal_basis: string;
+  data_categories: string[];
+  disclosed_by: string | null;
+  disclosed_at: string;
+};
+
+export type ContentSafetyRuleRow = {
+  id: string;
+  school_id: string | null;
+  category: ContentSafetyCategory;
+  pattern: string;
+  action: 'block' | 'flag';
+  description: string | null;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type ContentSafetyEventRow = {
+  id: string;
+  school_id: string;
+  rule_id: string | null;
+  category: ContentSafetyCategory;
+  action: 'block' | 'flag';
+  source_table: string;
+  source_id: string | null;
+  actor_profile_id: string | null;
+  excerpt: string | null;
+  status: ContentSafetyEventStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  created_at: string;
+};
+
+export type DataSubjectRequestRow = {
+  id: string;
+  school_id: string;
+  subject_profile_id: string | null;
+  subject_learner_id: string | null;
+  request_type: DsarRequestType;
+  status: DsarStatus;
+  reason: string | null;
+  requested_at: string;
+  completed_at: string | null;
+  handled_by: string | null;
+  outcome_notes: string | null;
+  requested_by: string | null;
+  due_at: string | null;
+};
+
+/** Tables written only through SECURITY DEFINER RPCs — clients never insert/update them directly. */
+type RpcWrittenTable<Row> = { Row: Row; Insert: never; Update: never };
+
 export type Database = {
   public: {
     Tables: {
@@ -3128,6 +3288,14 @@ export type Database = {
       transport_assignments: { Row: TransportAssignmentRow; Insert: TransportAssignmentInsert; Update: TransportAssignmentUpdate; };
       transport_schedules: { Row: TransportScheduleRow; Insert: TransportScheduleInsert; Update: TransportScheduleUpdate; };
       transport_attendance: { Row: TransportAttendanceRow; Insert: TransportAttendanceInsert; Update: TransportAttendanceUpdate; };
+      school_compliance_settings: RpcWrittenTable<SchoolComplianceSettingsRow>;
+      parental_consents: RpcWrittenTable<ParentalConsentRow>;
+      student_record_access_log: RpcWrittenTable<StudentRecordAccessLogRow>;
+      record_amendment_requests: RpcWrittenTable<RecordAmendmentRequestRow>;
+      record_disclosures: RpcWrittenTable<RecordDisclosureRow>;
+      content_safety_rules: RpcWrittenTable<ContentSafetyRuleRow>;
+      content_safety_events: RpcWrittenTable<ContentSafetyEventRow>;
+      data_subject_requests: RpcWrittenTable<DataSubjectRequestRow>;
 
     };
     Views: Record<string, never>;
@@ -3662,6 +3830,89 @@ export type Database = {
           created_at: string;
         }[];
       };
+      record_parental_consent: {
+        Args: {
+          p_learner_id: string;
+          p_purpose: ConsentPurpose;
+          p_decision: ConsentDecision;
+          p_attested_name?: string | null;
+          p_method?: ConsentMethod;
+        };
+        Returns: ParentalConsentRow;
+      };
+      log_learner_record_access: {
+        Args: { p_learner_id: string; p_access_type: 'view' | 'export' | 'print'; p_context: string };
+        Returns: undefined;
+      };
+      submit_record_amendment: {
+        Args: {
+          p_learner_id: string;
+          p_record_area: AmendmentRecordArea;
+          p_requested_change: string;
+          p_reason: string;
+          p_record_reference?: string | null;
+          p_current_value?: string | null;
+        };
+        Returns: RecordAmendmentRequestRow;
+      };
+      decide_record_amendment: {
+        Args: {
+          p_request_id: string;
+          p_status: 'under_review' | 'approved' | 'denied' | 'closed';
+          p_decision_notes: string | null;
+        };
+        Returns: RecordAmendmentRequestRow;
+      };
+      respond_to_amendment_denial: {
+        Args: { p_request_id: string; p_request_hearing: boolean; p_disagreement_statement?: string | null };
+        Returns: RecordAmendmentRequestRow;
+      };
+      record_disclosure: {
+        Args: {
+          p_learner_id: string;
+          p_disclosed_to: string;
+          p_recipient_type: DisclosureRecipientType;
+          p_legal_basis: string;
+          p_data_categories: string[];
+        };
+        Returns: RecordDisclosureRow;
+      };
+      get_learner_record_package: { Args: { p_learner_id: string }; Returns: Json };
+      get_learner_privacy_history: { Args: { p_learner_id: string }; Returns: Json };
+      execute_learner_erasure: { Args: { p_request_id: string; p_confirm_learner_number: string }; Returns: Json };
+      review_content_safety_event: {
+        Args: { p_event_id: string; p_status: Exclude<ContentSafetyEventStatus, 'open'>; p_notes?: string | null };
+        Returns: ContentSafetyEventRow;
+      };
+      upsert_content_safety_rule: {
+        Args: {
+          p_school_id: string | null;
+          p_category: ContentSafetyCategory;
+          p_pattern: string;
+          p_action: 'block' | 'flag';
+          p_description?: string | null;
+          p_active?: boolean;
+          p_rule_id?: string | null;
+        };
+        Returns: ContentSafetyRuleRow;
+      };
+      get_compliance_overview: { Args: { p_school_id: string }; Returns: Json };
+      update_compliance_settings: {
+        Args: {
+          p_school_id: string;
+          p_frameworks: ComplianceFramework[];
+          p_coppa_consent_age: number;
+          p_gdpr_digital_consent_age: number;
+          p_ferpa_amendment_response_days: number;
+          p_dsar_response_days: number;
+          p_content_filter_enabled: boolean;
+          p_information_officer_name: string | null;
+          p_information_officer_email: string | null;
+          p_privacy_notice_version: string;
+        };
+        Returns: SchoolComplianceSettingsRow;
+      };
+      get_my_privacy_overview: { Args: Record<string, never>; Returns: Json };
     };
   };
 };

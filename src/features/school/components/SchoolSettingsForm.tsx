@@ -55,7 +55,7 @@ export function SchoolSettingsForm() {
   };
 
   return (
-    <form noValidate onSubmit={handleSubmit(onValid)} className="mx-auto max-w-3xl px-4 pb-8 sm:px-6">
+    <form noValidate onSubmit={handleSubmit(onValid)} className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-8 sm:px-6">
       <section className="rounded-card border border-border bg-surface-raised p-5 shadow-card dark:shadow-card-dark sm:p-6">
         <h2 className="text-base font-semibold text-content-primary">Regional Settings</h2>
         <p className="mt-1 text-sm text-content-secondary">

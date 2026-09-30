@@ -18,6 +18,13 @@ export default {
           800: 'rgb(var(--brand-800) / <alpha-value>)',
           900: 'rgb(var(--brand-900) / <alpha-value>)',
         },
+        accent: {
+          50: 'rgb(var(--accent-50) / <alpha-value>)',
+          100: 'rgb(var(--accent-100) / <alpha-value>)',
+          500: 'rgb(var(--accent-500) / <alpha-value>)',
+          600: 'rgb(var(--accent-600) / <alpha-value>)',
+          700: 'rgb(var(--accent-700) / <alpha-value>)',
+        },
         surface: {
           DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
           raised: 'rgb(var(--surface-raised) / <alpha-value>)',
@@ -37,6 +44,7 @@ export default {
           50: 'rgb(var(--danger-50) / <alpha-value>)',
           500: 'rgb(var(--danger-500) / <alpha-value>)',
           600: 'rgb(var(--danger-600) / <alpha-value>)',
+          700: 'rgb(var(--danger-700) / <alpha-value>)',
         },
         success: {
           500: 'rgb(var(--success-500) / <alpha-value>)',

@@ -22,6 +22,8 @@ import type { Permission } from '@/features/rbac/types/permission.types';
  */
 export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   platform_owner: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -63,6 +65,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   super_administrator: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -104,6 +108,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   platform_administrator: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -146,6 +152,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   ],
   support_engineer: ['school.view', 'profile.view_any'],
   school_owner: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -186,6 +194,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   principal: [
+    'compliance.view',
+    'compliance.manage',
     'operations.view',
     'operations.manage',
     'transport.view',
@@ -252,7 +262,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.view',
     'reports.export',
   ],
-  finance_manager: ['school.view', 'learner.view', 'learner.view_financial', 'learner.manage_financial'],
+  finance_manager: [
+    'school.view',
+    'learner.view',
+    'learner.view_financial',
+    'learner.manage_financial',
+  ],
   accountant: ['school.view', 'learner.view', 'learner.view_financial', 'learner.manage_financial'],
   receptionist: ['school.view', 'profile.view_any', 'admission.view'],
   admissions_officer: [
@@ -269,8 +284,19 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   librarian: ['school.view', 'operations.view', 'operations.manage'],
-  transport_coordinator: ['school.view', 'transport.view', 'transport.manage', 'operations.view', 'operations.manage'],
+  transport_coordinator: [
+    'school.view',
+    'transport.view',
+    'transport.manage',
+    'operations.view',
+    'operations.manage',
+  ],
   sports_coordinator: ['school.view', 'operations.view', 'operations.manage'],
+  asset_manager: ['school.view', 'operations.view', 'operations.manage'],
+  boarding_manager: ['school.view', 'operations.view', 'operations.manage'],
+  events_coordinator: ['school.view', 'operations.view', 'operations.manage'],
+  governance_officer: ['school.view', 'operations.view', 'operations.manage'],
+  procurement_officer: ['school.view', 'operations.view', 'operations.manage'],
   medical_officer: [
     'school.view',
     'learner.view',

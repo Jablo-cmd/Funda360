@@ -83,7 +83,12 @@ test('a role without attendance.view is blocked from the attendance page', async
 
   await page.goto('/attendance');
   await expect(page).toHaveURL('http://localhost:5173/dashboard');
-  await expect(page.getByRole('link', { name: 'Attendance' })).toHaveCount(0);
+  // Wait for the sidebar, then check the learner register link specifically:
+  // hr_manager legitimately has "Staff Attendance", which a substring match
+  // on 'Attendance' also matched (the old assertion only passed when it ran
+  // before the nav had rendered).
+  await expect(page.getByRole('link', { name: 'Staff Attendance' }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Attendance', exact: true })).toHaveCount(0);
 });
 
 test('dashboard shows today\'s attendance summary once registers have been taken', async ({ page }) => {
@@ -105,8 +110,8 @@ test('dashboard shows today\'s attendance summary once registers have been taken
 
   await page.goto('/dashboard');
   const attendancePanel = page.locator('section', { has: page.getByRole('heading', { name: 'Attendance Overview' }) });
-  await expect(attendancePanel.getByText('00,002', { exact: true })).toBeVisible();
-  await expect(attendancePanel.getByText('00,001', { exact: true })).toBeVisible();
+  await expect(attendancePanel.getByText('2', { exact: true })).toBeVisible();
+  await expect(attendancePanel.getByText('1', { exact: true })).toBeVisible();
 });
 
 test('dashboard shows a 30-day attendance rate KPI, computed from the trailing 30 days of records', async ({ page }) => {

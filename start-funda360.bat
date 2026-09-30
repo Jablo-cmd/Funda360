@@ -109,11 +109,9 @@ if errorlevel 1 (
 echo.
 echo Supabase is running.
 echo.
-echo Seeded local login accounts (supabase/seed.sql), all sharing the
-echo password Funda360!LOCALDEV-ONLY-2026:
-echo   super.admin@funda360.dev
-echo   principal@riverside.funda360.dev
-echo   teacher@riverside.funda360.dev
+echo Seeded local login accounts come from supabase/seed.sql. Their shared
+echo password is generated randomly on every "supabase db reset" and printed
+echo in that command's output - there is no fixed demo password.
 echo.
 
 REM ------------------------------------------------

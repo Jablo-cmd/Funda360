@@ -6,6 +6,7 @@ import { FullScreenNotice } from '@/components/ui/FullScreenNotice';
 import { Tabs } from '@/components/ui/Tabs';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSchool } from '@/features/school/hooks/useSchool';
+import { useRecordAccessLog } from '@/features/compliance/hooks/useRecordAccessLog';
 import { useLearner } from '@/features/learners/hooks/useLearner';
 import { LearnerFormModal } from '@/features/learners/components/LearnerFormModal';
 import { LearnerLoginModal } from '@/features/learners/components/LearnerLoginModal';
@@ -268,6 +269,7 @@ export function LearnerProfilePage() {
   ];
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  useRecordAccessLog(id, `Staff learner profile — ${activeTab} tab`);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -297,7 +299,7 @@ export function LearnerProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
       <button
         type="button"
         onClick={() => navigate('/learners')}

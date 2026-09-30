@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useCallback, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ParentHeader } from '@/components/layout/ParentHeader';
 import { ParentNav } from '@/components/layout/ParentNav';
 import { AppFooter } from '@/components/layout/AppFooter';
-import { CloseIcon } from '@/components/ui/icons';
+import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer';
+import { ConsentOnboardingGate } from '@/features/compliance/components/ConsentOnboardingGate';
 
 /** Mirrors DashboardLayout's shell shape (header + collapsible mobile nav + main + footer) with a purpose-built, simpler nav — see ParentNav. */
 export function ParentLayout() {
+  const { pathname } = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const closeMobileNav = useCallback(() => setIsMobileNavOpen(false), []);
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-surface-sunken">
@@ -18,36 +22,21 @@ export function ParentLayout() {
           <ParentNav />
         </aside>
 
-        {isMobileNavOpen && (
-          <div className="fixed inset-0 z-30 md:hidden">
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setIsMobileNavOpen(false)}
-              aria-hidden="true"
-            />
-            <div className="absolute inset-y-0 left-0 flex w-64 max-w-[80vw] flex-col border-r border-sidebar-border bg-sidebar shadow-card dark:shadow-card-dark">
-              <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
-                <span className="text-sm font-semibold uppercase tracking-wide text-white/90">Menu</span>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileNavOpen(false)}
-                  aria-label="Close menu"
-                  className="focus-ring touch-target flex items-center justify-center rounded-md p-1.5 text-white/70 hover:text-white"
-                >
-                  <CloseIcon className="h-5 w-5" />
-                </button>
-              </div>
-              <ParentNav onNavigate={() => setIsMobileNavOpen(false)} />
-            </div>
-          </div>
-        )}
+        <MobileNavDrawer isOpen={isMobileNavOpen} onClose={closeMobileNav} widthClassName="w-64">
+          <ParentNav onNavigate={closeMobileNav} />
+        </MobileNavDrawer>
 
-        <main className="min-w-0 flex-1 overflow-y-auto">
-          <Outlet />
+        <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+          <ConsentOnboardingGate>
+            <ErrorBoundary context="parent-route" resetKey={pathname}>
+              <Outlet />
+            </ErrorBoundary>
+          </ConsentOnboardingGate>
+          <AppFooter className="mt-auto md:hidden" />
         </main>
       </div>
 
-      <AppFooter />
+      <AppFooter className="max-md:hidden" />
     </div>
   );
 }
