@@ -99,7 +99,7 @@ export function LoginForm() {
           </label>
           <Link
             to="/forgot-password"
-            className="focus-ring rounded text-sm font-medium text-brand-600 hover:text-brand-700 hover:underline"
+            className="focus-ring rounded text-sm font-medium text-brand-600 hover:text-brand-700 hover:underline dark:hover:text-brand-200"
           >
             Forgot password?
           </Link>
