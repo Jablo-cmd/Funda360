@@ -1,6 +1,6 @@
 # Funda360 — working notes for Claude sessions
 
-Multi-tenant South African school-management SaaS. React 18 + TypeScript + Vite + Tailwind frontend (GitHub Pages, `funda360.aurisnexus.co.za`), Supabase backend (Postgres + RLS, Auth, Storage, Edge Functions). Hosted project: `rzkybmkzhpwovpvrjkxk` ("Funda360", eu-central-1).
+Multi-tenant South African school-management SaaS. React 18 + TypeScript + Vite + Tailwind frontend (GitHub Pages, `app.funda360.aurisnexus.co.za`), Supabase backend (Postgres + RLS, Auth, Storage, Edge Functions). Hosted project: `rzkybmkzhpwovpvrjkxk` ("Funda360", eu-central-1).
 
 **Resume here after a context reset:** read this file, then `git log --oneline -15`, then the "Status" section below.
 
