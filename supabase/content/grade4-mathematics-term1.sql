@@ -46,7 +46,7 @@ begin
   insert into public.curriculum_versions (code, name, version_label, source, source_reference, license_notes)
   values ('ZA-CAPS-G4-MATH-SLICE', 'South African CAPS - Grade 4 Mathematics (Term 1 slice)', 'draft-1',
           'Department of Basic Education, South Africa (CAPS)',
-          'Curriculum and Assessment Policy Statement, Mathematics, Intermediate Phase (Grades 4-6). Edition to be confirmed by the reviewer.',
+          'Department of Basic Education official CAPS Mathematics Grades 4-6 (Intermediate Phase), © 2011, ISBN 978-1-4315-0491-6. Official source: https://www.education.gov.za/LinkClick.aspx?fileticket=dr7zg3CFCr8%3D&forcedownload=true&mid=1568&portalid=0&tabid=572',
           'Funda360 draft mapping and paraphrase. Not verified against the official document. Confirm permissions for any reproduction before approval. No CAPS text is copied.')
   returning id into v_version;
 
