@@ -101,7 +101,7 @@ What is still open, and is deliberately not done by code:
 1. The sources are **not yet registered** in `curriculum_sources`, and none is marked verified. Registering them (title, publisher, licence, checksum) and verifying them is a person's step in the Content Studio.
 2. The CAPS PDF is given under two different DBE URLs in `docs/sources/caps/grade4-mathematics-2026-source.md` (and the content pack) and in `docs/sources/curriculum-source-register.md`. Confirm they are the same document, and record a checksum when registering it.
 3. Funda360's licence/permission position for using these documents as a reference is a legal decision still to be confirmed.
-4. A corrected Term 1 structure (objectives mapped to source sections) has to be written and **approved** before AI can draft against it: `ai_begin_generation` refuses objectives that are not approved, so the pipeline cannot be used on the current draft pack. That is the intended behaviour.
+4. A corrected Term 1 structure now exists as the draft pack `ZA-G4-MATH-2026-T1` (see `docs/sources/caps/grade4-mathematics-2026-term1-mapping.md`). It has to be checked and **approved** before AI can draft against it: `ai_begin_generation` refuses objectives that are not approved, and a test pins that refusal. That is the intended behaviour.
 
 Until then `supabase/content/grade4-mathematics-term1.sql` stays a draft, and no unit can be `reviewed` or `verified` against an authoritative source.
 

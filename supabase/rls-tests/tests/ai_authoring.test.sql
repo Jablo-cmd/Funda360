@@ -371,7 +371,9 @@ begin
   call test_util.record('a well-formed AI assessment passes validation', v_pass, 'run ' || v_run);
 
   -- a resource per finding rule
-  v_run := public.validate_content('teaching_resources', (select resource_id from public.lesson_resources where lesson_id = test_util.c('lesson1') limit 1));
+  -- a fixed resource (the explain step), so the approval-gate tests below can rely on the challenge step never having been validated
+  v_run := public.validate_content('teaching_resources', (select lr.resource_id from public.lesson_resources lr join public.teaching_resources t on t.id = lr.resource_id
+                                                           where lr.lesson_id = test_util.c('lesson1') and t.stage = 'explain'));
   select passed into v_pass from public.content_validation_runs where id = v_run;
   call test_util.record('a well-formed AI resource passes validation', v_pass, 'run ' || v_run);
 end $$;

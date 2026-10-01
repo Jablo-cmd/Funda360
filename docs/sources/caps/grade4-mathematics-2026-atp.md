@@ -83,15 +83,14 @@ Common fractions appear in the 2026 ATP later in the year, not as a core Term 1 
 
 ## Funda360 verification status
 
-This source is authoritative reference material, not published learner content.
-
 - [x] Official DBE 2026 ATP located
 - [x] Grade 4 Mathematics identified
-- [x] Term 1 scope extracted and recorded
-- [ ] Existing Funda360 topic hierarchy reconciled
-- [ ] Existing objectives reconciled
-- [ ] Lesson/resource coverage reconciled
-- [ ] Assessment coverage reconciled
+- [x] Term 1 scope extracted and recorded (by the project owner; the ATP PDF could not be opened from the build environment, so this record has not been independently compared with it)
+- [x] Existing Funda360 topic hierarchy reconciled in a new draft version (`ZA-G4-MATH-2026-T1`)
+- [x] Objectives reconciled in draft (27, each mapped to a recorded ATP item)
+- [x] Lesson/resource coverage reconciled in draft (17 lessons, 112 resources)
+- [x] Assessment coverage reconciled in draft (6 practice checks; the formal assignment itself is not held)
+- [ ] ATP PDF checksum, page and week references confirmed
 - [ ] Curriculum specialist review
 - [ ] Approval
 - [ ] Publication

@@ -36,10 +36,12 @@ Do not mark it approved or published solely because this source has been identif
 
 ## Verification status
 
-- [x] Official DBE source identified
-- [x] Official Mathematics Grades 4–6 document identified
-- [x] Grade 4 Term 1 section located
-- [ ] Topic-by-topic mapping completed
+- [x] Official DBE source identified (by the project owner)
+- [x] Official Mathematics Grades 4-6 document identified
+- [x] Grade 4 Term 1 section located (as recorded above; not re-checked)
+- [ ] Document identity confirmed (the two URLs above are not confirmed to be the same file: see `../curriculum-source-register.md`)
+- [ ] SHA-256, page count and ISBN confirmed from the downloaded file
+- [x] Topic-by-topic mapping completed in draft (see `grade4-mathematics-2026-term1-mapping.md`; not verified)
 - [ ] Objective-by-objective verification completed
 - [ ] Assessment coverage checked
 - [ ] Teaching-time allocation checked
