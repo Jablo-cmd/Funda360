@@ -87,15 +87,23 @@ Reports findings; never edits.
 `learning_recommendations.reason` now states only what was recorded (latest result, number of attempts, or that the latest two met mastery). The previous wording claimed "below the support threshold" even when a learner was flagged by the "two results under 60%" rule.
 The teacher interface shows **Evidence:** and **Suggestion:** as separate statements. No prediction and no confidence score exists anywhere.
 
-## Source material that is missing (verification cannot be claimed yet)
+## Source material: identified, not yet registered or verified
 
-No curriculum document is in this repository or reachable from this environment. To verify the Grade 4 Mathematics pack someone must supply, register and verify:
+The official sources are now identified in `docs/sources/` (added by the project owner on this branch): the DBE CAPS Mathematics Grades 4-6
+policy statement (© 2011, ISBN 978-1-4315-0491-6; Grade 4 Term 1 begins at printed page 35), the 2026 Grade 4 Mathematics Annual Teaching Plan,
+and a source register with a precedence order (current CAPS, then current ATP, then official support material, then Funda360 content, then AI drafts).
+`docs/sources/caps/grade4-mathematics-term1-gap-analysis.md` records that the existing Term 1 pack is **incomplete against the 2026 ATP**
+(for example rounding, number sentences, the properties of operations, multiplication, odd/even numbers, financial and measurement contexts)
+and that it places Common Fractions in Term 1, which the ATP places later. Its conclusion stands: the pack must be reconciled before approval.
 
-1. the DBE CAPS Mathematics policy statement for the Intermediate Phase (Grades 4-6), the edition in force;
-2. the Mathematics Annual Teaching Plan for Grade 4, Term 1, for the relevant year;
-3. Funda360's licence/permission position for using those documents as a reference (this is a legal decision, not a technical one).
+What is still open, and is deliberately not done by code:
 
-Until then `supabase/content/grade4-mathematics-term1.sql` stays a draft and AI drafts cannot become `reviewed` against an authoritative source.
+1. The sources are **not yet registered** in `curriculum_sources`, and none is marked verified. Registering them (title, publisher, licence, checksum) and verifying them is a person's step in the Content Studio.
+2. The CAPS PDF is given under two different DBE URLs in `docs/sources/caps/grade4-mathematics-2026-source.md` (and the content pack) and in `docs/sources/curriculum-source-register.md`. Confirm they are the same document, and record a checksum when registering it.
+3. Funda360's licence/permission position for using these documents as a reference is a legal decision still to be confirmed.
+4. A corrected Term 1 structure (objectives mapped to source sections) has to be written and **approved** before AI can draft against it: `ai_begin_generation` refuses objectives that are not approved, so the pipeline cannot be used on the current draft pack. That is the intended behaviour.
+
+Until then `supabase/content/grade4-mathematics-term1.sql` stays a draft, and no unit can be `reviewed` or `verified` against an authoritative source.
 
 ## Not built here
 
