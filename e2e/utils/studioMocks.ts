@@ -23,6 +23,9 @@ export interface StudioCalls {
   registered: unknown[];
   sourcesVerified: unknown[];
   evidence: unknown[];
+  retrievals: unknown[];
+  sourceReviews: unknown[];
+  corrections: unknown[];
 }
 
 export interface StudioState {
@@ -40,6 +43,11 @@ export interface StudioState {
     verified_at: string | null;
     content_reviewed_at: string | null;
     content_review_note: string | null;
+    licence_status: 'unreviewed' | 'permitted' | 'restricted' | 'not_permitted';
+    retrieval_status: 'not_attempted' | 'retrieved' | 'inaccessible' | 'not_a_pdf';
+    retrieval_size_bytes: number | null;
+    retrieval_content_type: string | null;
+    retrieval_final_url: string | null;
   };
   references: Array<Record<string, unknown>>;
 }
@@ -123,7 +131,16 @@ const source = (state: StudioState) => ({
   title: 'Mathematics policy statement (test)',
   publisher: 'Test publisher',
   doc_type: 'caps_policy',
-  url: null,
+  url: 'https://example.org/policy.pdf',
+  alternate_urls: [],
+  jurisdiction: null,
+  subject: null,
+  grade_phase: null,
+  isbn: null,
+  licence_reviewed_at: null,
+  licence_review_note: null,
+  retrieval_redirects: null,
+  retrieval_recorded_at: null,
   edition: '2026',
   licence: 'Used under a test licence',
   excerpts_permitted: false,
@@ -271,6 +288,9 @@ export async function mockStudio(page: Page, options: { role?: string } = {}) {
     registered: [],
     sourcesVerified: [],
     evidence: [],
+    retrievals: [],
+    sourceReviews: [],
+    corrections: [],
   };
   const state: StudioState = {
     status: 'draft',
@@ -287,6 +307,11 @@ export async function mockStudio(page: Page, options: { role?: string } = {}) {
       verified_at: null,
       content_reviewed_at: null,
       content_review_note: null,
+      licence_status: 'unreviewed',
+      retrieval_status: 'not_attempted',
+      retrieval_size_bytes: null,
+      retrieval_content_type: null,
+      retrieval_final_url: null,
     },
     references: [],
   };
@@ -452,29 +477,54 @@ export async function mockStudio(page: Page, options: { role?: string } = {}) {
     calls.registered.push(p);
     return ok(route, 'src-2');
   });
-  await rpc('verify_curriculum_source', (p, route) => {
-    calls.sourcesVerified.push(p);
-    if (!state.src.checksum_sha256) {
-      return rejected(
-        route,
-        "invalid_state: record the downloaded file's SHA-256 and date first; identity cannot be verified without the actual bytes",
-      );
-    }
-    state.src.status = 'verified';
-    state.src.verified_at = '2026-10-03T08:00:00Z';
-    return ok(route, null);
-  });
   await rpc('record_source_evidence', (p, route) => {
     calls.evidence.push(p);
     if (p.p_level === 'indexed') state.src.indexed_on = (p.p_on as string) || '2026-10-03';
-    if (p.p_level === 'retrieved') {
-      state.src.checksum_sha256 = p.p_sha256 as string;
-      state.src.retrieved_on = p.p_on as string;
+    return ok(route, null);
+  });
+  await rpc('record_source_retrieval', (p, route) => {
+    calls.retrievals.push(p);
+    const f = String(p.p_record).split('\t');
+    if (f[0] !== 'RECORD' || f.length < 10) return rejected(route, 'invalid_argument: paste one RECORD line');
+    state.src.checksum_sha256 = f[6] ?? null;
+    state.src.retrieved_on = '2026-10-03';
+    state.src.retrieval_status = 'retrieved';
+    state.src.retrieval_size_bytes = Number(f[5]);
+    state.src.retrieval_content_type = f[7] ?? null;
+    state.src.retrieval_final_url = f[8] ?? null;
+    return ok(route, null);
+  });
+  await rpc('record_source_review', (p, route) => {
+    calls.sourceReviews.push(p);
+    if (p.p_kind === 'identity' && p.p_decision === 'verified') {
+      if (!state.src.checksum_sha256) {
+        return rejected(
+          route,
+          'invalid_state: record the retrieval (verify-dbe-sources.sh output) first; identity cannot be verified without the actual bytes',
+        );
+      }
+      state.src.status = 'verified';
+      state.src.verified_at = '2026-10-03T08:00:00Z';
     }
-    if (p.p_level === 'content_reviewed') {
+    if (p.p_kind === 'document' && p.p_decision === 'reviewed') {
       state.src.content_reviewed_at = '2026-10-03T09:00:00Z';
-      state.src.content_review_note = p.p_note as string;
+      state.src.content_review_note = p.p_notes as string;
     }
+    if (p.p_kind === 'licence') state.src.licence_status = p.p_decision as 'permitted';
+    return ok(route, 'rev-1');
+  });
+  await rpc('correct_source_evidence', (p, route) => {
+    calls.corrections.push(p);
+    state.src = {
+      ...state.src,
+      status: 'registered',
+      checksum_sha256: null,
+      retrieved_on: null,
+      verified_at: null,
+      content_reviewed_at: null,
+      content_review_note: null,
+      retrieval_status: 'not_attempted',
+    };
     return ok(route, null);
   });
 

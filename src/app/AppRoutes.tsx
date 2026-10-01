@@ -192,6 +192,10 @@ const ContentStudioPage = named(
   () => import('@/features/content-studio/pages/ContentStudioPage'),
   'ContentStudioPage',
 );
+const CurriculumReviewPage = named(
+  () => import('@/features/content-studio/pages/CurriculumReviewPage'),
+  'CurriculumReviewPage',
+);
 const TeacherWorkspacePage = named(
   () => import('@/features/teacherWorkspace/pages/TeacherWorkspacePage'),
   'TeacherWorkspacePage',
@@ -367,6 +371,7 @@ export function AppRoutes() {
               </Route>
               <Route element={<RequirePermission permission="content.manage" />}>
                 <Route path="/content-studio" element={<ContentStudioPage />} />
+                <Route path="/content-studio/curriculum-review/:versionCode" element={<CurriculumReviewPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="academic.view" />}>

@@ -2957,6 +2957,8 @@ export type CurriculumVersionRow = {
   id: string; code: string; name: string; version_label: string; source: string; source_reference: string | null;
   license_notes: string | null; status: ContentStatus; effective_from: string | null; effective_to: string | null;
   supersedes_version_id: string | null; created_at: string; updated_at: string;
+  /** true: cannot be approved, published or drafted against until the curriculum review is complete (20261004090000). */
+  review_workflow: boolean;
 };
 export type CurriculumGradeRow = { id: string; version_id: string; phase_id: string; grade_number: number; name: string; sort_order: number };
 export type CurriculumSubjectRow = { id: string; version_id: string; code: string; name: string; language: string; sort_order: number };
@@ -3058,6 +3060,34 @@ export type CurriculumSourceRow = {
   retrieved_on: string | null; status: 'registered' | 'verified' | 'retired'; note: string | null; verified_at: string | null; created_at: string;
   /** Evidence ladder (20261003090000). status = 'verified' means IDENTITY verified, not that the document was read. */
   indexed_on: string | null; content_reviewed_at: string | null; content_review_note: string | null;
+  /** Review workflow (20261004090000). */
+  jurisdiction: string | null; subject: string | null; grade_phase: string | null; alternate_urls: string[]; isbn: string | null;
+  licence_status: 'unreviewed' | 'permitted' | 'restricted' | 'not_permitted'; licence_reviewed_at: string | null; licence_review_note: string | null;
+  retrieval_status: 'not_attempted' | 'retrieved' | 'inaccessible' | 'not_a_pdf'; retrieval_size_bytes: number | null;
+  retrieval_content_type: string | null; retrieval_final_url: string | null; retrieval_redirects: number | null; retrieval_recorded_at: string | null;
+};
+export type CurriculumSourceReviewRow = {
+  id: string; source_id: string; kind: 'identity' | 'document' | 'licence' | 'correction'; decision: string; notes: string; findings: string | null;
+  checksum_at_review: string | null; reviewer: string; reviewed_at: string;
+};
+export type ReviewEntityType = 'objective' | 'lesson' | 'resource' | 'assessment' | 'question' | 'formal_assessment';
+export type ReviewDecisionValue = 'verified' | 'accepted' | 'needs_correction' | 'rejected';
+export type FindingCategory =
+  | 'factual_error' | 'curriculum_mismatch' | 'age_suitability' | 'language_issue' | 'unclear_instruction' | 'unsuitable_activity'
+  | 'incorrect_answer' | 'low_resource_problem' | 'assessment_problem' | 'scope_question' | 'other';
+export type CurriculumReviewFindingRow = {
+  id: string; version_id: string; entity_type: ReviewEntityType | 'open_question' | 'source'; entity_id: string; category: FindingCategory; description: string;
+  status: 'open' | 'resolved' | 'dismissed'; review_id: string | null; raised_by: string; raised_at: string; resolved_by: string | null; resolved_at: string | null;
+  resolution_note: string | null;
+};
+export type CurriculumOpenQuestionRow = {
+  id: string; version_id: string; code: string; title: string; description: string; materially_affects_scope: boolean; status: 'open' | 'resolved' | 'deferred';
+  answer: string | null; source_id: string | null; source_section: string | null; source_page: string | null; notes: string | null; resolved_by: string | null; resolved_at: string | null;
+};
+export type CurriculumFormalAssessmentDetailsRow = {
+  id: string; version_id: string; objective_id: string; status: 'pending' | 'recorded'; assessment_name: string | null; assessment_type: string | null;
+  scope: string | null; duration_minutes: number | null; timing: string | null; marks: number | null; weighting: string | null; instructions: string | null;
+  source_id: string | null; source_section: string | null; source_page: string | null; notes: string | null; recorded_by: string | null; recorded_at: string | null;
 };
 export type ContentSourceReferenceRow = {
   id: string; entity_table: ContentEntityTable; entity_id: string; source_id: string; locator: string; supports: string | null;
@@ -3485,6 +3515,10 @@ export type Database = {
       learner_objective_progress: RpcWrittenTable<LearnerObjectiveProgressRow>;
       learning_recommendations: RpcWrittenTable<LearningRecommendationRow>;
       curriculum_sources: RpcWrittenTable<CurriculumSourceRow>;
+      curriculum_source_reviews: RpcWrittenTable<CurriculumSourceReviewRow>;
+      curriculum_review_findings: RpcWrittenTable<CurriculumReviewFindingRow>;
+      curriculum_open_questions: RpcWrittenTable<CurriculumOpenQuestionRow>;
+      curriculum_formal_assessment_details: RpcWrittenTable<CurriculumFormalAssessmentDetailsRow>;
       content_source_references: RpcWrittenTable<ContentSourceReferenceRow>;
       content_verifications: RpcWrittenTable<ContentVerificationRow>;
       ai_generation_requests: RpcWrittenTable<AiGenerationRequestRow>;
@@ -4131,15 +4165,42 @@ export type Database = {
       register_curriculum_source: {
         Args: {
           p_title: string; p_publisher: string; p_doc_type: CurriculumSourceRow['doc_type']; p_licence: string; p_url?: string | null;
-          p_edition?: string | null; p_excerpts_permitted?: boolean; p_checksum_sha256?: string | null; p_retrieved_on?: string | null; p_note?: string | null;
+          p_edition?: string | null; p_excerpts_permitted?: boolean; p_checksum_sha256?: null; p_retrieved_on?: null; p_note?: string | null;
+          p_jurisdiction?: string | null; p_subject?: string | null; p_grade_phase?: string | null; p_alternate_urls?: string[] | null; p_isbn?: string | null;
         };
         Returns: string;
       };
       verify_curriculum_source: { Args: { p_source_id: string; p_note?: string | null }; Returns: undefined };
       record_source_evidence: {
-        Args: { p_source_id: string; p_level: 'indexed' | 'retrieved' | 'content_reviewed'; p_sha256?: string | null; p_on?: string | null; p_note?: string | null };
+        Args: { p_source_id: string; p_level: 'indexed'; p_sha256?: null; p_on?: string | null; p_note?: string | null };
         Returns: undefined;
       };
+      record_source_retrieval: { Args: { p_source_id: string; p_record: string }; Returns: undefined };
+      record_source_review: { Args: { p_source_id: string; p_kind: 'identity' | 'document' | 'licence'; p_decision: string; p_notes: string; p_findings?: string | null }; Returns: string };
+      correct_source_evidence: { Args: { p_source_id: string; p_reason: string }; Returns: undefined };
+      require_curriculum_review: { Args: { p_version_id: string }; Returns: undefined };
+      record_curriculum_review: {
+        Args: {
+          p_version_id: string; p_entity_type: ReviewEntityType; p_entity_id: string; p_decision: ReviewDecisionValue; p_notes: string;
+          p_source_id?: string | null; p_source_section?: string | null; p_source_page?: string | null; p_finding_category?: FindingCategory | null;
+        };
+        Returns: string;
+      };
+      raise_review_finding: { Args: { p_version_id: string; p_entity_type: ReviewEntityType | 'open_question' | 'source'; p_entity_id: string; p_category: FindingCategory; p_description: string }; Returns: string };
+      resolve_review_finding: { Args: { p_finding_id: string; p_status: 'resolved' | 'dismissed'; p_note: string }; Returns: undefined };
+      resolve_open_question: {
+        Args: { p_question_id: string; p_status: 'open' | 'resolved' | 'deferred'; p_answer?: string | null; p_source_id?: string | null; p_source_section?: string | null; p_source_page?: string | null; p_notes?: string | null };
+        Returns: undefined;
+      };
+      record_formal_assessment_details: {
+        Args: {
+          p_version_id: string; p_objective_id: string; p_name: string; p_type: string; p_scope: string; p_duration_minutes: number | null; p_timing: string | null;
+          p_marks: number | null; p_weighting: string | null; p_instructions: string | null; p_source_id: string; p_source_section: string; p_source_page: string; p_notes: string;
+        };
+        Returns: undefined;
+      };
+      curriculum_review_summary: { Args: { p_version_id: string }; Returns: Json };
+      curriculum_review_items: { Args: { p_version_id: string; p_type: ReviewEntityType }; Returns: Json };
       add_content_source_reference: { Args: { p_entity: ContentEntityTable; p_id: string; p_source_id: string; p_locator: string; p_supports?: string | null }; Returns: string };
       check_content_source_reference: { Args: { p_reference_id: string; p_result: 'matches' | 'partial' | 'does_not_match'; p_note?: string | null }; Returns: undefined };
       set_content_verification: { Args: { p_entity: ContentEntityTable; p_id: string; p_status: ContentVerificationStatus; p_note?: string | null }; Returns: undefined };

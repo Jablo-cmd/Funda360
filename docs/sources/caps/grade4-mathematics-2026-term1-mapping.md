@@ -12,6 +12,10 @@
 
 The scope below is the Term 1 list recorded in `docs/sources/caps/grade4-mathematics-2026-atp.md`. That record was written by the project owner. **It has not been compared with the ATP PDF by anyone else, and the PDF could not be downloaded from the build environment**, so every objective rests on that record.
 
+## Where an objective is verified
+
+Verification happens in Content Studio, Curriculum review, Objectives: **Verify** (needs a source whose identity is verified, the section, and the page or reference), **Request correction** or **Reject**. The machine-readable table `grade4-mathematics-2026-term1-objectives.json` / `.csv` records the pending state of the pack as shipped (`verification_status: pending`, `source_page: NOT VERIFIED`); the live state is the database's, shown on the review Summary. See [`../../verification/review-workflow.md`](../../verification/review-workflow.md).
+
 ## Objectives
 
 `Lessons`, `Resources` and `Questions` are counts of Funda360 units linked to the objective. Every source reference below is **mapped, not verified**: item-level page and week references are not verified.

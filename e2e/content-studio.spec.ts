@@ -212,7 +212,7 @@ test('resources and assessments are reviewed with their content, and AI answer k
   await expect(assessment.getByText('Answer proposed by the AI (check it):')).toBeVisible();
 });
 
-test('a source climbs four separate evidence steps, and each needs its own evidence', async ({
+test('a source climbs separate evidence steps, and each needs its own evidence', async ({
   page,
 }) => {
   const { calls } = await mockStudio(page);
@@ -222,16 +222,22 @@ test('a source climbs four separate evidence steps, and each needs its own evide
     name: 'Evidence for Mathematics policy statement (test)',
   });
 
+  // The five meanings are explained on the page, and curriculum verification is shown as its own step.
+  await page.getByText('What each step means').first().click();
+  await expect(page.getByText('A DBE source was identified at the recorded location.').first()).toBeVisible();
+  await expect(page.getByText('A specific Funda360 curriculum unit was checked against the source.').first()).toBeVisible();
+
   // A new source has no evidence at all.
   await expect(sources.getByText('Registered only: no evidence yet')).toBeVisible();
   for (const step of ['Indexed', 'Retrieved', 'Identity verified', 'Content reviewed']) {
     await expect(evidence.getByText(`${step}: not done`)).toBeVisible();
   }
+  await expect(evidence.getByText('Curriculum verified: decided per unit, not on the source')).toBeAttached();
 
   // Identity cannot be confirmed before the file's bytes are recorded: the button is disabled and says why.
   await expect(
     sources.getByRole('button', {
-      name: 'Confirm the identity of Mathematics policy statement (test)',
+      name: 'Record the identity decision for Mathematics policy statement (test)',
     }),
   ).toBeDisabled();
   await expect(
@@ -243,53 +249,80 @@ test('a source climbs four separate evidence steps, and each needs its own evide
   await sources
     .getByRole('button', { name: 'Record Mathematics policy statement (test) as indexed' })
     .click();
-  await expect(sources.getByText('Indexed: found at a location, not downloaded')).toBeVisible();
+  await expect(sources.getByText(/Indexed: found at a location, not downloaded/)).toBeVisible();
   await expect(evidence.getByText('Indexed: done')).toBeVisible();
   await expect(evidence.getByText('Retrieved: not done')).toBeVisible();
   await expect
     .poll(() => calls.evidence)
-    .toEqual([
-      {
-        p_source_id: 'src-1',
-        p_level: 'indexed',
-        p_sha256: null,
-        p_on: '2026-10-01',
-        p_note: null,
-      },
-    ]);
+    .toEqual([{ p_source_id: 'src-1', p_level: 'indexed', p_on: '2026-10-01', p_note: null }]);
 
-  // Step 2: retrieved, with the actual checksum.
+  // Step 2: retrieved. The checksum cannot be typed: only the script's RECORD line is accepted.
+  const recordButton = sources.getByRole('button', {
+    name: 'Record the download of Mathematics policy statement (test)',
+  });
+  await expect(recordButton).toBeDisabled();
+  await sources.getByLabel(/^Paste the RECORD line/).fill('ab'.repeat(32));
+  await expect(recordButton).toBeDisabled();
   const sha = 'ab'.repeat(32);
-  await sources.getByLabel(/^SHA-256 of the downloaded file/).fill(sha);
-  await sources.getByLabel('Date it was downloaded').fill('2026-10-02');
-  await sources
-    .getByRole('button', { name: 'Record the download of Mathematics policy statement (test)' })
-    .click();
-  await expect(
-    sources.getByText('Retrieved: the file was downloaded, identity not confirmed'),
-  ).toBeVisible();
+  const line = ['RECORD', '1', 'retrieved', '200', '0', '4096', sha, 'application/pdf', 'https://example.org/policy.pdf', 'https://example.org/policy.pdf'].join('\t');
+  await sources.getByLabel(/^Paste the RECORD line/).fill(line);
+  await recordButton.click();
+  await expect(sources.getByText(/Retrieved: the file was downloaded, identity not confirmed/)).toBeVisible();
   await expect(evidence.getByText('Retrieved: done')).toBeVisible();
   await expect(evidence.getByText('Identity verified: not done')).toBeVisible();
+  await expect.poll(() => calls.retrievals).toHaveLength(1);
 
-  // Step 3: identity verified.
-  await sources
-    .getByRole('button', { name: 'Confirm the identity of Mathematics policy statement (test)' })
-    .click();
-  await expect.poll(() => calls.sourcesVerified).toHaveLength(1);
-  await expect(
-    sources.getByText('Identity verified: nobody has recorded reading it yet'),
-  ).toBeVisible();
+  // Step 3: identity verified, as a recorded decision with notes.
+  const identity = sources.getByRole('button', {
+    name: 'Record the identity decision for Mathematics policy statement (test)',
+  });
+  await expect(identity).toBeDisabled();
+  await sources.getByLabel('Identity review notes (required)').fill('Title page and publisher match');
+  await identity.click();
+  await expect
+    .poll(() => calls.sourceReviews)
+    .toEqual([
+      { p_source_id: 'src-1', p_kind: 'identity', p_decision: 'verified', p_notes: 'Title page and publisher match', p_findings: null },
+    ]);
+  await expect(sources.getByText(/Identity verified: nobody has recorded reading it yet/)).toBeVisible();
   await expect(evidence.getByText('Content reviewed: not done')).toBeVisible();
 
   // Step 4: content reviewed, which needs a statement of what was reviewed.
   const record = sources.getByRole('button', {
-    name: 'Record that you reviewed Mathematics policy statement (test)',
+    name: 'Record the document review of Mathematics policy statement (test)',
   });
   await expect(record).toBeDisabled();
   await sources.getByLabel(/^What did you review/).fill('Section 3.3.1 of the 2011 edition');
   await record.click();
-  await expect(sources.getByText('Content reviewed by a person')).toBeVisible();
+  await expect(sources.getByText(/Content reviewed by a person/)).toBeVisible();
   await expect(evidence.getByText('Content reviewed: done')).toBeVisible();
+});
+
+test('the licence is reviewed separately, and wrong evidence can be corrected explicitly', async ({ page }) => {
+  const { calls } = await mockStudio(page);
+  await page.goto('/content-studio');
+  const sources = page.getByRole('list', { name: 'Registered sources' });
+  const licence = sources.getByRole('button', { name: 'Record the licence decision for Mathematics policy statement (test)' });
+  await expect(licence).toBeDisabled();
+  await sources.getByLabel('Licence review notes (required)').fill('Reference and paraphrase only');
+  await sources.getByRole('combobox', { name: /^Licence decision/ }).selectOption('restricted');
+  await licence.click();
+  await expect.poll(() => calls.sourceReviews).toHaveLength(1);
+  await expect(sources.getByText(/Licence: restricted use/)).toBeVisible();
+
+  // No correction section until bytes have been recorded.
+  await expect(sources.locator('summary', { hasText: 'Correct recorded evidence' })).toHaveCount(0);
+  const line = ['RECORD', '1', 'retrieved', '200', '0', '4096', 'cd'.repeat(32), 'application/pdf', 'https://example.org/policy.pdf', 'https://example.org/policy.pdf'].join('\t');
+  await sources.getByLabel(/^Paste the RECORD line/).fill(line);
+  await sources.getByRole('button', { name: 'Record the download of Mathematics policy statement (test)' }).click();
+  await expect(sources.locator('summary', { hasText: 'Correct recorded evidence' })).toBeVisible();
+  await sources.locator('summary', { hasText: 'Correct recorded evidence' }).click();
+  const correct = sources.getByRole('button', { name: 'Correct the recorded evidence of Mathematics policy statement (test)' });
+  await expect(correct).toBeDisabled();
+  await sources.getByLabel(/^Reason for the correction/).fill('The wrong file was hashed');
+  await correct.click();
+  await expect.poll(() => calls.corrections).toEqual([{ p_source_id: 'src-1', p_reason: 'The wrong file was hashed' }]);
+  await expect(sources.getByRole('list', { name: 'Evidence for Mathematics policy statement (test)' }).getByText('Retrieved: not done')).toBeVisible();
 });
 
 test('registering a source stores details only, and it starts with no evidence', async ({
@@ -307,7 +340,9 @@ test('registering a source stores details only, and it starts with no evidence',
     p_publisher: 'Test publisher',
     p_doc_type: 'caps_policy',
   });
-  expect(calls.registered[0]).not.toHaveProperty('p_checksum_sha256', expect.stringMatching(/./));
+  // A client cannot hand over cryptographic evidence at registration.
+  expect(calls.registered[0]).not.toHaveProperty('p_checksum_sha256');
+  expect(calls.registered[0]).not.toHaveProperty('p_retrieved_on');
 });
 
 test('the review dialog keeps lifecycle, curriculum verification and source evidence apart', async ({

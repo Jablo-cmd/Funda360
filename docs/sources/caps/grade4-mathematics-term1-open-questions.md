@@ -18,6 +18,10 @@ For each question: what the repository evidence says, what the pack currently do
 
 Where Common Fractions falls in the 2026 year is also not recorded (see the gap analysis); that belongs to a later-term pack and is not a Term 1 question.
 
+## Where they are worked on
+
+The nine questions are seeded into the database with the pack and appear as review tasks under Content Studio, Curriculum review, Open questions (Q1 to Q9 in the order above; measurement units is Q7). Each can be **Resolved** (answer, a source whose identity is verified, section, page or reference, and an explanation: nothing can be marked resolved without all of them) or **Deferred** (a reason; "requires further curriculum review"). A deferred question never counts as verified: every question except Q4 (weeks and hours, which affects pacing only) affects scope, so a deferred one still blocks the review from completing. Who answered, when, and with which source is recorded and audited. Their status in this document remains OPEN until someone does that.
+
 ## How these were handled
 
 - Nothing in the pack was added "just in case" to cover a possible requirement, and nothing was removed. A guess in either direction would make the pack look more certain than it is.

@@ -73,7 +73,9 @@ Steps 1-4 describe a *source*. Step 5 describes a *unit of Funda360 content* and
 
 Separate again is the **content lifecycle** of a unit: Draft, Review, Approved, Published, Retired. A unit that is `approved` is not thereby `verified`, and a `verified` unit is not thereby published. Content Studio shows the three as three different rows so they cannot be confused.
 
-The database enforces the order: a checksum must be 64 lowercase hexadecimal characters with a download date that is not in the future; identity cannot be verified without a checksum; a document cannot be reviewed before identity is verified; a recorded checksum cannot later be replaced by another file's. See `supabase/migrations/20261003090000_source_evidence_ladder.sql`.
+The database enforces the order: retrieval evidence can only be recorded from the `RECORD` line printed by `docs/sources/verify-dbe-sources.sh` (the server parses it, requires a retrieved PDF with an HTTP success and a requested address that is registered for the source, and dates it itself: a checksum cannot be typed in or supplied at registration); identity cannot be verified without a checksum; a document cannot be reviewed before identity is verified; a recorded checksum cannot be replaced except through the explicit, audited correction workflow, which clears retrieval, identity and document review so they are redone. Identity, document and licence reviews are recorded decisions (reviewer, date, decision, notes, findings) kept in an append-only history. See `supabase/migrations/20261003090000_source_evidence_ladder.sql`, `supabase/migrations/20261004090000_curriculum_review_workflow.sql` and, for the exact definition of each status, [`../verification/review-workflow.md`](../verification/review-workflow.md).
+
+Everything is done in Content Studio, Sources. A source description holds: title, publisher, jurisdiction, subject, grade or phase, kind of document, canonical and other addresses, edition or year, ISBN, licence statement and notes.
 
 ## Source identity check (CAPS Mathematics Grades 4-6)
 
@@ -94,7 +96,7 @@ What was done and what was found:
 
 Decision for this implementation: URL A is the **working reference** because it is the DBE's own indexed location for this title and is the one used by the register and the gap analysis. That is not a finding that A and B are the same file. **Flagged for human review.**
 
-How to settle it (about two minutes, on a machine that can reach the DBE site):
+How to settle it (about two minutes, on a machine that can reach the DBE site). Then paste each printed `RECORD` line into Content Studio, Sources, "Record the download":
 
 ```
 docs/sources/verify-dbe-sources.sh \

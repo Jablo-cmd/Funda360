@@ -89,6 +89,10 @@ Reports findings; never edits.
 `learning_recommendations.reason` now states only what was recorded (latest result, number of attempts, or that the latest two met mastery). The previous wording claimed "below the support threshold" even when a learner was flagged by the "two results under 60%" rule.
 The teacher interface shows **Evidence:** and **Suggestion:** as separate statements. No prediction and no confidence score exists anywhere.
 
+## Curriculum review workflow (20261004090000)
+
+A curriculum version in the review workflow (`review_workflow = true`, the default for new versions) cannot be approved, published or drafted against by AI until `curriculum_review_compute()` says its review is complete: sources identity verified, documents reviewed and licences decided; every objective verified and every lesson, resource, practice check and question accepted, each at its current content; the formal assessment recorded and verified; every open question resolved with evidence or deferred (a deferred question that affects scope still blocks); no open finding. `ai_begin_generation` checks this in addition to every earlier rule, so a finding raised after approval closes drafting again. See `docs/verification/review-workflow.md`.
+
 ## Source material: identified, not yet registered or verified
 
 The official sources are now identified in `docs/sources/` (added by the project owner on this branch): the DBE CAPS Mathematics Grades 4-6

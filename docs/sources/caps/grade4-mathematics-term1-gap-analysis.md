@@ -54,6 +54,10 @@ The full table, with the evidence found for each and what would change, is in [`
 6. **Assessment.** The record says only "three hours in class" and the three areas covered.
 7. **Document identity.** See [`curriculum-source-register.md`](../curriculum-source-register.md): the two CAPS URLs are not confirmed to be the same document.
 
+## Review workflow
+
+Nothing in this analysis is closed by writing it. Closing a gap means a person records a decision in Content Studio, Curriculum review (objectives, lessons, resources, questions, open questions, formal assessment), with the source, section and page. How that works, and what each status means, is in [`../../verification/review-workflow.md`](../../verification/review-workflow.md).
+
 ## Status
 
 **DRAFT. SOURCE LOCATED, CONTENT NOT VERIFIED, NOT APPROVED.** Identifying the sources and mapping the pack to them does not mean the content is compliant.

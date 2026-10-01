@@ -325,6 +325,12 @@ async function registerSource(input: {
   licence: string;
   url: string;
   edition: string;
+  jurisdiction?: string;
+  subject?: string;
+  gradePhase?: string;
+  alternateUrls?: string[];
+  isbn?: string;
+  note?: string;
 }): Promise<void> {
   await rpc(
     supabase.rpc('register_curriculum_source', {
@@ -334,22 +340,21 @@ async function registerSource(input: {
       p_licence: input.licence,
       p_url: input.url || null,
       p_edition: input.edition || null,
+      p_note: input.note || null,
+      p_jurisdiction: input.jurisdiction || null,
+      p_subject: input.subject || null,
+      p_grade_phase: input.gradePhase || null,
+      p_alternate_urls: input.alternateUrls?.length ? input.alternateUrls : null,
+      p_isbn: input.isbn || null,
     }),
   );
 }
 
-async function recordSourceEvidence(input: {
-  sourceId: string;
-  level: 'indexed' | 'retrieved' | 'content_reviewed';
-  sha256?: string;
-  on?: string;
-  note?: string;
-}): Promise<void> {
+async function recordSourceEvidence(input: { sourceId: string; on?: string; note?: string }): Promise<void> {
   await rpc(
     supabase.rpc('record_source_evidence', {
       p_source_id: input.sourceId,
-      p_level: input.level,
-      p_sha256: input.sha256 || null,
+      p_level: 'indexed',
       p_on: input.on || null,
       p_note: input.note || null,
     }),
