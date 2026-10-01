@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getDbErrorMessage } from '@/lib/dbErrors';
+import { curriculumErrorMessage as getDbErrorMessage } from '@/features/learning/utils/errors';
 
 export interface LoadState<T> {
   data: T | null;

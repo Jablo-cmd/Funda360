@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { NoActiveSchoolNotice } from '@/components/ui/NoActiveSchoolNotice';
 import { useToast } from '@/components/ui/toast/useToast';
 import { useSchool } from '@/features/school/hooks/useSchool';
-import { getDbErrorMessage } from '@/lib/dbErrors';
+import { curriculumErrorMessage as getDbErrorMessage } from '@/features/learning/utils/errors';
 import { learningService } from '@/features/learning/services/learningService';
 import { useLoad } from '@/features/learning/hooks/useLoad';
 

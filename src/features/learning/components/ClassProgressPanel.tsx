@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
 import { useToast } from '@/components/ui/toast/useToast';
-import { getDbErrorMessage } from '@/lib/dbErrors';
+import { curriculumErrorMessage as getDbErrorMessage } from '@/features/learning/utils/errors';
 import { learningService } from '@/features/learning/services/learningService';
 import { useLoad } from '@/features/learning/hooks/useLoad';
 import { PROGRESS_META, summariseProgress } from '@/features/learning/utils/toolkit';
@@ -200,12 +200,14 @@ export function ClassProgressPanel({
                           ? 'ready for a challenge'
                           : 'check again'}
                     </p>
-                    <p className="break-words text-sm text-content-secondary">{rec.reason}</p>
-                    {rec.resourceTitle && (
-                      <p className="break-words text-sm text-content-primary">
-                        Try: {rec.resourceTitle}
-                      </p>
-                    )}
+                    <p className="break-words text-sm text-content-secondary">
+                      <span className="font-semibold text-content-primary">Evidence: </span>
+                      {rec.reason}
+                    </p>
+                    <p className="break-words text-sm text-content-primary">
+                      <span className="font-semibold">Suggestion: </span>
+                      {suggestionText(rec.kind, rec.resourceTitle)}
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -231,4 +233,17 @@ export function ClassProgressPanel({
       )}
     </div>
   );
+}
+
+/** What to consider doing about the evidence. It is a prompt for the teacher's judgement, never a prediction. */
+function suggestionText(kind: string, resourceTitle: string | null): string {
+  if (kind === 'remediation')
+    return resourceTitle
+      ? `Consider using “${resourceTitle}” before the next check.`
+      : 'No support resource is published for this objective yet. Consider explaining it again in a different way.';
+  if (kind === 'extension')
+    return resourceTitle
+      ? `Consider “${resourceTitle}” as a challenge.`
+      : 'No challenge resource is published for this objective yet.';
+  return 'Consider checking this again.';
 }

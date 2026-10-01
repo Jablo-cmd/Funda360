@@ -11,7 +11,7 @@ import { useToast } from '@/components/ui/toast/useToast';
 import { useAuth } from '@/features/auth/context/authContext';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { usePermissions } from '@/hooks/usePermissions';
-import { getDbErrorMessage } from '@/lib/dbErrors';
+import { curriculumErrorMessage as getDbErrorMessage } from '@/features/learning/utils/errors';
 import { learningService } from '@/features/learning/services/learningService';
 import { useLoad } from '@/features/learning/hooks/useLoad';
 import { ToolkitPanel } from '@/features/learning/components/ToolkitPanel';

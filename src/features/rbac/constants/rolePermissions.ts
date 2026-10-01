@@ -66,6 +66,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   super_administrator: [
+    'content.manage',
     'compliance.view',
     'compliance.manage',
     'operations.view',
@@ -110,6 +111,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reports.export',
   ],
   platform_administrator: [
+    'content.manage',
     'compliance.view',
     'compliance.manage',
     'operations.view',

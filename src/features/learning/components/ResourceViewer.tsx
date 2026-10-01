@@ -76,6 +76,22 @@ function Block({ block }: { block: ResourceBlock }) {
   }
 }
 
+/** The body of a resource (blocks and picture description), shared by the teacher's viewer and the Content Studio review. */
+export function ResourceBody({ resource }: { resource: TeachingResourceRow }) {
+  const blocks = parseBlocks(resource.body);
+  const alt = altTextOf(resource.body);
+  return (
+    <>
+      {blocks.length === 0 ? (
+        <p className="text-sm text-content-tertiary">This resource has no written content yet.</p>
+      ) : (
+        blocks.map((block, index) => <Block key={index} block={block} />)
+      )}
+      {alt && <p className="text-xs text-content-tertiary">Picture description: {alt}</p>}
+    </>
+  );
+}
+
 export interface ResourceViewerProps {
   resource: TeachingResourceRow | null;
   onClose: () => void;
@@ -83,8 +99,6 @@ export interface ResourceViewerProps {
 
 /** Shows one toolkit resource. Content is rendered from a whitelist of block types, so it can never inject markup. */
 export function ResourceViewer({ resource, onClose }: ResourceViewerProps) {
-  const blocks = resource ? parseBlocks(resource.body) : [];
-  const alt = resource ? altTextOf(resource.body) : null;
   return (
     <Modal
       isOpen={resource !== null}
@@ -111,14 +125,7 @@ export function ResourceViewer({ resource, onClose }: ResourceViewerProps) {
         <div className="flex flex-col gap-3" data-print-area>
           {resource.summary && <p className="text-sm text-content-secondary">{resource.summary}</p>}
           <AccessBadges resource={resource} />
-          {blocks.length === 0 ? (
-            <p className="text-sm text-content-tertiary">
-              This resource has no written content yet.
-            </p>
-          ) : (
-            blocks.map((block, index) => <Block key={index} block={block} />)
-          )}
-          {alt && <p className="text-xs text-content-tertiary">Picture description: {alt}</p>}
+          <ResourceBody resource={resource} />
         </div>
       )}
     </Modal>

@@ -32,7 +32,7 @@ export function Tabs<K extends string>({ tabs, activeTab, onChange }: TabsProps<
           type="button"
           onClick={() => onChange(tab.key)}
           aria-current={activeTab === tab.key ? 'page' : undefined}
-          className={`focus-ring shrink-0 whitespace-nowrap rounded-t-lg px-3 py-2.5 text-sm font-medium transition-colors sm:px-3.5 ${
+          className={`focus-ring min-h-11 shrink-0 whitespace-nowrap rounded-t-lg px-3 py-2.5 text-sm font-medium transition-colors sm:px-3.5 lg:min-h-0 ${
             activeTab === tab.key
               ? 'border-b-2 border-brand-600 text-brand-700 dark:text-brand-300'
               : 'text-content-secondary hover:text-content-primary'

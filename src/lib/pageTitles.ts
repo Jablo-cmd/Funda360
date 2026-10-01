@@ -18,6 +18,7 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/users', { title: 'Users & Roles', section: 'Administration' }],
   ['/learning/setup', { title: 'Curriculum Setup', section: 'Academics' }],
   ['/learning', { title: 'Learning', section: 'Teaching' }],
+  ['/content-studio', { title: 'Content Studio', section: 'Administration' }],
   ['/academic/years', { title: 'Academic Years', section: 'Academics' }],
   ['/academic/terms', { title: 'Terms', section: 'Academics' }],
   ['/academic/grades', { title: 'Grades', section: 'Academics' }],

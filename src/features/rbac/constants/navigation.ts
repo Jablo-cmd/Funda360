@@ -194,6 +194,7 @@ export const NAV_MODEL: NavGroupDef[] = [
     items: [
       { label: 'Users & Roles', path: '/users', icon: UsersIcon, permission: 'profile.manage_any' },
       { label: 'Schools', path: '/schools', icon: GearIcon, permission: 'tenant.switch' },
+      { label: 'Content Studio', path: '/content-studio', icon: BookIcon, permission: 'content.manage' },
       { label: 'School Profile', path: '/school/profile', icon: BuildingIcon, permission: 'school.manage' },
       { label: 'Trust Center', path: '/compliance', icon: ShieldIcon, permission: 'compliance.view' },
       { label: 'My Profile', path: '/my-profile', icon: UsersIcon },

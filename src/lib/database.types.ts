@@ -2995,11 +2995,15 @@ export type LearningAssessmentRow = {
   id: string; curriculum_version_id: string; grade_subject_id: string; topic_id: string; lesson_id: string | null; title: string;
   purpose: 'diagnostic' | 'formative' | 'summative_check'; difficulty: ContentDifficulty; estimated_minutes: number | null;
   mastery_percent: number; support_below_percent: number; language: string; status: ContentStatus;
+  origin: 'authored' | 'ai_draft'; ai_disclosure: string | null; created_at: string; updated_at: string;
 };
 export type AssessmentObjectiveRow = { assessment_id: string; objective_id: string; curriculum_version_id: string };
 export type AssessmentQuestionRow = {
   id: string; assessment_id: string; curriculum_version_id: string; position: number;
   question_type: 'multiple_choice' | 'true_false' | 'numeric' | 'short_answer'; prompt: string; options: Json; marks: number; objective_id: string | null;
+};
+export type AssessmentQuestionKeyRow = {
+  question_id: string; assessment_id: string; answer: Json; feedback: string | null; marking_notes: string | null;
 };
 export type SchoolCurriculumAdoptionRow = {
   id: string; school_id: string; curriculum_version_id: string; status: 'active' | 'ended'; adopted_at: string; ended_at: string | null;
@@ -3037,6 +3041,63 @@ export type LearningRecommendationRow = {
 export type ClassObjectiveProgressRow = {
   learner_id: string; first_name: string; last_name: string; learner_number: string; status: LearnerProgressStatus;
   latest_percent: number | null; evidence_count: number; last_evidence_at: string | null;
+};
+
+// ---------------------------------------------------------------------------
+// AI-assisted authoring (20261002090000)
+// ---------------------------------------------------------------------------
+export type ContentVerificationStatus = 'unverified' | 'source_backed' | 'reviewed' | 'verified';
+export type AiGenerationStatus = 'generating' | 'draft_created' | 'rejected_output' | 'failed';
+export type ValidationSeverity = 'error' | 'warning' | 'info';
+export type ContentEntityTable = 'lessons' | 'teaching_resources' | 'learning_assessments';
+export type ValidationCategory = 'structure' | 'curriculum' | 'delivery' | 'assessment' | 'safety';
+
+export type CurriculumSourceRow = {
+  id: string; title: string; publisher: string; doc_type: 'caps_policy' | 'annual_teaching_plan' | 'assessment_guideline' | 'textbook' | 'other';
+  url: string | null; edition: string | null; licence: string; excerpts_permitted: boolean; checksum_sha256: string | null;
+  retrieved_on: string | null; status: 'registered' | 'verified' | 'retired'; note: string | null; verified_at: string | null; created_at: string;
+};
+export type ContentSourceReferenceRow = {
+  id: string; entity_table: ContentEntityTable; entity_id: string; source_id: string; locator: string; supports: string | null;
+  check_result: 'matches' | 'partial' | 'does_not_match' | null; check_note: string | null; checked_at: string | null; created_at: string;
+};
+export type ContentVerificationRow = {
+  entity_table: ContentEntityTable; entity_id: string; status: ContentVerificationStatus; fingerprint: string | null; note: string | null; set_at: string;
+};
+export type AiGenerationRequestRow = {
+  id: string; requested_by: string | null; curriculum_version_id: string; grade_subject_id: string; topic_id: string; objective_ids: string[];
+  kind: 'lesson_pack'; language: string; instruction: string | null; status: AiGenerationStatus; provider: string; model: string;
+  prompt_version: string; schema_version: string; params: Json; output_hash: string | null; rejection_reasons: Json | null;
+  result_lesson_id: string | null; created_at: string; completed_at: string | null;
+};
+export type AiGenerationOutputRow = { request_id: string; entity_table: ContentEntityTable; entity_id: string };
+export type ContentValidationRunRow = {
+  id: string; entity_table: ContentEntityTable; entity_id: string; ruleset_version: string; content_fingerprint: string;
+  error_count: number; warning_count: number; info_count: number; passed: boolean; created_at: string;
+};
+export type ContentValidationFindingRow = {
+  id: string; run_id: string; severity: ValidationSeverity; category: ValidationCategory; code: string; message: string; path: string | null;
+  acknowledged_at: string | null; ack_note: string | null;
+};
+/** What content_provenance() returns: where a unit came from, what was checked and who approved it. */
+export type ContentProvenance = {
+  entity: ContentEntityTable; id: string; origin: 'authored' | 'ai_draft'; status: ContentStatus; ai_disclosure: string | null;
+  created_by: { id: string; name: string } | null; created_at: string; reviewed_by: string | null; approved_by: string | null;
+  approved_at: string | null; published_at: string | null;
+  generation: {
+    request_id: string; requested_by: string | null; requested_at: string; provider: string; model: string; prompt_version: string;
+    schema_version: string; curriculum_version_id: string; topic_id: string; instruction: string | null; output_hash: string | null;
+    objectives: Array<{ code: string; description: string }> | null;
+  } | null;
+  sources: Array<{
+    reference_id: string; locator: string; supports: string | null; check_result: 'matches' | 'partial' | 'does_not_match' | null; checked_at: string | null;
+    source: { id: string; title: string; publisher: string; doc_type: string; licence: string; status: string };
+  }>;
+  verification: { status: ContentVerificationStatus; recorded_status: ContentVerificationStatus | null; stale: boolean; set_at: string | null; note: string | null };
+  validation: {
+    run_id: string; run_at: string; passed: boolean; stale: boolean; errors: number; warnings: number; info: number; unacknowledged_warnings: number;
+  } | null;
+  review_events: Array<{ from: ContentStatus | null; to: ContentStatus; at: string; note: string | null; by: string | null }>;
 };
 
 type RpcWrittenTable<Row> = { Row: Row; Insert: never; Update: never };
@@ -3412,6 +3473,7 @@ export type Database = {
       learning_assessments: RpcWrittenTable<LearningAssessmentRow>;
       assessment_objectives: RpcWrittenTable<AssessmentObjectiveRow>;
       assessment_questions: RpcWrittenTable<AssessmentQuestionRow>;
+      assessment_question_keys: RpcWrittenTable<AssessmentQuestionKeyRow>;
       school_curriculum_adoptions: RpcWrittenTable<SchoolCurriculumAdoptionRow>;
       school_grade_curriculum_map: { Row: SchoolGradeCurriculumMapRow; Insert: SchoolGradeCurriculumMapInsert; Update: Partial<SchoolGradeCurriculumMapInsert>; };
       school_subject_curriculum_map: { Row: SchoolSubjectCurriculumMapRow; Insert: SchoolSubjectCurriculumMapInsert; Update: Partial<SchoolSubjectCurriculumMapInsert>; };
@@ -3420,6 +3482,13 @@ export type Database = {
       learning_attempts: RpcWrittenTable<LearningAttemptRow>;
       learner_objective_progress: RpcWrittenTable<LearnerObjectiveProgressRow>;
       learning_recommendations: RpcWrittenTable<LearningRecommendationRow>;
+      curriculum_sources: RpcWrittenTable<CurriculumSourceRow>;
+      content_source_references: RpcWrittenTable<ContentSourceReferenceRow>;
+      content_verifications: RpcWrittenTable<ContentVerificationRow>;
+      ai_generation_requests: RpcWrittenTable<AiGenerationRequestRow>;
+      ai_generation_outputs: RpcWrittenTable<AiGenerationOutputRow>;
+      content_validation_runs: RpcWrittenTable<ContentValidationRunRow>;
+      content_validation_findings: RpcWrittenTable<ContentValidationFindingRow>;
 
     };
     Views: Record<string, never>;
@@ -4057,6 +4126,20 @@ export type Database = {
       generate_learning_recommendations: { Args: { p_class_id: string; p_objective_id: string }; Returns: number };
       update_recommendation_status: { Args: { p_id: string; p_status: 'accepted' | 'dismissed' | 'completed'; p_intervention_id?: string | null }; Returns: undefined };
       content_transition: { Args: { p_entity: string; p_id: string; p_to: ContentStatus; p_note?: string | null }; Returns: undefined };
+      register_curriculum_source: {
+        Args: {
+          p_title: string; p_publisher: string; p_doc_type: CurriculumSourceRow['doc_type']; p_licence: string; p_url?: string | null;
+          p_edition?: string | null; p_excerpts_permitted?: boolean; p_checksum_sha256?: string | null; p_retrieved_on?: string | null; p_note?: string | null;
+        };
+        Returns: string;
+      };
+      verify_curriculum_source: { Args: { p_source_id: string; p_note?: string | null }; Returns: undefined };
+      add_content_source_reference: { Args: { p_entity: ContentEntityTable; p_id: string; p_source_id: string; p_locator: string; p_supports?: string | null }; Returns: string };
+      check_content_source_reference: { Args: { p_reference_id: string; p_result: 'matches' | 'partial' | 'does_not_match'; p_note?: string | null }; Returns: undefined };
+      set_content_verification: { Args: { p_entity: ContentEntityTable; p_id: string; p_status: ContentVerificationStatus; p_note?: string | null }; Returns: undefined };
+      validate_content: { Args: { p_entity: ContentEntityTable; p_id: string }; Returns: string };
+      acknowledge_validation_finding: { Args: { p_finding_id: string; p_note: string }; Returns: undefined };
+      content_provenance: { Args: { p_entity: ContentEntityTable; p_id: string }; Returns: ContentProvenance };
     };
   };
 };

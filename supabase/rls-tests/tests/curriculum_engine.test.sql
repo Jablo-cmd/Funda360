@@ -479,6 +479,9 @@ begin
     where lr.learner_id = 'c4c40000-0000-0000-0000-0000000000b2' and lr.kind = 'extension';
   call test_util.record('suggestions point at the support and challenge resources mapped to the objective',
     r1 = 'Support: build numbers with counters' and r2 = 'Challenge: largest and smallest puzzles', coalesce(r1, 'null') || ' / ' || coalesce(r2, 'null'));
+  select reason into r1 from public.learning_recommendations where learner_id = 'c4c40000-0000-0000-0000-0000000000b4' and kind = 'remediation';
+  call test_util.record('the evidence states only what was recorded, with no claim about which rule applied',
+    r1 like 'Recorded results: the latest is %' and r1 not ilike '%threshold%' and r1 not ilike '%will%' and r1 not ilike '%predict%', coalesce(r1, 'null'));
   n := public.generate_learning_recommendations('c4c40000-0000-0000-0000-0000000000a1', v_obj);
   call test_util.record('generating again does not duplicate open suggestions', n = 0, format('created=%s', n));
 

@@ -188,6 +188,10 @@ const ParentHomeworkPage = named(
 );
 const LearningHubPage = named(() => import('@/features/learning/pages/LearningHubPage'), 'LearningHubPage');
 const LearningSetupPage = named(() => import('@/features/learning/pages/LearningSetupPage'), 'LearningSetupPage');
+const ContentStudioPage = named(
+  () => import('@/features/content-studio/pages/ContentStudioPage'),
+  'ContentStudioPage',
+);
 const TeacherWorkspacePage = named(
   () => import('@/features/teacherWorkspace/pages/TeacherWorkspacePage'),
   'TeacherWorkspacePage',
@@ -360,6 +364,9 @@ export function AppRoutes() {
               </Route>
               <Route element={<RequirePermission permission="academic.manage" />}>
                 <Route path="/learning/setup" element={<LearningSetupPage />} />
+              </Route>
+              <Route element={<RequirePermission permission="content.manage" />}>
+                <Route path="/content-studio" element={<ContentStudioPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="academic.view" />}>
