@@ -44,6 +44,8 @@
 
 ## Open questions for the curriculum specialist (not settled by this work)
 
+The full table, with the evidence found for each and what would change, is in [`grade4-mathematics-2026-term1-open-questions.md`](grade4-mathematics-2026-term1-open-questions.md). All are OPEN and REQUIRE HUMAN CURRICULUM REVIEW. A further question, measurement units, was added after the content audit.
+
 1. **Division and inverse operations.** The ATP record lists "inverse operations" among multiplication strategies but lists no division content for Term 1. A machine summary from a DBE-restricted web search mentioned "multiplication, and division" for Term 1; that summary is not reliable and is not in the project record. The pack uses inverse operations only as a light check with known facts, and flags this in the lesson notes. If division is a Term 1 requirement, the pack is missing it.
 2. **Number range.** "Between 0 and at least 10 000" is recorded for counting. The pack uses "at least four digits" for the other whole-number items, as recorded.
 3. **Which operations the properties cover.** The record says "operations with whole numbers". The lessons use addition and multiplication (and show subtraction as a contrast). Confirm against CAPS.

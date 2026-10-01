@@ -22,6 +22,7 @@ export interface StudioCalls {
   verifications: unknown[];
   registered: unknown[];
   sourcesVerified: unknown[];
+  evidence: unknown[];
 }
 
 export interface StudioState {
@@ -31,7 +32,15 @@ export interface StudioState {
   transitionError: string | null;
   verification: 'unverified' | 'source_backed' | 'reviewed' | 'verified';
   acknowledged: boolean;
-  sourceStatus: 'registered' | 'verified';
+  src: {
+    status: 'registered' | 'verified';
+    indexed_on: string | null;
+    checksum_sha256: string | null;
+    retrieved_on: string | null;
+    verified_at: string | null;
+    content_reviewed_at: string | null;
+    content_review_note: string | null;
+  };
   references: Array<Record<string, unknown>>;
 }
 
@@ -109,7 +118,7 @@ const assessmentRow = {
   updated_at: '2026-10-02T08:00:00Z',
 };
 
-const source = (status: string) => ({
+const source = (state: StudioState) => ({
   id: 'src-1',
   title: 'Mathematics policy statement (test)',
   publisher: 'Test publisher',
@@ -118,12 +127,9 @@ const source = (status: string) => ({
   edition: '2026',
   licence: 'Used under a test licence',
   excerpts_permitted: false,
-  checksum_sha256: null,
-  retrieved_on: null,
-  status,
   note: null,
-  verified_at: null,
   created_at: '2026-10-01T08:00:00Z',
+  ...state.src,
 });
 
 function findings(state: StudioState) {
@@ -207,7 +213,7 @@ function provenance(state: StudioState) {
         publisher: 'Test publisher',
         doc_type: 'caps_policy',
         licence: 'x',
-        status: state.sourceStatus,
+        status: state.src.status,
       },
     })),
     verification: {
@@ -264,6 +270,7 @@ export async function mockStudio(page: Page, options: { role?: string } = {}) {
     verifications: [],
     registered: [],
     sourcesVerified: [],
+    evidence: [],
   };
   const state: StudioState = {
     status: 'draft',
@@ -272,7 +279,15 @@ export async function mockStudio(page: Page, options: { role?: string } = {}) {
     transitionError: null,
     verification: 'unverified',
     acknowledged: false,
-    sourceStatus: 'registered',
+    src: {
+      status: 'registered',
+      indexed_on: null,
+      checksum_sha256: null,
+      retrieved_on: null,
+      verified_at: null,
+      content_reviewed_at: null,
+      content_review_note: null,
+    },
     references: [],
   };
 
@@ -375,7 +390,7 @@ export async function mockStudio(page: Page, options: { role?: string } = {}) {
   ]);
   await get('content_validation_runs', () => (state.ran ? [{ id: 'run-1' }] : []));
   await get('content_validation_findings', () => findings(state));
-  await get('curriculum_sources', () => [source(state.sourceStatus)]);
+  await get('curriculum_sources', () => [source(state)]);
   await get('content_source_references', () => state.references);
 
   const rpc = (
@@ -439,7 +454,27 @@ export async function mockStudio(page: Page, options: { role?: string } = {}) {
   });
   await rpc('verify_curriculum_source', (p, route) => {
     calls.sourcesVerified.push(p);
-    state.sourceStatus = 'verified';
+    if (!state.src.checksum_sha256) {
+      return rejected(
+        route,
+        "invalid_state: record the downloaded file's SHA-256 and date first; identity cannot be verified without the actual bytes",
+      );
+    }
+    state.src.status = 'verified';
+    state.src.verified_at = '2026-10-03T08:00:00Z';
+    return ok(route, null);
+  });
+  await rpc('record_source_evidence', (p, route) => {
+    calls.evidence.push(p);
+    if (p.p_level === 'indexed') state.src.indexed_on = (p.p_on as string) || '2026-10-03';
+    if (p.p_level === 'retrieved') {
+      state.src.checksum_sha256 = p.p_sha256 as string;
+      state.src.retrieved_on = p.p_on as string;
+    }
+    if (p.p_level === 'content_reviewed') {
+      state.src.content_reviewed_at = '2026-10-03T09:00:00Z';
+      state.src.content_review_note = p.p_note as string;
+    }
     return ok(route, null);
   });
 

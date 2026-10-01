@@ -121,6 +121,9 @@ begin
   select count(*) into n_src from public.curriculum_sources where title in ('Curriculum and Assessment Policy Statement (CAPS): Mathematics, Intermediate Phase, Grades 4-6', '2026 Annual Teaching Plan: Mathematics Grade 4 (English)')
     and status = 'registered' and checksum_sha256 is null and verified_at is null and verified_by is null;
   call test_util.record('both official sources are registered, not verified, and have no invented checksum', n_src = 2, 'sources: ' || n_src);
+  select count(*) into n from public.curriculum_sources s where s.title in ('Curriculum and Assessment Policy Statement (CAPS): Mathematics, Intermediate Phase, Grades 4-6', '2026 Annual Teaching Plan: Mathematics Grade 4 (English)')
+    and s.indexed_on is not null and s.retrieved_on is null and s.content_reviewed_at is null and public.source_evidence_level(s) = 'indexed';
+  call test_util.record('both sources are at the "indexed" step only: found at a DBE location, not retrieved, not identity-verified, not reviewed', n = 2, 'sources at indexed: ' || n);
 
   select count(*) into n from public.lessons l where l.curriculum_version_id = v and not exists (select 1 from public.content_source_references r
     join public.curriculum_sources s on s.id = r.source_id where r.entity_table = 'lessons' and r.entity_id = l.id and s.title like '2026 Annual Teaching Plan%');
@@ -189,6 +192,78 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- 4b. Independent content audit. These checks parse the stored content; they do not reuse the generator that wrote it.
+-- Passing them says the pack is internally consistent. It says nothing about alignment with any official document.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v uuid := (select id from public.curriculum_versions where code = 'ZA-G4-MATH-2026-T1');
+  n int; n2 int; rec record; m text[]; want numeric; got numeric; bad text := '';
+  scope_re constant text := '(fraction|decimal|percent|\malgebra|negative|\mratio\M|long division|÷)';
+  device_re constant text := '\m(projector|smartphone|phone|tablet|computer|laptop|online|internet|website|video|download|wifi|wi-fi|screen|apps?|qr|youtube|https?)\M';
+begin
+  -- arithmetic: every numeric question that is a bare expression has the key an independent calculation gives
+  n2 := 0;
+  for rec in select q.prompt, (k.answer #>> '{}') as ans from public.assessment_questions q join public.assessment_question_keys k on k.question_id = q.id
+           where q.curriculum_version_id = v and q.question_type = 'numeric' loop
+    m := regexp_match(rec.prompt, '(?:^|: )([0-9][0-9 ]*) ([+−×]) ([0-9][0-9 ]*)$');
+    if m is not null then
+      n2 := n2 + 1;
+      want := case m[2] when '+' then replace(m[1], ' ', '')::numeric + replace(m[3], ' ', '')::numeric
+                        when '−' then replace(m[1], ' ', '')::numeric - replace(m[3], ' ', '')::numeric
+                        else replace(m[1], ' ', '')::numeric * replace(m[3], ' ', '')::numeric end;
+      got := rec.ans::numeric;
+      if want is distinct from got then bad := bad || format('[%s = %s but key %s] ', rec.prompt, want, got); end if;
+    end if;
+  end loop;
+  call test_util.record('every bare-expression numeric question has the key an independent calculation gives (13 checked)', n2 = 13 and bad = '', format('checked=%s %s', n2, bad));
+
+  select count(*) into n from public.assessment_questions q join public.assessment_question_keys k on k.question_id = q.id
+   where q.curriculum_version_id = v and q.question_type = 'short_answer' and btrim(coalesce(k.marking_notes, '')) = '';
+  call test_util.record('every short-answer question carries marking notes for the teacher', n = 0, 'without notes: ' || n);
+
+  select count(*) into n from public.assessment_questions q join public.teaching_resources r on r.curriculum_version_id = v
+   where q.curriculum_version_id = v and length(q.prompt) > 25 and position(q.prompt in (r.title || ' ' || r.body::text)) > 0;
+  call test_util.record('no assessment question is a verbatim copy of text inside a teaching resource', n = 0, 'verbatim copies: ' || n);
+
+  select count(*) into n from public.resource_objectives ro join public.lesson_resources lr on lr.resource_id = ro.resource_id
+   where ro.resource_id in (select id from public.teaching_resources where curriculum_version_id = v)
+     and not exists (select 1 from public.lesson_objectives lo where lo.lesson_id = lr.lesson_id and lo.objective_id = ro.objective_id);
+  call test_util.record('a resource only claims objectives its own lesson teaches', n = 0, 'resources outside their lesson: ' || n);
+
+  select count(*) into n from public.curriculum_objectives o where o.version_id = v
+   and not exists (select 1 from public.resource_objectives ro join public.teaching_resources r on r.id = ro.resource_id where ro.objective_id = o.id and r.stage = 'explain');
+  select count(*) into n2 from public.curriculum_objectives o where o.version_id = v and o.code not like '%.FA.01'
+   and not exists (select 1 from public.resource_objectives ro join public.teaching_resources r on r.id = ro.resource_id where ro.objective_id = o.id and r.stage in ('practise', 'try'));
+  call test_util.record('every objective has a low-resource explanation resource, and every taught objective has practice', n = 0 and n2 = 0, format('no explanation=%s no practice=%s', n, n2));
+
+  select count(*) into n from public.teaching_resources r where r.curriculum_version_id = v and r.stage in ('practise', 'check') and r.body::text not like '%Answers for the teacher%';
+  select count(*) into n2 from public.teaching_resources r where r.curriculum_version_id = v and r.stage = 'print' and r.body::text like '%Answers for the teacher%';
+  call test_util.record('practice and check resources carry teacher answers; printables for learners never do', n = 0 and n2 = 0, format('missing=%s printable with answers=%s', n, n2));
+
+  select count(*) into n from public.teaching_resources r where r.curriculum_version_id = v
+   and (r.title || ' ' || coalesce(r.summary, '') || ' ' || r.body::text) ~* scope_re;
+  select count(*) into n2 from public.assessment_questions q where q.curriculum_version_id = v and q.prompt ~* scope_re;
+  call test_util.record('nothing from later terms (fractions, decimals, percent, algebra, negatives, ratio, division) appears in a resource or question, ',
+    n = 0 and n2 = 0, format('resources=%s questions=%s', n, n2));
+
+  select count(*) into n from public.teaching_resources r where r.curriculum_version_id = v and (r.title || ' ' || coalesce(r.summary, '') || ' ' || r.body::text) ~* device_re;
+  select count(*) into n2 from public.assessment_questions q where q.curriculum_version_id = v and (q.prompt || ' ' || q.options::text) ~* device_re;
+  call test_util.record('no resource or question depends on the internet, a projector, a phone or any device', n = 0 and n2 = 0, format('resources=%s questions=%s', n, n2));
+
+  select count(*) into n from (
+    select title from public.curriculum_topics where version_id = v union all select title from public.curriculum_subtopics where version_id = v
+    union all select description from public.curriculum_objectives where version_id = v
+    union all select title || ' ' || coalesce(summary, '') || ' ' || body::text from public.teaching_resources where curriculum_version_id = v
+    union all select prompt from public.assessment_questions where curriculum_version_id = v) t
+   where title ~* 'common fraction|G4\.MATH\.T1\.FRAC';
+  call test_util.record('the reconciled version contains no Common Fractions text or code anywhere', n = 0, 'occurrences: ' || n);
+
+  select count(*) into n from public.curriculum_objectives where version_id = v and (code like 'G4.MATH.T1.%' or code not like 'G4.MATH.2026.T1.%');
+  call test_util.record('every objective code in the reconciled version uses the 2026 prefix', n = 0, 'other prefixes: ' || n);
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- 5. The existing checks still run, and the gates still hold
 -- ---------------------------------------------------------------------------
 do $$
@@ -196,7 +271,7 @@ declare
   v uuid := (select id from public.curriculum_versions where code = 'ZA-G4-MATH-2026-T1');
   r record; v_run uuid; n_units int := 0; n_bad int; n_other int; n_ack int;
   v_lesson uuid := (select id from public.lessons where curriculum_version_id = v order by sort_order, title limit 1);
-  v_topic uuid; v_obj uuid; e text; n int; n_res_vis int; n_obj_vis int; v_asm_ids uuid[];
+  v_topic uuid; v_obj uuid; e text; n int; n_res_vis int; n_obj_vis int; v_asm_ids uuid[]; v_old_topic uuid; v_old_obj uuid;
 begin
   perform test_util.become('44444444-4444-4444-4444-444444444444', 'platform_administrator', null);
   for r in select 'lessons' t, id from public.lessons where curriculum_version_id = v
@@ -227,6 +302,11 @@ begin
   select id into v_obj from public.curriculum_objectives where version_id = v order by sort_order limit 1;
   e := test_util.err_of(format('select public.ai_begin_generation(%L, %L, array[%L]::uuid[], null, ''en'', ''mock'', ''mock-model-1'', ''p1'')', v, v_topic, v_obj));
   call test_util.record('AI drafting is refused for this pack until its objectives are approved', e like 'invalid_state%approved%', e);
+  select t.id, o.id into v_old_topic, v_old_obj from public.curriculum_topics t join public.curriculum_objectives o on o.topic_id = t.id
+   where t.code = 'G4.MATH.T1.FRAC' order by o.code limit 1;
+  e := test_util.err_of(format('select public.ai_begin_generation(%L, %L, array[%L]::uuid[], null, ''en'', ''mock'', ''mock-model-1'', ''p1'')',
+    (select id from public.curriculum_versions where code = 'ZA-CAPS-G4-MATH-SLICE'), v_old_topic, v_old_obj));
+  call test_util.record('AI drafting against the superseded earlier pack (including its Common Fractions objectives) is refused', e like 'invalid_state%superseded%', e);
   e := test_util.err_of(format('select public.set_content_verification(''lessons'', %L, ''reviewed'')', v_lesson));
   call test_util.record('a lesson cannot be marked reviewed while it is a draft with unchecked references', e like 'invalid_state%', e);
 

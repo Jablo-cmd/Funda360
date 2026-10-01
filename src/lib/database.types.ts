@@ -3056,6 +3056,8 @@ export type CurriculumSourceRow = {
   id: string; title: string; publisher: string; doc_type: 'caps_policy' | 'annual_teaching_plan' | 'assessment_guideline' | 'textbook' | 'other';
   url: string | null; edition: string | null; licence: string; excerpts_permitted: boolean; checksum_sha256: string | null;
   retrieved_on: string | null; status: 'registered' | 'verified' | 'retired'; note: string | null; verified_at: string | null; created_at: string;
+  /** Evidence ladder (20261003090000). status = 'verified' means IDENTITY verified, not that the document was read. */
+  indexed_on: string | null; content_reviewed_at: string | null; content_review_note: string | null;
 };
 export type ContentSourceReferenceRow = {
   id: string; entity_table: ContentEntityTable; entity_id: string; source_id: string; locator: string; supports: string | null;
@@ -4134,6 +4136,10 @@ export type Database = {
         Returns: string;
       };
       verify_curriculum_source: { Args: { p_source_id: string; p_note?: string | null }; Returns: undefined };
+      record_source_evidence: {
+        Args: { p_source_id: string; p_level: 'indexed' | 'retrieved' | 'content_reviewed'; p_sha256?: string | null; p_on?: string | null; p_note?: string | null };
+        Returns: undefined;
+      };
       add_content_source_reference: { Args: { p_entity: ContentEntityTable; p_id: string; p_source_id: string; p_locator: string; p_supports?: string | null }; Returns: string };
       check_content_source_reference: { Args: { p_reference_id: string; p_result: 'matches' | 'partial' | 'does_not_match'; p_note?: string | null }; Returns: undefined };
       set_content_verification: { Args: { p_entity: ContentEntityTable; p_id: string; p_status: ContentVerificationStatus; p_note?: string | null }; Returns: undefined };

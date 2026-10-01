@@ -47,6 +47,9 @@ jobs:
       - name: Unit tests
         run: npm run test
 
+      - name: Source verification script tests (offline, deterministic)
+        run: docs/sources/test-verify-dbe-sources.sh
+
       - name: Production build
         # This build is a quality gate only. The deploy job below performs the
         # real production build with the hosted Supabase configuration.

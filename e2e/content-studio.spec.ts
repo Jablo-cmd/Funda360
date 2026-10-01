@@ -212,12 +212,91 @@ test('resources and assessments are reviewed with their content, and AI answer k
   await expect(assessment.getByText('Answer proposed by the AI (check it):')).toBeVisible();
 });
 
-test('sources are registered with details only, then verified', async ({ page }) => {
+test('a source climbs four separate evidence steps, and each needs its own evidence', async ({
+  page,
+}) => {
   const { calls } = await mockStudio(page);
   await page.goto('/content-studio');
   const sources = page.getByRole('list', { name: 'Registered sources' });
-  await expect(sources.getByText('Registered, not yet verified')).toBeVisible();
+  const evidence = sources.getByRole('list', {
+    name: 'Evidence for Mathematics policy statement (test)',
+  });
 
+  // A new source has no evidence at all.
+  await expect(sources.getByText('Registered only: no evidence yet')).toBeVisible();
+  for (const step of ['Indexed', 'Retrieved', 'Identity verified', 'Content reviewed']) {
+    await expect(evidence.getByText(`${step}: not done`)).toBeVisible();
+  }
+
+  // Identity cannot be confirmed before the file's bytes are recorded: the button is disabled and says why.
+  await expect(
+    sources.getByRole('button', {
+      name: 'Confirm the identity of Mathematics policy statement (test)',
+    }),
+  ).toBeDisabled();
+  await expect(
+    sources.getByText('Identity can only be confirmed once the download is recorded.'),
+  ).toBeVisible();
+
+  // Step 1: indexed.
+  await sources.getByLabel('Date it was seen at the publisher’s site').fill('2026-10-01');
+  await sources
+    .getByRole('button', { name: 'Record Mathematics policy statement (test) as indexed' })
+    .click();
+  await expect(sources.getByText('Indexed: found at a location, not downloaded')).toBeVisible();
+  await expect(evidence.getByText('Indexed: done')).toBeVisible();
+  await expect(evidence.getByText('Retrieved: not done')).toBeVisible();
+  await expect
+    .poll(() => calls.evidence)
+    .toEqual([
+      {
+        p_source_id: 'src-1',
+        p_level: 'indexed',
+        p_sha256: null,
+        p_on: '2026-10-01',
+        p_note: null,
+      },
+    ]);
+
+  // Step 2: retrieved, with the actual checksum.
+  const sha = 'ab'.repeat(32);
+  await sources.getByLabel(/^SHA-256 of the downloaded file/).fill(sha);
+  await sources.getByLabel('Date it was downloaded').fill('2026-10-02');
+  await sources
+    .getByRole('button', { name: 'Record the download of Mathematics policy statement (test)' })
+    .click();
+  await expect(
+    sources.getByText('Retrieved: the file was downloaded, identity not confirmed'),
+  ).toBeVisible();
+  await expect(evidence.getByText('Retrieved: done')).toBeVisible();
+  await expect(evidence.getByText('Identity verified: not done')).toBeVisible();
+
+  // Step 3: identity verified.
+  await sources
+    .getByRole('button', { name: 'Confirm the identity of Mathematics policy statement (test)' })
+    .click();
+  await expect.poll(() => calls.sourcesVerified).toHaveLength(1);
+  await expect(
+    sources.getByText('Identity verified: nobody has recorded reading it yet'),
+  ).toBeVisible();
+  await expect(evidence.getByText('Content reviewed: not done')).toBeVisible();
+
+  // Step 4: content reviewed, which needs a statement of what was reviewed.
+  const record = sources.getByRole('button', {
+    name: 'Record that you reviewed Mathematics policy statement (test)',
+  });
+  await expect(record).toBeDisabled();
+  await sources.getByLabel(/^What did you review/).fill('Section 3.3.1 of the 2011 edition');
+  await record.click();
+  await expect(sources.getByText('Content reviewed by a person')).toBeVisible();
+  await expect(evidence.getByText('Content reviewed: done')).toBeVisible();
+});
+
+test('registering a source stores details only, and it starts with no evidence', async ({
+  page,
+}) => {
+  const { calls } = await mockStudio(page);
+  await page.goto('/content-studio');
   await page.getByLabel(/^Title/).fill('Annual teaching plan Grade 4 (test)');
   await page.getByLabel(/^Publisher/).fill('Test publisher');
   await page.getByLabel('Licence or permission to use it').fill('Used under a test licence');
@@ -228,12 +307,57 @@ test('sources are registered with details only, then verified', async ({ page })
     p_publisher: 'Test publisher',
     p_doc_type: 'caps_policy',
   });
+  expect(calls.registered[0]).not.toHaveProperty('p_checksum_sha256', expect.stringMatching(/./));
+});
 
-  await sources
-    .getByRole('button', { name: 'Mark Mathematics policy statement (test) as verified' })
-    .click();
-  await expect.poll(() => calls.sourcesVerified).toHaveLength(1);
-  await expect(sources.getByText('✓ Verified as the authoritative edition')).toBeVisible();
+test('the review dialog keeps lifecycle, curriculum verification and source evidence apart', async ({
+  page,
+}) => {
+  const { state } = await mockStudio(page);
+  state.status = 'approved';
+  await page.goto('/content-studio');
+  await page.getByRole('button', { name: 'Review Counting in hundreds', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /Lesson: Counting in hundreds/ });
+  await expect(dialog.getByText('Where this came from')).toBeVisible();
+
+  // Three different rows, three different questions.
+  await expect(
+    dialog.getByText(
+      'Approved. This is where the content is in review and publication, not whether it is correct.',
+    ),
+  ).toBeVisible();
+  await expect(dialog.getByText('Pending.', { exact: false }).first()).toBeVisible();
+  await expect(dialog.getByText('Nobody has verified this against a source yet.')).toBeVisible();
+  await expect(dialog.getByText('No source is linked yet.')).toBeVisible();
+
+  // An approved lesson is still "Pending" curriculum verification: lifecycle does not imply verification.
+  await expect(dialog.getByText('Verified.', { exact: false })).toHaveCount(0);
+});
+
+test('a source reference that a reviewer rejected shows curriculum verification as Rejected', async ({
+  page,
+}) => {
+  const { state } = await mockStudio(page);
+  state.references.push({
+    id: 'ref-x',
+    entity_table: 'lessons',
+    entity_id: 'lesson-ai',
+    source_id: 'src-1',
+    locator: 'Term 1 whole numbers',
+    supports: null,
+    check_result: 'does_not_match',
+    check_note: null,
+    checked_at: null,
+    created_at: '2026-10-02T09:00:00Z',
+  });
+  await page.goto('/content-studio');
+  await page.getByRole('button', { name: 'Review Counting in hundreds', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /Lesson: Counting in hundreds/ });
+  await expect(dialog.getByText('Rejected.', { exact: false }).first()).toBeVisible();
+  await expect(
+    dialog.getByText('A reviewer found that a source reference does not match this content.'),
+  ).toBeVisible();
+  await expect(dialog.getByText('Source evidence: Registered only: no evidence yet')).toBeVisible();
 });
 
 test.describe('on a small phone', () => {

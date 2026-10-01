@@ -143,7 +143,7 @@ begin
   perform public.content_transition('curriculum_version', test_util.aid(1), 'approved');
   perform public.content_transition('curriculum_version', test_util.aid(1), 'published');
   insert into test_util.ctx values ('source', public.register_curriculum_source(
-    'Test curriculum policy document', 'Test publisher', 'annual_teaching_plan', 'Fixture licence', 'https://example.org/policy', '2026', false, null, current_date, 'Test source'));
+    'Test curriculum policy document', 'Test publisher', 'annual_teaching_plan', 'Fixture licence', 'https://example.org/policy', '2026', false, repeat('a', 64), current_date, 'Test source'));
 end $$;
 
 -- ---------------------------------------------------------------------------

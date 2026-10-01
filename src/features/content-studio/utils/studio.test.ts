@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentProvenance } from '@/lib/database.types';
 import {
+  curriculumVerification,
   DRAFT_ERRORS,
   describeValidation,
   effectiveVerification,
+  SOURCE_LEVEL_LABEL,
+  sourceEvidenceLevel,
+  sourceEvidenceSteps,
   VERIFICATION_LABEL,
   workflowActions,
 } from '@/features/content-studio/utils/studio';
+import type { CurriculumSourceRow } from '@/lib/database.types';
 
 const verification = (
   over: Partial<ContentProvenance['verification']> = {},
@@ -97,5 +102,116 @@ describe('DRAFT_ERRORS', () => {
     ]) {
       expect(DRAFT_ERRORS[code]).toBeTruthy();
     }
+  });
+});
+
+const source = (over: Partial<CurriculumSourceRow> = {}): CurriculumSourceRow => ({
+  id: 's',
+  title: 'Doc',
+  publisher: 'P',
+  doc_type: 'other',
+  url: null,
+  edition: null,
+  licence: 'L',
+  excerpts_permitted: false,
+  checksum_sha256: null,
+  retrieved_on: null,
+  status: 'registered',
+  note: null,
+  verified_at: null,
+  created_at: '2026-10-01T00:00:00Z',
+  indexed_on: null,
+  content_reviewed_at: null,
+  content_review_note: null,
+  ...over,
+});
+
+describe('sourceEvidenceLevel', () => {
+  it('climbs one step at a time, and each step needs its own evidence', () => {
+    expect(sourceEvidenceLevel(source())).toBe('registered');
+    expect(sourceEvidenceLevel(source({ indexed_on: '2026-10-01' }))).toBe('indexed');
+    expect(
+      sourceEvidenceLevel(
+        source({
+          indexed_on: '2026-10-01',
+          checksum_sha256: 'a'.repeat(64),
+          retrieved_on: '2026-10-02',
+        }),
+      ),
+    ).toBe('retrieved');
+    expect(
+      sourceEvidenceLevel(
+        source({ status: 'verified', checksum_sha256: 'a'.repeat(64), retrieved_on: '2026-10-02' }),
+      ),
+    ).toBe('identity_verified');
+    expect(
+      sourceEvidenceLevel(
+        source({
+          status: 'verified',
+          checksum_sha256: 'a'.repeat(64),
+          retrieved_on: '2026-10-02',
+          content_reviewed_at: '2026-10-03T00:00:00Z',
+        }),
+      ),
+    ).toBe('content_reviewed');
+  });
+
+  it('a checksum without a date, or a date without a checksum, is not "retrieved"', () => {
+    expect(sourceEvidenceLevel(source({ checksum_sha256: 'a'.repeat(64) }))).toBe('registered');
+    expect(sourceEvidenceLevel(source({ retrieved_on: '2026-10-02' }))).toBe('registered');
+  });
+
+  it('a review recorded without verified identity is not reported as reviewed', () => {
+    expect(sourceEvidenceLevel(source({ content_reviewed_at: '2026-10-03T00:00:00Z' }))).toBe(
+      'registered',
+    );
+  });
+
+  it('never calls an indexed source verified, and has distinct wording for every level', () => {
+    const labels = Object.values(SOURCE_LEVEL_LABEL);
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(SOURCE_LEVEL_LABEL.indexed).not.toMatch(/verified|reviewed/i);
+    expect(SOURCE_LEVEL_LABEL.retrieved).toMatch(/identity not confirmed/);
+  });
+
+  it('lists four steps and marks only the ones with evidence', () => {
+    const steps = sourceEvidenceSteps(source({ indexed_on: '2026-10-01' }));
+    expect(steps.map((s) => [s.key, s.done])).toEqual([
+      ['indexed', true],
+      ['retrieved', false],
+      ['identity', false],
+      ['content', false],
+    ]);
+  });
+});
+
+describe('curriculumVerification', () => {
+  const prov = (status: 'unverified' | 'source_backed' | 'reviewed' | 'verified', stale = false) =>
+    verification({ status, recorded_status: status, stale });
+
+  it('is pending for anything short of verified, including reviewed', () => {
+    for (const status of ['unverified', 'source_backed', 'reviewed'] as const) {
+      expect(curriculumVerification(prov(status), []).state).toBe('pending');
+    }
+  });
+
+  it('is verified only when verified and not stale', () => {
+    expect(curriculumVerification(prov('verified'), []).state).toBe('verified');
+    expect(curriculumVerification(prov('verified', true), []).state).toBe('pending');
+  });
+
+  it('is rejected when any reference was checked and does not match, whatever the recorded level', () => {
+    expect(
+      curriculumVerification(prov('verified'), [
+        { check_result: 'matches' },
+        { check_result: 'does_not_match' },
+      ]).state,
+    ).toBe('rejected');
+  });
+
+  it('a partial match is not a rejection and not a verification', () => {
+    expect(curriculumVerification(prov('reviewed'), [{ check_result: 'partial' }]).state).toBe(
+      'pending',
+    );
   });
 });

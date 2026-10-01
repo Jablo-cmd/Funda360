@@ -1,8 +1,10 @@
 import type {
   ContentEntityTable,
   ContentProvenance,
+  ContentSourceReferenceRow,
   ContentStatus,
   ContentVerificationStatus,
+  CurriculumSourceRow,
   ValidationSeverity,
 } from '@/lib/database.types';
 
@@ -138,4 +140,112 @@ export function formatDate(iso: string | null | undefined): string {
   return Number.isNaN(d.getTime())
     ? ''
     : d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// --- Source evidence: four different facts about a source document -------------------------------------------------
+
+export type SourceEvidenceLevel =
+  'registered' | 'indexed' | 'retrieved' | 'identity_verified' | 'content_reviewed';
+
+export interface EvidenceStep {
+  key: 'indexed' | 'retrieved' | 'identity' | 'content';
+  label: string;
+  meaning: string;
+  done: boolean;
+  detail: string | null;
+}
+
+export const SOURCE_LEVEL_LABEL: Record<SourceEvidenceLevel, string> = {
+  registered: 'Registered only: no evidence yet',
+  indexed: 'Indexed: found at a location, not downloaded',
+  retrieved: 'Retrieved: the file was downloaded, identity not confirmed',
+  identity_verified: 'Identity verified: nobody has recorded reading it yet',
+  content_reviewed: 'Content reviewed by a person',
+};
+
+/** Mirrors source_evidence_level() in the database. Each step needs its own evidence; none implies the next. */
+export function sourceEvidenceLevel(
+  s: Pick<
+    CurriculumSourceRow,
+    'status' | 'indexed_on' | 'checksum_sha256' | 'retrieved_on' | 'content_reviewed_at'
+  >,
+): SourceEvidenceLevel {
+  if (s.status === 'verified' && s.content_reviewed_at) return 'content_reviewed';
+  if (s.status === 'verified') return 'identity_verified';
+  if (s.checksum_sha256 && s.retrieved_on) return 'retrieved';
+  if (s.indexed_on) return 'indexed';
+  return 'registered';
+}
+
+export function sourceEvidenceSteps(s: CurriculumSourceRow): EvidenceStep[] {
+  const retrieved = Boolean(s.checksum_sha256 && s.retrieved_on);
+  return [
+    {
+      key: 'indexed',
+      label: 'Indexed',
+      meaning: 'A document with this title was found at this address.',
+      done: Boolean(s.indexed_on),
+      detail: s.indexed_on,
+    },
+    {
+      key: 'retrieved',
+      label: 'Retrieved',
+      meaning: 'The actual file was downloaded and its SHA-256 recorded.',
+      done: retrieved,
+      detail: retrieved ? `${s.retrieved_on}, SHA-256 ${s.checksum_sha256?.slice(0, 12)}…` : null,
+    },
+    {
+      key: 'identity',
+      label: 'Identity verified',
+      meaning: 'A person confirmed the downloaded file is the authoritative edition.',
+      done: s.status === 'verified',
+      detail: s.verified_at ? s.verified_at.slice(0, 10) : null,
+    },
+    {
+      key: 'content',
+      label: 'Content reviewed',
+      meaning: 'A person read the actual document.',
+      done: Boolean(s.content_reviewed_at),
+      detail: s.content_review_note,
+    },
+  ];
+}
+
+// --- Curriculum verification: a property of the Funda360 unit, not of the source or its lifecycle step -------------
+
+export type CurriculumVerificationState = 'pending' | 'verified' | 'rejected';
+
+/**
+ * Pending: nobody has verified the unit against a verified source (including "reviewed but not verified").
+ * Verified: its verification is "verified" for the content as it reads now.
+ * Rejected: a reviewer checked a source reference and found that it does not match.
+ */
+export function curriculumVerification(
+  provenance: Pick<ContentProvenance, 'verification'>,
+  references: Array<Pick<ContentSourceReferenceRow, 'check_result'>>,
+): { state: CurriculumVerificationState; label: string; detail: string } {
+  if (references.some((r) => r.check_result === 'does_not_match')) {
+    return {
+      state: 'rejected',
+      label: 'Rejected',
+      detail: 'A reviewer found that a source reference does not match this content.',
+    };
+  }
+  const v = effectiveVerification(provenance);
+  if (v.status === 'verified') {
+    return {
+      state: 'verified',
+      label: 'Verified',
+      detail: 'Verified against a verified source, as the content currently reads.',
+    };
+  }
+  return {
+    state: 'pending',
+    label: 'Pending',
+    detail: v.stale
+      ? v.label
+      : v.status === 'unverified'
+        ? 'Nobody has verified this against a source yet.'
+        : v.label,
+  };
 }

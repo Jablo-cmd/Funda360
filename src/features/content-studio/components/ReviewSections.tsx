@@ -12,8 +12,12 @@ import type { ReviewData, UnitContent } from '@/features/content-studio/types';
 import {
   describeValidation,
   formatDate,
+  curriculumVerification,
   effectiveVerification,
   SEVERITY_META,
+  SOURCE_LEVEL_LABEL,
+  sourceEvidenceLevel,
+  STATUS_LABEL,
   VERIFICATION_OPTIONS,
   workflowActions,
 } from '@/features/content-studio/utils/studio';
@@ -155,6 +159,16 @@ export function ContentSection({ content, ai }: { content: UnitContent; ai: bool
 export function ProvenanceSection({ data }: { data: ReviewData }) {
   const p = data.provenance;
   const v = effectiveVerification(p);
+  const cv = curriculumVerification(p, data.references);
+  const sourceById = new Map(data.sources.map((src) => [src.id, src]));
+  const sourceLines = [...new Set(data.references.map((r) => r.source_id))].map((id) => {
+    const src = sourceById.get(id);
+    return {
+      id,
+      title: src?.title ?? 'Source',
+      level: src ? SOURCE_LEVEL_LABEL[sourceEvidenceLevel(src)] : 'unknown',
+    };
+  });
   return (
     <Section title="Where this came from">
       <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[10rem_1fr]">
@@ -179,8 +193,35 @@ export function ProvenanceSection({ data }: { data: ReviewData }) {
             </dd>
           </>
         )}
-        <dt className="font-medium text-content-primary">Checked against sources</dt>
-        <dd className="break-words text-content-secondary">{v.label}</dd>
+        <dt className="font-medium text-content-primary">Lifecycle step</dt>
+        <dd className="break-words text-content-secondary">
+          {STATUS_LABEL[p.status]}. This is where the content is in review and publication, not
+          whether it is correct.
+        </dd>
+        <dt className="font-medium text-content-primary">Curriculum verification</dt>
+        <dd className="break-words text-content-secondary">
+          <strong className="text-content-primary">
+            <span aria-hidden="true">
+              {cv.state === 'verified' ? '✓ ' : cv.state === 'rejected' ? '✕ ' : '○ '}
+            </span>
+            {cv.label}.
+          </strong>{' '}
+          {cv.detail} <span className="text-content-tertiary">({v.label})</span>
+        </dd>
+        <dt className="font-medium text-content-primary">Source evidence</dt>
+        <dd className="break-words text-content-secondary">
+          {sourceLines.length === 0 ? (
+            'No source is linked yet.'
+          ) : (
+            <ul className="flex flex-col gap-1" aria-label="Source evidence">
+              {sourceLines.map((l) => (
+                <li key={l.id}>
+                  {l.title}: {l.level}
+                </li>
+              ))}
+            </ul>
+          )}
+        </dd>
         <dt className="font-medium text-content-primary">Approved by</dt>
         <dd className="break-words text-content-secondary">
           {p.approved_by ? `${p.approved_by} on ${formatDate(p.approved_at)}` : 'Not approved yet'}
@@ -353,7 +394,10 @@ function ReferenceRow({
         {reference.locator}
         {reference.supports ? ` · ${reference.supports}` : ''}
       </p>
-      <p className="text-xs font-medium text-content-secondary">{label}</p>
+      <p className="text-xs text-content-tertiary">
+        Source evidence: {source ? SOURCE_LEVEL_LABEL[sourceEvidenceLevel(source)] : 'unknown'}
+      </p>
+      <p className="text-xs font-medium text-content-secondary">Your check: {label}</p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
           <Field label="Your check against the source">
@@ -488,7 +532,7 @@ export function VerificationSection({
   const [status, setStatus] = useState<(typeof VERIFICATION_OPTIONS)[number]['value']>('reviewed');
   const [note, setNote] = useState('');
   return (
-    <Section title="Verification">
+    <Section title="Curriculum verification">
       <p className="text-sm text-content-primary" role="status">
         Now: {v.label}.
       </p>

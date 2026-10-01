@@ -9,6 +9,11 @@ import { useLoad } from '@/features/learning/hooks/useLoad';
 import { curriculumErrorMessage } from '@/features/learning/utils/errors';
 import { contentStudioService } from '@/features/content-studio/services/contentStudioService';
 import type { CurriculumSourceRow } from '@/lib/database.types';
+import {
+  SOURCE_LEVEL_LABEL,
+  sourceEvidenceLevel,
+  sourceEvidenceSteps,
+} from '@/features/content-studio/utils/studio';
 import { ButtonSlot, Field, selectClass } from '@/features/content-studio/components/StudioBits';
 
 const DOC_TYPES: Array<{ value: CurriculumSourceRow['doc_type']; label: string }> = [
@@ -18,6 +23,187 @@ const DOC_TYPES: Array<{ value: CurriculumSourceRow['doc_type']; label: string }
   { value: 'textbook', label: 'Textbook' },
   { value: 'other', label: 'Other' },
 ];
+
+type Run = (label: string, action: () => Promise<void>, ok: string) => Promise<void>;
+
+/** One source, its four evidence steps, and the single next action that is allowed. */
+function SourceCard({
+  source: s,
+  busy,
+  run,
+}: {
+  source: CurriculumSourceRow;
+  busy: string | null;
+  run: Run;
+}) {
+  const [seen, setSeen] = useState('');
+  const [sha, setSha] = useState('');
+  const [downloaded, setDownloaded] = useState('');
+  const [reviewNote, setReviewNote] = useState('');
+  const level = sourceEvidenceLevel(s);
+  const steps = sourceEvidenceSteps(s);
+  const retrieved =
+    level === 'retrieved' || level === 'identity_verified' || level === 'content_reviewed';
+
+  return (
+    <li className="flex min-w-0 flex-col gap-3 rounded-card border border-border p-3">
+      <div className="min-w-0">
+        <p className="break-words text-sm font-semibold text-content-primary">{s.title}</p>
+        <p className="break-words text-xs text-content-tertiary">
+          {s.publisher} · Licence: {s.licence}
+        </p>
+        <p className="mt-1 text-xs font-medium text-content-secondary">
+          {s.status === 'retired' ? 'Retired' : SOURCE_LEVEL_LABEL[level]}
+        </p>
+      </div>
+      <ol
+        className="flex flex-col gap-1 text-xs text-content-secondary"
+        aria-label={`Evidence for ${s.title}`}
+      >
+        {steps.map((step) => (
+          <li key={step.key} className="break-words">
+            <span aria-hidden="true">{step.done ? '✓ ' : '○ '}</span>
+            <span className="font-medium text-content-primary">{step.label}</span>
+            <span className="sr-only">{step.done ? ': done' : ': not done'}</span>
+            {step.done ? (step.detail ? ` (${step.detail})` : '') : ` · ${step.meaning}`}
+          </li>
+        ))}
+      </ol>
+      {s.status !== 'retired' && (
+        <div className="flex flex-col gap-3">
+          {!s.indexed_on && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <TextField
+                containerClassName="min-w-0 flex-1"
+                label="Date it was seen at the publisher’s site"
+                type="date"
+                value={seen}
+                onChange={(e) => setSeen(e.target.value)}
+              />
+              <ButtonSlot>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  isLoading={busy === `indexed:${s.id}`}
+                  onClick={() =>
+                    void run(
+                      `indexed:${s.id}`,
+                      () =>
+                        contentStudioService.recordSourceEvidence({
+                          sourceId: s.id,
+                          level: 'indexed',
+                          on: seen,
+                        }),
+                      'Recorded as indexed.',
+                    )
+                  }
+                  aria-label={`Record ${s.title} as indexed`}
+                >
+                  Record as indexed
+                </Button>
+              </ButtonSlot>
+            </div>
+          )}
+          {!retrieved && (
+            <div className="flex flex-col gap-2">
+              <TextField
+                label="SHA-256 of the downloaded file (64 lowercase hexadecimal characters)"
+                value={sha}
+                onChange={(e) => setSha(e.target.value.trim())}
+              />
+              <TextField
+                label="Date it was downloaded"
+                type="date"
+                value={downloaded}
+                onChange={(e) => setDownloaded(e.target.value)}
+              />
+              <ButtonSlot>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  isLoading={busy === `retrieved:${s.id}`}
+                  onClick={() =>
+                    void run(
+                      `retrieved:${s.id}`,
+                      () =>
+                        contentStudioService.recordSourceEvidence({
+                          sourceId: s.id,
+                          level: 'retrieved',
+                          sha256: sha,
+                          on: downloaded,
+                        }),
+                      'Download recorded.',
+                    )
+                  }
+                  aria-label={`Record the download of ${s.title}`}
+                >
+                  Record the download
+                </Button>
+              </ButtonSlot>
+            </div>
+          )}
+          {s.status === 'registered' && (
+            <ButtonSlot>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!retrieved}
+                isLoading={busy === `verify:${s.id}`}
+                onClick={() =>
+                  void run(
+                    `verify:${s.id}`,
+                    () => contentStudioService.verifySource(s.id, ''),
+                    'Identity confirmed.',
+                  )
+                }
+                aria-label={`Confirm the identity of ${s.title}`}
+              >
+                Confirm identity
+              </Button>
+              {!retrieved && (
+                <p className="mt-1 text-xs text-content-tertiary">
+                  Identity can only be confirmed once the download is recorded.
+                </p>
+              )}
+            </ButtonSlot>
+          )}
+          {s.status === 'verified' && !s.content_reviewed_at && (
+            <div className="flex flex-col gap-2">
+              <TextField
+                label="What did you review? (sections and edition)"
+                value={reviewNote}
+                onChange={(e) => setReviewNote(e.target.value)}
+              />
+              <ButtonSlot>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!reviewNote.trim()}
+                  isLoading={busy === `content:${s.id}`}
+                  onClick={() =>
+                    void run(
+                      `content:${s.id}`,
+                      () =>
+                        contentStudioService.recordSourceEvidence({
+                          sourceId: s.id,
+                          level: 'content_reviewed',
+                          note: reviewNote,
+                        }),
+                      'Document review recorded.',
+                    )
+                  }
+                  aria-label={`Record that you reviewed ${s.title}`}
+                >
+                  Record document review
+                </Button>
+              </ButtonSlot>
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
 
 /** The register of documents content can be checked against. Only details are stored, never the document itself. */
 export function SourcesPanel() {
@@ -51,9 +237,12 @@ export function SourcesPanel() {
     <Card title="Sources">
       <p className="text-sm text-content-secondary">
         Register the official documents that content is checked against. Funda360 stores the title,
-        publisher and licence only: documents are never copied into the app. Marking a source
-        “verified” says the document is the authoritative edition. It does not make any lesson
-        verified.
+        publisher and licence only: documents are never copied into the app. A source climbs four
+        separate steps, and each needs its own evidence: <strong>indexed</strong> (found at a
+        location), <strong>retrieved</strong> (the file was downloaded and hashed),{' '}
+        <strong>identity verified</strong> (a person confirmed it is the authoritative file) and{' '}
+        <strong>content reviewed</strong> (a person read it). None of them makes any lesson
+        verified: that is decided separately, on each lesson.
       </p>
       <ErrorAlert message={sources.error ?? error} />
       {sources.isLoading && !sources.data ? (
@@ -63,43 +252,7 @@ export function SourcesPanel() {
       ) : (
         <ul className="flex flex-col gap-2" aria-label="Registered sources">
           {(sources.data ?? []).map((s) => (
-            <li
-              key={s.id}
-              className="flex flex-col gap-2 rounded-card border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <p className="break-words text-sm font-semibold text-content-primary">{s.title}</p>
-                <p className="break-words text-xs text-content-tertiary">
-                  {s.publisher} · Licence: {s.licence}
-                </p>
-                <p className="mt-1 text-xs font-medium text-content-secondary">
-                  {s.status === 'verified'
-                    ? '✓ Verified as the authoritative edition'
-                    : s.status === 'retired'
-                      ? 'Retired'
-                      : 'Registered, not yet verified'}
-                </p>
-              </div>
-              {s.status === 'registered' && (
-                <ButtonSlot>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    isLoading={busy === `verify:${s.id}`}
-                    onClick={() =>
-                      void run(
-                        `verify:${s.id}`,
-                        () => contentStudioService.verifySource(s.id, ''),
-                        'Source verified.',
-                      )
-                    }
-                    aria-label={`Mark ${s.title} as verified`}
-                  >
-                    Mark as verified
-                  </Button>
-                </ButtonSlot>
-              )}
-            </li>
+            <SourceCard key={s.id} source={s} busy={busy} run={run} />
           ))}
         </ul>
       )}

@@ -21,7 +21,9 @@ Purpose:
 2026 Annual Teaching Plans: English Mathematics: Grade 4
 
 Official DBE source:
-https://www.education.gov.za/Portals/0/Documents/Recovery%20plan%20page/2026%20ATPs/2026_ATP_Mathematics%20Grade%204.pdf?ver=2026-01-20-202040-057
+https://www.education.gov.za/Portals/0/Documents/Recovery%20plan%20page/2026%20ATPs/2026_ATP_Mathematics_Grade%204.pdf?ver=2026-01-20-202040-057
+
+(An earlier version of this register wrote the file name with a space instead of the underscore before "Grade". The underscore form is the one the DBE index lists and the one the pack's source record uses. Neither spelling has been opened: see the evidence ladder below.)
 
 Purpose:
 - current 2026 term/week sequencing
@@ -55,6 +57,24 @@ For curriculum generation and verification use:
 4. Funda360-authored content as implementation material.
 5. AI-generated content as draft material only until human review.
 
+## What "verified" means: five separate things
+
+The word "verified" used to cover several different facts. They are now recorded separately, and each one needs the one before it. None of them is implied by another, and none is implied by a document merely being listed.
+
+| Step | Question it answers | Recorded as | Who | Today (CAPS Mathematics Gr 4-6, 2026 Grade 4 ATP) |
+| --- | --- | --- | --- | --- |
+| 1. Indexed | Was a document with this title seen at this URL (for example in the DBE's own index)? | `indexed_on` | anyone, platform admin in the app | **Yes** (2026-10-01, from search-index observation only) |
+| 2. Retrieved | Were the actual bytes downloaded and hashed? | `checksum_sha256` and `retrieved_on` | whoever runs `verify-dbe-sources.sh` | **No.** The build environment cannot reach `education.gov.za`; no checksum exists. |
+| 3. Identity verified | Did a person confirm the downloaded file is the authoritative current edition? | `status = verified` (needs step 2) | a platform administrator | **No** |
+| 4. Content reviewed | Did a person read the document itself (sections, edition)? | `content_reviewed_*` (needs step 3) | a curriculum specialist | **No** |
+| 5. Curriculum verified | Does a specific Funda360 objective, lesson, resource or question match the source? | `content_source_references.check_result` and `content_verifications` | a curriculum specialist who is **not** the author | **No** (every unit is `pending`) |
+
+Steps 1-4 describe a *source*. Step 5 describes a *unit of Funda360 content* and is checked one unit at a time: a source can be fully reviewed while every lesson that cites it is still unverified.
+
+Separate again is the **content lifecycle** of a unit: Draft, Review, Approved, Published, Retired. A unit that is `approved` is not thereby `verified`, and a `verified` unit is not thereby published. Content Studio shows the three as three different rows so they cannot be confused.
+
+The database enforces the order: a checksum must be 64 lowercase hexadecimal characters with a download date that is not in the future; identity cannot be verified without a checksum; a document cannot be reviewed before identity is verified; a recorded checksum cannot later be replaced by another file's. See `supabase/migrations/20261003090000_source_evidence_ladder.sql`.
+
 ## Source identity check (CAPS Mathematics Grades 4-6)
 
 **Result: NOT ESTABLISHED. No checksum was recorded and none was invented.**
@@ -85,7 +105,7 @@ If the checksums are equal: record one canonical URL, list the others as aliases
 
 ## Current Grade 4 Mathematics status
 
-Sources located and recorded. Two sources are registered in the app (`curriculum_sources`) as **registered, not verified, no checksum**.
+Sources located and recorded. Two sources are registered in the app (`curriculum_sources`) at the first step only: **indexed**. Not retrieved, no checksum, identity not verified, content not reviewed.
 
 - The earlier draft pack (`ZA-CAPS-G4-MATH-SLICE`) is kept as history and marked superseded. It is incomplete against the 2026 ATP and places Common Fractions in Term 1.
 - The reconciled draft pack (`ZA-G4-MATH-2026-T1`) represents the recorded 2026 Term 1 scope. See [`caps/grade4-mathematics-term1-gap-analysis.md`](caps/grade4-mathematics-term1-gap-analysis.md) and [`caps/grade4-mathematics-2026-term1-mapping.md`](caps/grade4-mathematics-2026-term1-mapping.md).

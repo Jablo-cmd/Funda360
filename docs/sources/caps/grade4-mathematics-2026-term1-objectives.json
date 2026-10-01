@@ -1,0 +1,549 @@
+{
+  "version_code": "ZA-G4-MATH-2026-T1",
+  "status": "DRAFT - NOT VERIFIED - NOT APPROVED - NOT PUBLISHED",
+  "note": "Every row is verification_status pending. source_status indexed means a document with this title was seen at a URL; it is not retrieved, identity verified or content reviewed.",
+  "objectives": [
+    {
+      "objective_id": "G4.MATH.2026.T1.WN.01",
+      "title": "Counting forwards and backwards in 2s, 3s, 5s, 10s, 25s, 50s and 100s between 0 and at least 10 000",
+      "description": "Count forwards and backwards in 2s, 3s, 5s, 10s, 25s, 50s and 100s with whole numbers between 0 and at least 10 000.",
+      "topic": "G4.MATH.2026.T1.WN",
+      "topic_title": "Whole numbers: counting, ordering, representing, place value and rounding",
+      "subtopic": "G4.MATH.2026.T1.WN.COUNT",
+      "subtopic_title": "Counting in steps",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole numbers; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Counting forwards and backwards in 2s, 3s, 5s, 10s, 25s, 50s and 100s between 0 and at least 10 000",
+      "lessons": [
+        "L01"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.WN.02",
+      "title": "Ordering, comparing and representing numbers to at least four digits (ordering and comparing)",
+      "description": "Order and compare whole numbers of at least four digits.",
+      "topic": "G4.MATH.2026.T1.WN",
+      "topic_title": "Whole numbers: counting, ordering, representing, place value and rounding",
+      "subtopic": "G4.MATH.2026.T1.WN.ORDER",
+      "subtopic_title": "Ordering, comparing and representing numbers",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole numbers; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Ordering, comparing and representing numbers to at least four digits (ordering and comparing)",
+      "lessons": [
+        "L03"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.WN.03",
+      "title": "Ordering, comparing and representing numbers to at least four digits (representing)",
+      "description": "Represent whole numbers of at least four digits in different ways.",
+      "topic": "G4.MATH.2026.T1.WN",
+      "topic_title": "Whole numbers: counting, ordering, representing, place value and rounding",
+      "subtopic": "G4.MATH.2026.T1.WN.ORDER",
+      "subtopic_title": "Ordering, comparing and representing numbers",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole numbers; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Ordering, comparing and representing numbers to at least four digits (representing)",
+      "lessons": [
+        "L02"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.WN.04",
+      "title": "Odd and even numbers to at least 1 000",
+      "description": "Recognise odd and even numbers to at least 1 000.",
+      "topic": "G4.MATH.2026.T1.WN",
+      "topic_title": "Whole numbers: counting, ordering, representing, place value and rounding",
+      "subtopic": "G4.MATH.2026.T1.WN.ODDEVEN",
+      "subtopic_title": "Odd and even numbers",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole numbers; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Odd and even numbers to at least 1 000",
+      "lessons": [
+        "L04"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.WN.05",
+      "title": "Place value of digits in whole numbers to at least four digits",
+      "description": "State the place value of each digit in whole numbers of at least four digits.",
+      "topic": "G4.MATH.2026.T1.WN",
+      "topic_title": "Whole numbers: counting, ordering, representing, place value and rounding",
+      "subtopic": "G4.MATH.2026.T1.WN.PV",
+      "subtopic_title": "Place value",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole numbers; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Place value of digits in whole numbers to at least four digits",
+      "lessons": [
+        "L02"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.WN.06",
+      "title": "Rounding to the nearest 10, 100 and 1 000",
+      "description": "Round whole numbers to the nearest 10, 100 and 1 000.",
+      "topic": "G4.MATH.2026.T1.WN",
+      "topic_title": "Whole numbers: counting, ordering, representing, place value and rounding",
+      "subtopic": "G4.MATH.2026.T1.WN.ROUND",
+      "subtopic_title": "Rounding",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole numbers; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Rounding to the nearest 10, 100 and 1 000",
+      "lessons": [
+        "L05"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.NS.01",
+      "title": "Write number sentences describing problem situations",
+      "description": "Write number sentences that describe problem situations.",
+      "topic": "G4.MATH.2026.T1.NS",
+      "topic_title": "Number sentences and the properties of operations",
+      "subtopic": "G4.MATH.2026.T1.NS.SOLVE",
+      "subtopic_title": "Writing, solving and checking number sentences",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Number sentences; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Write number sentences describing problem situations",
+      "lessons": [
+        "L06"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.NS.02",
+      "title": "Solve and complete number sentences by inspection",
+      "description": "Solve and complete number sentences by inspection.",
+      "topic": "G4.MATH.2026.T1.NS",
+      "topic_title": "Number sentences and the properties of operations",
+      "subtopic": "G4.MATH.2026.T1.NS.SOLVE",
+      "subtopic_title": "Writing, solving and checking number sentences",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Number sentences; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Solve and complete number sentences by inspection",
+      "lessons": [
+        "L06"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.NS.03",
+      "title": "Trial and improvement",
+      "description": "Solve number sentences by trial and improvement.",
+      "topic": "G4.MATH.2026.T1.NS",
+      "topic_title": "Number sentences and the properties of operations",
+      "subtopic": "G4.MATH.2026.T1.NS.SOLVE",
+      "subtopic_title": "Writing, solving and checking number sentences",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Number sentences; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Trial and improvement",
+      "lessons": [
+        "L07"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.NS.04",
+      "title": "Checking solutions by substitution",
+      "description": "Check solutions to number sentences by substitution.",
+      "topic": "G4.MATH.2026.T1.NS",
+      "topic_title": "Number sentences and the properties of operations",
+      "subtopic": "G4.MATH.2026.T1.NS.SOLVE",
+      "subtopic_title": "Writing, solving and checking number sentences",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Number sentences; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Checking solutions by substitution",
+      "lessons": [
+        "L07"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.NS.05",
+      "title": "Recognise and use commutative, associative and distributive properties of operations with whole numbers (commutative)",
+      "description": "Recognise and use the commutative property of operations with whole numbers.",
+      "topic": "G4.MATH.2026.T1.NS",
+      "topic_title": "Number sentences and the properties of operations",
+      "subtopic": "G4.MATH.2026.T1.NS.PROP",
+      "subtopic_title": "Properties of operations",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Number sentences; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Recognise and use commutative, associative and distributive properties of operations with whole numbers (commutative)",
+      "lessons": [
+        "L08"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.NS.06",
+      "title": "Recognise and use commutative, associative and distributive properties of operations with whole numbers (associative)",
+      "description": "Recognise and use the associative property of operations with whole numbers.",
+      "topic": "G4.MATH.2026.T1.NS",
+      "topic_title": "Number sentences and the properties of operations",
+      "subtopic": "G4.MATH.2026.T1.NS.PROP",
+      "subtopic_title": "Properties of operations",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Number sentences; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Recognise and use commutative, associative and distributive properties of operations with whole numbers (associative)",
+      "lessons": [
+        "L08"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.NS.07",
+      "title": "Recognise and use commutative, associative and distributive properties of operations with whole numbers (distributive)",
+      "description": "Recognise and use the distributive property of operations with whole numbers.",
+      "topic": "G4.MATH.2026.T1.NS",
+      "topic_title": "Number sentences and the properties of operations",
+      "subtopic": "G4.MATH.2026.T1.NS.PROP",
+      "subtopic_title": "Properties of operations",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Number sentences; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Recognise and use commutative, associative and distributive properties of operations with whole numbers (distributive)",
+      "lessons": [
+        "L08"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.NS.08",
+      "title": "Understand 0 in terms of its additive property",
+      "description": "Understand 0 in terms of its additive property.",
+      "topic": "G4.MATH.2026.T1.NS",
+      "topic_title": "Number sentences and the properties of operations",
+      "subtopic": "G4.MATH.2026.T1.NS.PROP",
+      "subtopic_title": "Properties of operations",
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Number sentences; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Understand 0 in terms of its additive property",
+      "lessons": [
+        "L08"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.AS.01",
+      "title": "Addition and subtraction of whole numbers of at least four digits",
+      "description": "Add and subtract whole numbers of at least four digits.",
+      "topic": "G4.MATH.2026.T1.AS",
+      "topic_title": "Whole-number addition and subtraction",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number addition and subtraction; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Addition and subtraction of whole numbers of at least four digits",
+      "lessons": [
+        "L09"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.AS.02",
+      "title": "Calculation and checking strategies: estimation",
+      "description": "Use estimation to calculate and to check addition and subtraction of whole numbers.",
+      "topic": "G4.MATH.2026.T1.AS",
+      "topic_title": "Whole-number addition and subtraction",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number addition and subtraction; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Calculation and checking strategies: estimation",
+      "lessons": [
+        "L10"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.AS.03",
+      "title": "Calculation and checking strategies: building up and breaking down numbers",
+      "description": "Use building up and breaking down of numbers to add and subtract.",
+      "topic": "G4.MATH.2026.T1.AS",
+      "topic_title": "Whole-number addition and subtraction",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number addition and subtraction; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Calculation and checking strategies: building up and breaking down numbers",
+      "lessons": [
+        "L09"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.AS.04",
+      "title": "Calculation and checking strategies: number lines",
+      "description": "Use number lines to add and subtract.",
+      "topic": "G4.MATH.2026.T1.AS",
+      "topic_title": "Whole-number addition and subtraction",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number addition and subtraction; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Calculation and checking strategies: number lines",
+      "lessons": [
+        "L10"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.AS.05",
+      "title": "Calculation and checking strategies: rounding and compensating",
+      "description": "Use rounding and compensating to add and subtract.",
+      "topic": "G4.MATH.2026.T1.AS",
+      "topic_title": "Whole-number addition and subtraction",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number addition and subtraction; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Calculation and checking strategies: rounding and compensating",
+      "lessons": [
+        "L11"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.AS.06",
+      "title": "Calculation and checking strategies: inverse operations",
+      "description": "Use inverse operations to check addition and subtraction.",
+      "topic": "G4.MATH.2026.T1.AS",
+      "topic_title": "Whole-number addition and subtraction",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number addition and subtraction; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Calculation and checking strategies: inverse operations",
+      "lessons": [
+        "L11"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.MUL.01",
+      "title": "Multiply one-digit numbers by numbers up to 10",
+      "description": "Multiply one-digit numbers by numbers up to 10.",
+      "topic": "G4.MATH.2026.T1.MUL",
+      "topic_title": "Whole-number multiplication",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number multiplication; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Multiply one-digit numbers by numbers up to 10",
+      "lessons": [
+        "L12"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.MUL.02",
+      "title": "Multiply at least two-digit by one-digit numbers",
+      "description": "Multiply whole numbers of at least two digits by one-digit numbers.",
+      "topic": "G4.MATH.2026.T1.MUL",
+      "topic_title": "Whole-number multiplication",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number multiplication; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Multiply at least two-digit by one-digit numbers",
+      "lessons": [
+        "L13"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.MUL.03",
+      "title": "Multiply at least a two-digit whole number by a two-digit number",
+      "description": "Multiply a whole number of at least two digits by a two-digit number.",
+      "topic": "G4.MATH.2026.T1.MUL",
+      "topic_title": "Whole-number multiplication",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number multiplication; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Multiply at least a two-digit whole number by a two-digit number",
+      "lessons": [
+        "L14"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.MUL.04",
+      "title": "Strategies such as estimation, building up/breaking down, doubling/halving and inverse operations",
+      "description": "Use estimation, building up and breaking down, doubling and halving, and inverse operations in multiplication.",
+      "topic": "G4.MATH.2026.T1.MUL",
+      "topic_title": "Whole-number multiplication",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Whole-number multiplication; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Strategies such as estimation, building up/breaking down, doubling/halving and inverse operations",
+      "lessons": [
+        "L12",
+        "L13",
+        "L14"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.PS.01",
+      "title": "Solve whole-number problems in financial contexts",
+      "description": "Solve whole-number problems in financial contexts.",
+      "topic": "G4.MATH.2026.T1.PS",
+      "topic_title": "Problem solving in financial and measurement contexts",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Problem solving; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Solve whole-number problems in financial contexts",
+      "lessons": [
+        "L15"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.PS.02",
+      "title": "Solve whole-number problems in measurement contexts",
+      "description": "Solve whole-number problems in measurement contexts.",
+      "topic": "G4.MATH.2026.T1.PS",
+      "topic_title": "Problem solving in financial and measurement contexts",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Problem solving; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Solve whole-number problems in measurement contexts",
+      "lessons": [
+        "L16"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    },
+    {
+      "objective_id": "G4.MATH.2026.T1.FA.01",
+      "title": "Term 1 assignment: whole numbers (counting, ordering, representing), number sentences, whole-number addition and subtraction; completed in class within three hours",
+      "description": "Complete the Term 1 assignment, which covers whole numbers (counting, ordering and representing), number sentences, and whole-number addition and subtraction. It is completed in class within three hours.",
+      "topic": "G4.MATH.2026.T1.FA",
+      "topic_title": "Formal assessment: the Term 1 assignment",
+      "subtopic": null,
+      "subtopic_title": null,
+      "source_document": "DBE 2026 Annual Teaching Plan, Mathematics Grade 4 (scope and sequence); DBE CAPS Mathematics Grades 4-6 (requirements)",
+      "source_section": "ATP Term 1: Formal assessment; CAPS Grade 4 Term 1 (section 3.3.1)",
+      "source_page": "NOT VERIFIED",
+      "source_status": "indexed",
+      "verification_status": "pending",
+      "atp_bullet_as_recorded": "Term 1 assignment: whole numbers (counting, ordering, representing), number sentences, whole-number addition and subtraction; completed in class within three hours",
+      "lessons": [
+        "L17"
+      ],
+      "evidence_basis": "Project record docs/sources/caps/grade4-mathematics-2026-atp.md; not compared with the PDF by anyone else",
+      "reviewer": "REQUIRES HUMAN CURRICULUM REVIEW"
+    }
+  ]
+}

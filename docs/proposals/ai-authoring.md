@@ -35,7 +35,7 @@ The model identifier is configuration (`CURRICULUM_AI_MODEL`, no default) and th
 
 ## Data model (all new tables: RLS forced, platform administrators only, no client write policy, every write via RPC)
 
-- `curriculum_sources`: registry of documents (title, publisher, licence, edition, checksum, `status` registered/verified/retired). Metadata only; documents are never copied in.
+- `curriculum_sources`: registry of documents (title, publisher, licence, edition, checksum, `status` registered/verified/retired, where `verified` means *identity* verified and needs a recorded checksum and download date; plus `indexed_on` and `content_reviewed_*` for the other two steps of the source evidence ladder). Metadata only; documents are never copied in.
 - `content_source_references`: which part (`locator`) of which source a unit rests on, and a reviewer's check (`matches` / `partial` / `does_not_match`).
 - `content_verifications`: `unverified < source_backed < reviewed < verified`, with the content fingerprint it applies to.
 - `ai_generation_requests` / `ai_generation_outputs`: requester, version, topic, objectives, provider, model, prompt version, schema version, accepted payload hash, rejection reasons, and which units came out of it.
@@ -62,6 +62,8 @@ For AI-origin units (`ai_content_gate`), approval **and** publication require:
 `content_transition` itself was not redefined.
 
 ## Verification levels, in plain words
+
+These levels describe a unit of *content* checked against sources. They are not the status of a source and not the lifecycle (draft, review, approved, published, retired). The five steps for a *source* (indexed, retrieved, identity verified, content reviewed) and how they differ from curriculum verification are in `docs/sources/curriculum-source-register.md`; Content Studio shows them as separate rows.
 
 | Level | Meaning | Never means |
 | --- | --- | --- |
@@ -98,7 +100,7 @@ and that it places Common Fractions in Term 1, which the ATP places later. Its c
 
 What is still open, and is deliberately not done by code:
 
-1. The sources are **not yet registered** in `curriculum_sources`, and none is marked verified. Registering them (title, publisher, licence, checksum) and verifying them is a person's step in the Content Studio.
+1. The sources are registered in the pack data at the first step only (indexed, no checksum, not retrieved, identity not verified, content not reviewed) and none is marked verified. Registering them (title, publisher, licence, checksum) and verifying them is a person's step in the Content Studio.
 2. The CAPS PDF is given under two different DBE URLs in `docs/sources/caps/grade4-mathematics-2026-source.md` (and the content pack) and in `docs/sources/curriculum-source-register.md`. Confirm they are the same document, and record a checksum when registering it.
 3. Funda360's licence/permission position for using these documents as a reference is a legal decision still to be confirmed.
 4. A corrected Term 1 structure now exists as the draft pack `ZA-G4-MATH-2026-T1` (see `docs/sources/caps/grade4-mathematics-2026-term1-mapping.md`). It has to be checked and **approved** before AI can draft against it: `ai_begin_generation` refuses objectives that are not approved, and a test pins that refusal. That is the intended behaviour.

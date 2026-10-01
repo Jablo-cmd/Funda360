@@ -338,6 +338,24 @@ async function registerSource(input: {
   );
 }
 
+async function recordSourceEvidence(input: {
+  sourceId: string;
+  level: 'indexed' | 'retrieved' | 'content_reviewed';
+  sha256?: string;
+  on?: string;
+  note?: string;
+}): Promise<void> {
+  await rpc(
+    supabase.rpc('record_source_evidence', {
+      p_source_id: input.sourceId,
+      p_level: input.level,
+      p_sha256: input.sha256 || null,
+      p_on: input.on || null,
+      p_note: input.note || null,
+    }),
+  );
+}
+
 async function verifySource(sourceId: string, note: string): Promise<void> {
   await rpc(
     supabase.rpc('verify_curriculum_source', { p_source_id: sourceId, p_note: note || null }),
@@ -390,5 +408,6 @@ export const contentStudioService = {
   listSources,
   registerSource,
   verifySource,
+  recordSourceEvidence,
   requestAiDraft,
 };
