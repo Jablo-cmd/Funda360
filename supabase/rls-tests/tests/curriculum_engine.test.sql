@@ -72,6 +72,9 @@ declare
   v_ip uuid; v_wn uuid; v_add uuid;
   v_subtopic uuid;
 begin
+  -- The earlier draft pack predates the review workflow. This suite tests the lifecycle mechanics, so it runs the legacy path;
+  -- curriculum_review.test.sql proves that a version in the workflow cannot take this path.
+  update public.curriculum_versions set review_workflow = false where code = 'ZA-CAPS-G4-MATH-SLICE';
   select id into v from public.curriculum_versions where code = 'ZA-CAPS-G4-MATH-SLICE';
   select id into v_ip from public.curriculum_phases where version_id = v and code = 'IP';
   select id into v_wn from public.curriculum_topics where code = 'G4.MATH.T1.WN';

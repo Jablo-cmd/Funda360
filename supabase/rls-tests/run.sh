@@ -92,10 +92,10 @@ for test_file in "$SCRIPT_DIR"/tests/*.test.sql; do
   echo "    - $(basename "$test_file")"
   # The reconciled Term 1 pack is loaded just before its own suite (which removes it again), because other suites
   # assert exact curriculum row counts.
-  if [ "$(basename "$test_file")" = "grade4_term1_pack.test.sql" ]; then
-    echo "      (loading content pack ZA-G4-MATH-2026-T1, draft)"
+  case "$(basename "$test_file")" in grade4_term1_pack.test.sql|grade4_term1_review.test.sql) ;; *) false ;; esac && {
+    echo "      (loading content pack ZA-G4-MATH-2026-T1, draft; each of these suites removes it again)"
     psql_exec < "$REPO_ROOT/supabase/content/grade4-mathematics-2026-term1.sql"
-  fi
+  }
   psql_exec < "$test_file"
 done
 

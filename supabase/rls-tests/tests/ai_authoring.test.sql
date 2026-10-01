@@ -113,9 +113,11 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data) va
 insert into public.profiles (id, tenant_id, first_name, last_name, email, role, status) values
   (test_util.aid(900), null, 'Second', 'Admin', 'second.admin@funda360.test', null, 'active');
 
-insert into public.curriculum_versions (id, code, name, source) values
-  (test_util.aid(1), 'ZA-AI-TEST-A', 'AI test curriculum A', 'Test fixture'),
-  (test_util.aid(21), 'ZA-AI-TEST-B', 'AI test curriculum B (draft)', 'Test fixture');
+-- review_workflow = false: these fixtures exercise the AI gates on their own. The curriculum review workflow has its own suite
+-- (curriculum_review.test.sql), where the default (true) applies.
+insert into public.curriculum_versions (id, code, name, source, review_workflow) values
+  (test_util.aid(1), 'ZA-AI-TEST-A', 'AI test curriculum A', 'Test fixture', false),
+  (test_util.aid(21), 'ZA-AI-TEST-B', 'AI test curriculum B (draft)', 'Test fixture', false);
 insert into public.curriculum_phases (id, version_id, code, name) values
   (test_util.aid(2), test_util.aid(1), 'IP', 'Intermediate Phase'), (test_util.aid(22), test_util.aid(21), 'IP', 'Intermediate Phase');
 insert into public.curriculum_grades (id, version_id, phase_id, grade_number, name) values
@@ -143,7 +145,9 @@ begin
   perform public.content_transition('curriculum_version', test_util.aid(1), 'approved');
   perform public.content_transition('curriculum_version', test_util.aid(1), 'published');
   insert into test_util.ctx values ('source', public.register_curriculum_source(
-    'Test curriculum policy document', 'Test publisher', 'annual_teaching_plan', 'Fixture licence', 'https://example.org/policy', '2026', false, repeat('a', 64), current_date, 'Test source'));
+    'Test curriculum policy document', 'Test publisher', 'annual_teaching_plan', 'Fixture licence', 'https://example.org/policy', '2026', false, null, null, 'Test source'));
+  execute 'reset role';
+  update public.curriculum_sources set checksum_sha256 = repeat('a', 64), retrieved_on = current_date, retrieval_status = 'retrieved' where id = (select v from test_util.ctx where k = 'source');
 end $$;
 
 -- ---------------------------------------------------------------------------

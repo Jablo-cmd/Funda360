@@ -339,6 +339,8 @@ begin
     union select id from public.learning_assessments where curriculum_version_id = v);
   delete from public.content_source_references where entity_id in (select id from public.lessons where curriculum_version_id = v union select id from public.teaching_resources where curriculum_version_id = v
     union select id from public.learning_assessments where curriculum_version_id = v);
+  delete from public.curriculum_open_questions where version_id = v;
+  delete from public.curriculum_formal_assessment_details where version_id = v;
   delete from public.assessment_question_keys where assessment_id in (select id from public.learning_assessments where curriculum_version_id = v);
   delete from public.assessment_questions where curriculum_version_id = v;
   delete from public.assessment_objectives where curriculum_version_id = v;

@@ -589,6 +589,33 @@ begin
 end
 $pack$;
 
+-- 7. Review tasks for the curriculum specialist: the open questions and the formal assessment record. Idempotent, and
+--    deliberately a separate block so it also runs when the pack itself was loaded earlier. All start OPEN / PENDING.
+do $review$
+declare
+  v_version uuid;
+  v_fa      uuid;
+begin
+  select id into v_version from public.curriculum_versions where code = 'ZA-G4-MATH-2026-T1';
+  if v_version is null then return; end if;
+  insert into public.curriculum_open_questions (version_id, code, title, description, materially_affects_scope) values
+    (v_version, 'Q1', 'Division / inverse operations', 'Is division a Term 1 requirement, or only inverse operations as a check with known facts? The project record lists inverse operations among strategies and no division content. The pack has no division.', true),
+    (v_version, 'Q2', 'Number range', 'What is the number range for each Term 1 topic? Recorded: counting between 0 and at least 10 000; other whole-number items at least four digits; odd and even to at least 1 000.', true),
+    (v_version, 'Q3', 'Operations covered by properties', 'Which operations do the commutative, associative and distributive properties cover in Term 1? The record says operations with whole numbers.', true),
+    (v_version, 'Q4', 'Weeks and hours', 'How many weeks and hours does each Term 1 topic get? None are recorded and none are stored. This affects pacing, not what is taught.', false),
+    (v_version, 'Q5', 'Cents / decimals', 'Are cents or decimal amounts expected in Term 1 financial problems? The pack uses whole rands only.', true),
+    (v_version, 'Q6', 'Formal assignment details', 'What are the formal assignment task, marks, weighting, rubric and question count? Only the three covered areas and "three hours in class" are recorded.', true),
+    (v_version, 'Q7', 'Measurement units', 'Which measurement units belong in Term 1 problem solving? The pack uses cm, m, kg, litres, ml and minutes in examples.', true),
+    (v_version, 'Q8', 'CAPS URL identity and current edition', 'Are the DBE URLs recorded for CAPS Mathematics Grades 4-6 the same file, and is it the current edition? Needs docs/sources/verify-dbe-sources.sh run from an unrestricted machine.', true),
+    (v_version, 'Q9', 'ATP record completeness', 'Is the project owner''s written record of the 2026 ATP Term 1 scope complete and accurate against the ATP PDF?', true)
+  on conflict (version_id, code) do nothing;
+  select id into v_fa from public.curriculum_objectives where version_id = v_version and code = 'G4.MATH.2026.T1.FA.01';
+  if v_fa is not null then
+    insert into public.curriculum_formal_assessment_details (version_id, objective_id) values (v_version, v_fa) on conflict (version_id, objective_id) do nothing;
+  end if;
+end
+$review$;
+
 drop function if exists pg_temp.add_question(text, integer, text, text, jsonb, integer, text, text, jsonb, text, text);
 drop function if exists pg_temp.add_resource(text, integer, text, text, text, text, jsonb, text, integer, text[], boolean, integer, text[], text);
 drop function if exists pg_temp.pkid(text);
