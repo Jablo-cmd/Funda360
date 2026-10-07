@@ -93,3 +93,4 @@ All code-side criteria are met. What remains is applying the migrations to produ
 3. **Confirm the super-admin sessions.** Sessions from 41.116.x (Android) and 102.33.32.62 (Windows) were revoked; the owner should confirm those were theirs.
 4. Enable leaked-password protection in Supabase Auth settings (dashboard only).
 5. Migrations may be written (approved 2026-09-30). Applying them to production still needs item 1.
+6. **Email and login (2026-10-07):** production Site URL was `http://localhost:3000` and Auth used Supabase's built-in test mailer. Follow `docs/EMAIL_AND_LOGIN_SETUP.md` (Site URL, redirect URLs, HostAfrica SMTP, token-hash recovery template, email rate limit). The app accepts `?token_hash=…&type=…` links (`src/features/auth/utils/emailLink.ts`) so reset and guardian-activation links work on any device.

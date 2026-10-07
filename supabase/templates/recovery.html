@@ -19,7 +19,7 @@
                   Parent Portal. If you requested a password reset, it lets you choose a new password.
                 </p>
                 <p style="text-align:center;margin:0 0 24px;">
-                  <a href="{{ .ConfirmationURL }}"
+                  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=recovery"
                      style="display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;
                             font-size:14px;font-weight:600;padding:12px 28px;border-radius:8px;">
                     Continue

@@ -19,7 +19,12 @@ interface MockUserOverrides {
 }
 
 export function buildMockUser(overrides: MockUserOverrides = {}) {
-  const { email = 'admin@funda360.com', emailConfirmed = true, role = 'principal', factors = [] } = overrides;
+  const {
+    email = 'admin@funda360.com',
+    emailConfirmed = true,
+    role = 'principal',
+    factors = [],
+  } = overrides;
   return {
     id: MOCK_USER_ID,
     aud: 'authenticated',
@@ -57,7 +62,12 @@ export async function fulfillJson(route: Route, body: unknown, status = 200) {
 }
 
 /** Fulfils a Supabase auth-js error response (auth-js reads `error_code` + `msg`). */
-export async function fulfillAuthError(route: Route, errorCode: string, message: string, status = 400) {
+export async function fulfillAuthError(
+  route: Route,
+  errorCode: string,
+  message: string,
+  status = 400,
+) {
   await fulfillJson(route, { error_code: errorCode, msg: message, code: status }, status);
 }
 
@@ -69,7 +79,12 @@ export async function fulfillAuthError(route: Route, errorCode: string, message:
  */
 export async function installAuthMocks(
   page: Page,
-  handlers: Partial<Record<'token' | 'logout' | 'recover' | 'user' | 'resend', (route: Route) => Promise<void>>>,
+  handlers: Partial<
+    Record<
+      'token' | 'logout' | 'recover' | 'user' | 'resend' | 'verify',
+      (route: Route) => Promise<void>
+    >
+  >,
 ) {
   await page.route('**/auth/v1/**', async (route) => {
     const url = new URL(route.request().url());
@@ -86,6 +101,9 @@ export async function installAuthMocks(
     }
     if (url.pathname.endsWith('/resend') && handlers.resend) {
       return handlers.resend(route);
+    }
+    if (url.pathname.endsWith('/verify') && method === 'POST' && handlers.verify) {
+      return handlers.verify(route);
     }
     if (url.pathname.endsWith('/user') && method === 'PUT' && handlers.user) {
       return handlers.user(route);
