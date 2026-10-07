@@ -194,6 +194,10 @@ additional_redirect_urls = [
   "http://127.0.0.1:3000/reset-password",
   "http://localhost:5173/activate-account",
   "http://localhost:5173/reset-password",
+  # Production (Auth > URL Configuration in the dashboard must match;
+  # its Site URL is https://app.funda360.aurisnexus.co.za).
+  "https://app.funda360.aurisnexus.co.za/activate-account",
+  "https://app.funda360.aurisnexus.co.za/reset-password",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -230,7 +234,8 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# 2 (the scaffold default) blocks a school inviting a class of guardians.
+email_sent = 100
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -313,6 +318,9 @@ sender_name = "Funda360"
 # password" and guardian account activation, since both flows send this
 # same Supabase email type (resetPasswordForEmail) with different
 # redirectTo destinations. See supabase/migrations/20260827090000_guardian_invitations.sql.
+# The link carries a token hash (not {{ .ConfirmationURL }}) so it works in
+# any browser; see src/features/auth/utils/emailLink.ts and
+# docs/EMAIL_AND_LOGIN_SETUP.md for the production copy of this template.
 [auth.email.template.recovery]
 subject = "Continue to your Funda360 account"
 content_path = "./supabase/templates/recovery.html"

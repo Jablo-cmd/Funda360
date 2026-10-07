@@ -1,16 +1,26 @@
 import { test, expect } from '@playwright/test';
-import { buildMockUser, fulfillJson, installAuthMocks, seedAuthenticatedSession } from './utils/mockAuth';
+import {
+  buildMockSession,
+  buildMockUser,
+  fulfillJson,
+  installAuthMocks,
+  seedAuthenticatedSession,
+} from './utils/mockAuth';
 import { installGuardianInvitationRpcMock } from './utils/mockData';
 
 test('shows an invalid-invitation notice when there is no recovery session', async ({ page }) => {
   await page.goto('/activate-account');
 
-  await expect(page.getByRole('alert')).toHaveText('This invitation link is invalid or has expired.');
+  await expect(page.getByRole('alert')).toHaveText(
+    'This invitation link is invalid or has expired.',
+  );
   await page.getByRole('link', { name: 'Go to sign in' }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('a guardian with a pending invitation sees their linked children and can activate their account', async ({ page }) => {
+test('a guardian with a pending invitation sees their linked children and can activate their account', async ({
+  page,
+}) => {
   await seedAuthenticatedSession(page, { role: 'guardian' });
   await installAuthMocks(page, {
     user: (route) => fulfillJson(route, { user: buildMockUser({ role: 'guardian' }) }),
@@ -53,9 +63,13 @@ test('a guardian with a pending invitation sees their linked children and can ac
   await expect(page.getByRole('status')).toHaveText('Your account is now active. Please sign in.');
 });
 
-test('a revoked invitation blocks activation with a clear message and no password form', async ({ page }) => {
+test('a revoked invitation blocks activation with a clear message and no password form', async ({
+  page,
+}) => {
   await seedAuthenticatedSession(page, { role: 'guardian' });
-  await installAuthMocks(page, { user: (route) => fulfillJson(route, { user: buildMockUser({ role: 'guardian' }) }) });
+  await installAuthMocks(page, {
+    user: (route) => fulfillJson(route, { user: buildMockUser({ role: 'guardian' }) }),
+  });
   await installGuardianInvitationRpcMock(page, 'get_my_guardian_invitation', (route) =>
     fulfillJson(route, {
       guardianFirstName: 'John',
@@ -80,4 +94,34 @@ test('a revoked invitation blocks activation with a clear message and no passwor
   await expect(page.locator('#new-password')).toHaveCount(0);
   await page.getByRole('button', { name: 'Go to sign in' }).click();
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test('a guardian opening the invitation email in their own browser stays on the activation page', async ({
+  page,
+}) => {
+  // The invitation is requested from the admin's browser, so a PKCE code
+  // would fail here; the token-hash link verifies in any browser.
+  await installAuthMocks(page, {
+    verify: (route) => fulfillJson(route, buildMockSession({ role: 'guardian' })),
+  });
+  await installGuardianInvitationRpcMock(page, 'get_my_guardian_invitation', (route) =>
+    fulfillJson(route, {
+      guardianFirstName: 'John',
+      guardianLastName: 'Smith',
+      schoolName: 'Riverside Secondary School',
+      invitation: {
+        id: 'invitation-1',
+        status: 'pending',
+        effectiveStatus: 'pending',
+        expiresAt: '2099-08-30T00:00:00Z',
+        acceptedAt: null,
+      },
+      children: [{ id: 'learner-1', firstName: 'Maria', lastName: 'Johnson' }],
+    }),
+  );
+
+  await page.goto('/activate-account?token_hash=invite-hash&type=recovery');
+
+  await expect(page).toHaveURL(/\/activate-account$/);
+  await expect(page.getByText('Welcome, John.')).toBeVisible();
 });

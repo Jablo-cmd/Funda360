@@ -62,7 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     authService
-      .getSession()
+      .consumeEmailLink()
+      .catch(() => undefined)
+      .then(() => authService.getSession())
       .then((session) => {
         if (isMounted) applySession(session);
       })
