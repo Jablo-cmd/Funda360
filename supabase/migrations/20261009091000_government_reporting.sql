@@ -7,8 +7,8 @@
 -- * education_areas holds the Province -> District -> Circuit hierarchy.
 --   Schools link to their district or circuit through
 --   schools.education_area_id. The legacy free-text schools.province and
---   schools.district columns are kept untouched; this migration only reads
---   them once to seed the hierarchy.
+--   schools.district columns are kept untouched and are not used to seed
+--   the hierarchy (current school records are demo data).
 --
 -- * education_official_assignments grants an education_official access to
 --   one area and everything under it. Learner-level detail is a separate,
@@ -207,34 +207,10 @@ create trigger schools_protect_education_area
 
 revoke execute on function public.schools_protect_education_area() from public, anon, authenticated;
 
--- Seed the hierarchy from the existing free-text columns, once. Exact
--- (trimmed, case-insensitive) names only; anything ambiguous is left for a
--- platform administrator to link by hand and shows up as a data-quality
--- issue ("not linked to an education area").
-insert into public.education_areas (level, name)
-select distinct on (lower(btrim(province))) 'province'::public.education_area_level, btrim(province)
-from public.schools
-where nullif(btrim(province), '') is not null
-order by lower(btrim(province)), btrim(province)
-on conflict do nothing;
-
-insert into public.education_areas (level, parent_id, name)
-select distinct on (p.id, lower(btrim(s.district))) 'district'::public.education_area_level, p.id, btrim(s.district)
-from public.schools s
-join public.education_areas p
-  on p.level = 'province' and lower(p.name) = lower(btrim(s.province))
-where nullif(btrim(s.district), '') is not null
-order by p.id, lower(btrim(s.district)), btrim(s.district)
-on conflict do nothing;
-
-update public.schools s
-set education_area_id = d.id
-from public.education_areas d
-join public.education_areas p on p.id = d.parent_id
-where s.education_area_id is null
-  and d.level = 'district'
-  and lower(d.name) = lower(btrim(s.district))
-  and lower(p.name) = lower(btrim(s.province));
+-- No automatic seeding. The hierarchy is created by platform administrators
+-- (upsert_education_area) and schools are linked one by one
+-- (set_school_education_area). The existing school records are demo/test
+-- data, so nothing is derived from their free-text province/district.
 
 -- ===========================================================================
 -- 2. Official access
