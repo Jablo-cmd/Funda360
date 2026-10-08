@@ -98,6 +98,12 @@ Checked read-only on the hosted project (`rzkybmkzhpwovpvrjkxk`) with SQL; nothi
 - Schema matches the schema the migrations were tested against: 125 tables (column fingerprint identical), 260 policies (names identical), enum values identical, RLS forced on every table, 298 functions identical after normalising Windows line endings in 26 of them. No name collides with an object the new migrations create.
 - The migrations were rehearsed inside a rolled-back transaction on a copy of that schema: they apply cleanly, indexes are created, anon has no EXECUTE, no policy is left unoptimised, and a platform owner gets `mfa_required` at `aal1` and the report at `aal2`.
 - Seeding from existing text will create 3 provinces and 3 districts and link 3 schools; Townsview Primary has a province but no district and must be linked by hand.
+- Supabase security advisor (2026-10-08), production:
+  - Anon can execute 40 SECURITY DEFINER functions: all trigger functions plus `trigger_fee_overdue_reminders` / `trigger_document_expiry_alerts`. Migration `20261008090000` (in this branch) revokes every one; with all migrations applied, anon can execute 0 of 231 SECURITY DEFINER functions.
+  - Leaked-password protection is off. This is a dashboard setting.
+  - 32 functions have a mutable search_path. All are SECURITY INVOKER (no privilege change), mostly RLS helpers. They are left unpinned on purpose: a `SET` clause stops Postgres inlining them in policies.
+  - 3 tables have RLS and no policies (counters and rate-limit events). This is intended: only SECURITY DEFINER code uses them.
+  - 198 functions are executable by `authenticated`. These are the intended RPCs and policy helpers; trigger functions are revoked by `20261008090000`.
 - Not verified from the sandbox: the hosted Auth MFA (TOTP) setting, and the new functions on the hosted database (not applied). After the merge, re-run the checks above and one real sign-in with TOTP.
 
 ## Known limits
