@@ -108,6 +108,20 @@ const STAFF_ROUTES = [
   '/fees/reconciliation',
 ];
 
+// Guardians and learners use the app almost entirely on phones.
+const PORTAL_ROUTES: [string, string][] = [
+  ['guardian', '/parent/dashboard'],
+  ['guardian', '/parent/children'],
+  ['guardian', '/parent/fees'],
+  ['guardian', '/parent/homework'],
+  ['guardian', '/parent/messages'],
+  ['guardian', '/parent/privacy'],
+  ['learner', '/learner/dashboard'],
+  ['learner', '/learner/timetable'],
+  ['learner', '/learner/homework'],
+  ['learner', '/learner/results'],
+];
+
 for (const vp of VIEWPORTS) {
   test.describe(`${vp.name}`, () => {
     test.use({ viewport: { width: vp.width, height: vp.height } });
@@ -123,14 +137,16 @@ for (const vp of VIEWPORTS) {
       });
     }
 
-    test('parent portal dashboard has no horizontal overflow', async ({ page }) => {
-      await signIn(page, 'guardian');
-      await page.goto('/parent/dashboard');
-      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      const { pageOverflow, offenders } = await horizontalOverflow(page);
-      expect(pageOverflow).toBeLessThanOrEqual(0);
-      expect(offenders).toEqual([]);
-    });
+    for (const [role, route] of PORTAL_ROUTES) {
+      test(`${role} ${route} has no horizontal overflow`, async ({ page }) => {
+        await signIn(page, role);
+        await page.goto(route);
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+        const { pageOverflow, offenders } = await horizontalOverflow(page);
+        expect(pageOverflow, `page scrolls sideways by ${pageOverflow}px`).toBeLessThanOrEqual(0);
+        expect(offenders, `elements outside the viewport: ${offenders.join(', ')}`).toEqual([]);
+      });
+    }
   });
 }
 

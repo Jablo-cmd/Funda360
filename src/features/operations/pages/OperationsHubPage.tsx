@@ -63,7 +63,7 @@ export function OperationsHubPage() {
     </div>
 
     <div className="flex gap-2 overflow-x-auto border-b border-border pb-2">
-      {tabs.map(t=><button key={t} type="button" onClick={()=>setTab(t)} className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ${tab===t?'bg-content-primary text-surface':'text-content-secondary hover:bg-surface-raised'}`}>{t}</button>)}
+      {tabs.map(t=><button key={t} type="button" onClick={()=>setTab(t)} className={`focus-ring min-h-11 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium lg:min-h-0 ${tab===t?'bg-content-primary text-surface':'text-content-secondary hover:bg-surface-raised'}`}>{t}</button>)}
     </div>
 
     {tab==='Boarding'&&<Boarding schoolId={school.id} workspace={workspace} canManage={canManage} busy={busy} run={run}/>}
