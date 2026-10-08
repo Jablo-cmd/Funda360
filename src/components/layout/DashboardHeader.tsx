@@ -24,10 +24,12 @@ export interface DashboardHeaderProps {
 export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderProps) {
   const { school } = useSchool();
   const { currentAcademicYear } = useAcademic();
-  const { can } = usePermissions();
+  const { can, role } = usePermissions();
   const { pathname } = useLocation();
   const { title, section } = getPageTitle(pathname);
   const canSwitchSchool = can('tenant.switch');
+  // Education officials work across an area, never inside one school.
+  const noSchoolLabel = role === 'education_official' ? 'Education department' : 'No school selected';
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-1 border-b border-border bg-surface-raised px-2 sm:h-[4.5rem] sm:gap-4 sm:px-6">
@@ -60,7 +62,7 @@ export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderP
       <div className="flex shrink-0 items-center gap-0.5 sm:gap-2 lg:gap-3">
         <span className="hidden max-w-[16rem] truncate text-right lg:block">
           <span className="block text-sm font-medium text-content-secondary">
-            {school?.name ?? 'No school selected'}
+            {school?.name ?? noSchoolLabel}
           </span>
           {currentAcademicYear && (
             <span className="block font-mono text-[11px] uppercase tracking-wide text-content-tertiary">

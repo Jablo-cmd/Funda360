@@ -42,7 +42,13 @@ export interface NavItemDef {
   permission?: Permission | Permission[];
   /** Exact-match active state — for a path that is a prefix of sibling paths. */
   end?: boolean;
+  /** Roles that never see this item even though it has no permission gate (school-only pages for roles with no school). */
+  hideForRoles?: UserRole[];
 }
+
+// Education officials have no school, so school-scoped pages with no
+// permission gate are meaningless for them.
+const NO_SCHOOL_ROLES: UserRole[] = ['education_official'];
 
 export interface NavGroupDef {
   label: string;
@@ -58,7 +64,15 @@ export interface NavGroupDef {
 export const NAV_MODEL: NavGroupDef[] = [
   {
     label: 'Overview',
-    items: [{ label: 'Dashboard', path: '/dashboard', icon: GridIcon, end: true }],
+    items: [{ label: 'Dashboard', path: '/dashboard', icon: GridIcon, end: true, hideForRoles: NO_SCHOOL_ROLES }],
+  },
+  {
+    label: 'Government',
+    items: [
+      { label: 'District Dashboard', path: '/district', icon: ChartIcon, permission: 'government.view', end: true },
+      { label: 'Government Reports', path: '/reports/government', icon: ClipboardListIcon, permission: 'government.view' },
+      { label: 'Education Areas', path: '/district/areas', icon: LayersIcon, permission: 'government.manage' },
+    ],
   },
   {
     label: 'People',
@@ -172,9 +186,14 @@ export const NAV_MODEL: NavGroupDef[] = [
   {
     label: 'Communication',
     items: [
-      { label: 'Messages', path: '/messages', icon: ChatIcon, end: true },
-      { label: 'Announcements', path: '/announcements', icon: MegaphoneIcon },
-      { label: 'Notification Preferences', path: '/notifications/settings', icon: GearIcon },
+      { label: 'Messages', path: '/messages', icon: ChatIcon, end: true, hideForRoles: NO_SCHOOL_ROLES },
+      { label: 'Announcements', path: '/announcements', icon: MegaphoneIcon, hideForRoles: NO_SCHOOL_ROLES },
+      {
+        label: 'Notification Preferences',
+        path: '/notifications/settings',
+        icon: GearIcon,
+        hideForRoles: NO_SCHOOL_ROLES,
+      },
       {
         label: 'Messaging & Delivery',
         path: '/settings/messaging',
@@ -200,6 +219,7 @@ export const NAV_MODEL: NavGroupDef[] = [
 ];
 
 function itemVisible(role: UserRole | null | undefined, item: NavItemDef): boolean {
+  if (role && item.hideForRoles?.includes(role)) return false;
   if (!item.permission) return true;
   const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
   return hasAnyPermission(role, perms);

@@ -63,6 +63,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'employee.manage',
     'reports.view',
     'reports.export',
+    'government.view',
+    'government.export',
+    'government.manage',
   ],
   super_administrator: [
     'compliance.view',
@@ -106,6 +109,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'employee.manage',
     'reports.view',
     'reports.export',
+    'government.view',
+    'government.export',
+    'government.manage',
   ],
   platform_administrator: [
     'compliance.view',
@@ -149,6 +155,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'employee.manage',
     'reports.view',
     'reports.export',
+    'government.view',
+    'government.export',
+    'government.manage',
   ],
   support_engineer: ['school.view', 'profile.view_any'],
   school_owner: [
@@ -192,6 +201,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'employee.manage',
     'reports.view',
     'reports.export',
+    'government.view',
+    'government.export',
   ],
   principal: [
     'compliance.view',
@@ -231,6 +242,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'employee.view',
     'reports.view',
     'reports.export',
+    'government.view',
+    'government.export',
   ],
   vice_principal: [
     'operations.view',
@@ -345,6 +358,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     'reportcard.manage',
     'reports.view',
   ],
+  // Reads aggregated reports for the schools in their assigned areas; the
+  // database decides which schools (reporting_school_ids()).
+  education_official: ['government.view', 'government.export'],
   parent: [],
   guardian: [],
   learner: [],

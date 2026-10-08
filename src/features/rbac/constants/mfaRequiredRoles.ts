@@ -31,6 +31,7 @@ const MFA_REQUIRED_ROLES: readonly UserRole[] = [
   'accountant',
   'platform_administrator',
   'super_administrator',
+  'education_official',
 ];
 
 export function isMfaRequiredForRole(role: UserRole | null): boolean {

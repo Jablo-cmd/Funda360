@@ -34,6 +34,9 @@ export const USER_ROLES = [
   'events_coordinator',
   'governance_officer',
   'procurement_officer',
+  // Education department official (20261009090000_education_official_role.sql).
+  // Has no school tenant; reports on the schools in their assigned areas.
+  'education_official',
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];

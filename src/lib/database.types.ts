@@ -84,6 +84,32 @@ export type SafeguardingSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type SafeguardingStatus = 'open' | 'under_review' | 'escalated' | 'resolved' | 'closed';
 export type BehaviourFollowUpStatus = 'not_started' | 'in_progress' | 'resolved';
 
+export type EducationAreaLevel = 'province' | 'district' | 'circuit';
+
+export type EducationAreaRow = {
+  id: string;
+  level: EducationAreaLevel;
+  parent_id: string | null;
+  name: string;
+  code: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EducationOfficialAssignmentRow = {
+  id: string;
+  profile_id: string;
+  area_id: string;
+  can_view_learner_detail: boolean;
+  active: boolean;
+  notes: string | null;
+  granted_by: string | null;
+  granted_at: string;
+  revoked_by: string | null;
+  revoked_at: string | null;
+};
+
 export type SchoolRow = {
   id: string;
   name: string;
@@ -93,6 +119,7 @@ export type SchoolRow = {
   province: string | null;
   district: string | null;
   emis_number: string | null;
+  education_area_id: string | null;
   email: string | null;
   phone: string | null;
   website: string | null;
@@ -125,6 +152,7 @@ export type SchoolInsert = {
   province?: string | null;
   district?: string | null;
   emis_number?: string | null;
+  education_area_id?: string | null;
   email?: string | null;
   phone?: string | null;
   website?: string | null;
@@ -157,6 +185,7 @@ export type SchoolUpdate = {
   province?: string | null;
   district?: string | null;
   emis_number?: string | null;
+  education_area_id?: string | null;
   email?: string | null;
   phone?: string | null;
   website?: string | null;
@@ -2949,6 +2978,8 @@ export type Database = {
         Insert: SchoolInsert;
         Update: SchoolUpdate;
       };
+      education_areas: RpcWrittenTable<EducationAreaRow>;
+      education_official_assignments: RpcWrittenTable<EducationOfficialAssignmentRow>;
       profiles: {
         Row: ProfileRow;
         Insert: ProfileInsert;
@@ -3363,6 +3394,52 @@ export type Database = {
       apply_interop_import: {
         Args: { p_import_id: string };
         Returns: Json;
+      };
+      get_reporting_scope: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_government_report: {
+        Args: { p_filters?: Json };
+        Returns: Json;
+      };
+      get_school_report: {
+        Args: { p_school_id: string; p_filters?: Json };
+        Returns: Json;
+      };
+      get_class_learner_report: {
+        Args: { p_class_id: string; p_filters?: Json };
+        Returns: Json;
+      };
+      record_government_report_export: {
+        Args: { p_report: string; p_format: 'csv' | 'excel_csv' | 'pdf'; p_filters?: Json };
+        Returns: undefined;
+      };
+      upsert_education_area: {
+        Args: {
+          p_id: string | null;
+          p_level: EducationAreaLevel;
+          p_parent_id: string | null;
+          p_name: string;
+          p_code?: string | null;
+        };
+        Returns: string;
+      };
+      set_school_education_area: {
+        Args: { p_school_id: string; p_area_id: string | null };
+        Returns: undefined;
+      };
+      provision_education_official: {
+        Args: { p_email: string; p_first_name: string; p_last_name: string; p_phone?: string | null };
+        Returns: { user_id: string; temporary_password: string }[];
+      };
+      grant_education_official_access: {
+        Args: { p_profile_id: string; p_area_id: string; p_learner_detail?: boolean; p_notes?: string | null };
+        Returns: string;
+      };
+      revoke_education_official_access: {
+        Args: { p_assignment_id: string };
+        Returns: undefined;
       };
       get_advanced_analytics: {
         Args: { p_school_id: string };

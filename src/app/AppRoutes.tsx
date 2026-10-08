@@ -297,6 +297,17 @@ const LearnerTransportPage = named(() => import('@/features/transport/pages/Lear
 const ComplianceCenterPage = named(() => import('@/features/compliance/pages/ComplianceCenterPage'), 'ComplianceCenterPage');
 const PrivacyCenterPage = named(() => import('@/features/compliance/pages/PrivacyCenterPage'), 'PrivacyCenterPage');
 const TrustPage = named(() => import('@/features/compliance/pages/TrustPage'), 'TrustPage');
+const DistrictDashboardPage = named(
+  () => import('@/features/government/pages/DistrictDashboardPage'),
+  'DistrictDashboardPage',
+);
+const DistrictSchoolPage = named(() => import('@/features/government/pages/DistrictSchoolPage'), 'DistrictSchoolPage');
+const DistrictClassPage = named(() => import('@/features/government/pages/DistrictClassPage'), 'DistrictClassPage');
+const GovernmentReportsPage = named(
+  () => import('@/features/government/pages/GovernmentReportsPage'),
+  'GovernmentReportsPage',
+);
+const EducationAreasPage = named(() => import('@/features/government/pages/EducationAreasPage'), 'EducationAreasPage');
 
 export function AppRoutes() {
   return (
@@ -450,6 +461,19 @@ export function AppRoutes() {
                 <Route path="/reports/academic" element={<AcademicReportPage />} />
                 <Route path="/reports/assessments" element={<AssessmentReportPage />} />
                 <Route path="/reports/attendance" element={<AttendanceReportPage />} />
+              </Route>
+
+              {/* Government reporting: the database decides which schools each
+                  caller may see (reporting_school_ids()); these guards only
+                  keep the menu and routes tidy. */}
+              <Route element={<RequirePermission permission="government.view" />}>
+                <Route path="/district" element={<DistrictDashboardPage />} />
+                <Route path="/district/schools/:schoolId" element={<DistrictSchoolPage />} />
+                <Route path="/district/schools/:schoolId/classes/:classId" element={<DistrictClassPage />} />
+                <Route path="/reports/government" element={<GovernmentReportsPage />} />
+              </Route>
+              <Route element={<RequirePermission permission="government.manage" />}>
+                <Route path="/district/areas" element={<EducationAreasPage />} />
               </Route>
             </Route>
 
