@@ -290,7 +290,8 @@ test('a province official sees provincial KPIs, the district comparison, trends 
   expect(calls.reportArgs[0]?.p_province_id).toBe(PROVINCE);
 
   const overview = page.getByRole('region', { name: 'Province overview' });
-  await expect(overview.getByText('1,480', { exact: true })).toBeVisible();
+  // en-ZA grouping differs between ICU builds ("1,480" or "1 480" with a no-break space).
+  await expect(overview.getByText(/^1[,\s\u00a0\u202f]?480$/)).toBeVisible();
   await expect(overview.getByText('86.2%')).toBeVisible();
   await expect(overview.getByText('Districts requiring attention')).toBeVisible();
 
