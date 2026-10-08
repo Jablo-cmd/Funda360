@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { PublicOnlyRoute } from '@/routes/PublicOnlyRoute';
 import { TenantGate } from '@/routes/TenantGate';
 import { RequirePermission } from '@/routes/RequirePermission';
+import { RequirePrivilegedMfa } from '@/routes/RequirePrivilegedMfa';
 import { RequireGuardianRole } from '@/routes/RequireGuardianRole';
 import { RequireLearnerRole } from '@/routes/RequireLearnerRole';
 import { RedirectGuardiansToParentPortal } from '@/routes/RedirectGuardiansToParentPortal';
@@ -467,13 +468,17 @@ export function AppRoutes() {
                   caller may see (reporting_school_ids()); these guards only
                   keep the menu and routes tidy. */}
               <Route element={<RequirePermission permission="government.view" />}>
-                <Route path="/district" element={<DistrictDashboardPage />} />
-                <Route path="/district/schools/:schoolId" element={<DistrictSchoolPage />} />
-                <Route path="/district/schools/:schoolId/classes/:classId" element={<DistrictClassPage />} />
-                <Route path="/reports/government" element={<GovernmentReportsPage />} />
+                <Route element={<RequirePrivilegedMfa />}>
+                  <Route path="/district" element={<DistrictDashboardPage />} />
+                  <Route path="/district/schools/:schoolId" element={<DistrictSchoolPage />} />
+                  <Route path="/district/schools/:schoolId/classes/:classId" element={<DistrictClassPage />} />
+                  <Route path="/reports/government" element={<GovernmentReportsPage />} />
+                </Route>
               </Route>
               <Route element={<RequirePermission permission="government.manage" />}>
-                <Route path="/district/areas" element={<EducationAreasPage />} />
+                <Route element={<RequirePrivilegedMfa />}>
+                  <Route path="/district/areas" element={<EducationAreasPage />} />
+                </Route>
               </Route>
             </Route>
 

@@ -19,7 +19,13 @@ const SCOPE = {
   caller_kind: 'official',
   learner_detail: false,
   areas: [
-    { id: 'a0000000-0000-0000-0000-000000000001', level: 'province', parent_id: null, name: 'Test Province', code: null },
+    {
+      id: 'a0000000-0000-0000-0000-000000000001',
+      level: 'province',
+      parent_id: null,
+      name: 'Test Province',
+      code: null,
+    },
     {
       id: 'a0000000-0000-0000-0000-000000000011',
       level: 'district',
@@ -29,8 +35,20 @@ const SCOPE = {
     },
   ],
   schools: [
-    { id: SCHOOL_ONE, name: 'Thembalethu Secondary', emis_number: '900000001', education_area_id: 'a0000000-0000-0000-0000-000000000011', status: 'active' },
-    { id: '0e000000-0000-0000-0000-000000000002', name: 'Riverside Primary', emis_number: null, education_area_id: 'a0000000-0000-0000-0000-000000000011', status: 'active' },
+    {
+      id: SCHOOL_ONE,
+      name: 'Thembalethu Secondary',
+      emis_number: '900000001',
+      education_area_id: 'a0000000-0000-0000-0000-000000000011',
+      status: 'active',
+    },
+    {
+      id: '0e000000-0000-0000-0000-000000000002',
+      name: 'Riverside Primary',
+      emis_number: null,
+      education_area_id: 'a0000000-0000-0000-0000-000000000011',
+      status: 'active',
+    },
   ],
   grades: ['Grade 10'],
   academic_years: ['2026'],
@@ -105,10 +123,40 @@ const REPORT = {
   ],
   areas: [],
   grades: [
-    { grade: 'Grade 10', learners: 410, schools: 1, classes: 12, suppressed: false, attendance_rate: 91.2, average_percent: 61.4, pass_rate: 78.5, assessment_results: 3200 },
-    { grade: 'Grade 12', learners: 3, schools: 1, classes: 1, suppressed: true, attendance_rate: null, average_percent: null, pass_rate: null, assessment_results: 12 },
+    {
+      grade: 'Grade 10',
+      learners: 410,
+      schools: 1,
+      classes: 12,
+      suppressed: false,
+      attendance_rate: 91.2,
+      average_percent: 61.4,
+      pass_rate: 78.5,
+      assessment_results: 3200,
+    },
+    {
+      grade: 'Grade 12',
+      learners: 3,
+      schools: 1,
+      classes: 1,
+      suppressed: true,
+      attendance_rate: null,
+      average_percent: null,
+      pass_rate: null,
+      assessment_results: 12,
+    },
   ],
-  subjects: [{ subject: 'Mathematics', schools: 2, learners: 600, assessment_results: 1200, suppressed: false, average_percent: 48.2, pass_rate: 51.0 }],
+  subjects: [
+    {
+      subject: 'Mathematics',
+      schools: 2,
+      learners: 600,
+      assessment_results: 1200,
+      suppressed: false,
+      average_percent: 48.2,
+      pass_rate: 51.0,
+    },
+  ],
   attendance_trend: [
     { period: '2026-09-07', attendance_rate: 88.1, records: 3000 },
     { period: '2026-09-14', attendance_rate: 86.9, records: 3000 },
@@ -118,13 +166,43 @@ const REPORT = {
 
 const SCHOOL_REPORT = {
   generated_at: '2026-10-08T08:00:00Z',
-  school: { id: SCHOOL_ONE, name: 'Thembalethu Secondary', emis_number: '900000001', status: 'active', education_area_id: null },
+  school: {
+    id: SCHOOL_ONE,
+    name: 'Thembalethu Secondary',
+    emis_number: '900000001',
+    status: 'active',
+    education_area_id: null,
+  },
   period: { academic_year: '2026', start: '2026-01-12', end: '2026-10-08' },
   learner_detail: false,
   thresholds: { attendance: 80, performance: 50, minimum_group_size: 5 },
   classes: [
-    { id: CLASS_ONE, name: '10A', grade: 'Grade 10', learners: 35, suppressed: false, attendance_rate: 92.0, average_percent: 63.0, pass_rate: 80.0, learners_requiring_intervention: 4, assessments: 6, last_attendance_date: '2026-10-07' },
-    { id: '0c000000-0000-0000-0000-000000000002', name: '10B', grade: 'Grade 10', learners: 3, suppressed: true, attendance_rate: null, average_percent: null, pass_rate: null, learners_requiring_intervention: null, assessments: 0, last_attendance_date: null },
+    {
+      id: CLASS_ONE,
+      name: '10A',
+      grade: 'Grade 10',
+      learners: 35,
+      suppressed: false,
+      attendance_rate: 92.0,
+      average_percent: 63.0,
+      pass_rate: 80.0,
+      learners_requiring_intervention: 4,
+      assessments: 6,
+      last_attendance_date: '2026-10-07',
+    },
+    {
+      id: '0c000000-0000-0000-0000-000000000002',
+      name: '10B',
+      grade: 'Grade 10',
+      learners: 3,
+      suppressed: true,
+      attendance_rate: null,
+      average_percent: null,
+      pass_rate: null,
+      learners_requiring_intervention: null,
+      assessments: 0,
+      last_attendance_date: null,
+    },
   ],
 };
 
@@ -133,10 +211,33 @@ interface RpcCalls {
   reportFilters: unknown[];
 }
 
-async function signInAs(page: Page, role: string, calls: RpcCalls = { exports: [], reportFilters: [] }) {
-  await seedAuthenticatedSession(page, { role });
+const PRIVILEGED = new Set([
+  'education_official',
+  'platform_owner',
+  'super_administrator',
+  'platform_administrator',
+]);
+
+async function signInAs(
+  page: Page,
+  role: string,
+  calls: RpcCalls = { exports: [], reportFilters: [] },
+  mfa: 'verified' | 'none' = 'verified',
+) {
+  // Officials and platform administrators need an MFA (aal2) session for
+  // government reporting; `mfa: 'none'` signs them in with a password only.
+  const verified = mfa === 'verified' && PRIVILEGED.has(role);
+  await seedAuthenticatedSession(page, {
+    role,
+    aal: PRIVILEGED.has(role) ? (verified ? 'aal2' : 'aal1') : undefined,
+    factors: verified ? [{ id: 'factor-1', factor_type: 'totp', status: 'verified' }] : [],
+  });
   await installDataMocks(page, {
-    profile: buildMockProfileRow({ role: role as 'principal', tenantId: role === 'education_official' ? null : undefined, firstName: 'Nomsa' }),
+    profile: buildMockProfileRow({
+      role: role as 'principal',
+      tenantId: role === 'education_official' ? null : undefined,
+      firstName: 'Nomsa',
+    }),
     school: role === 'education_official' ? undefined : buildMockSchoolRow(),
   });
   await page.route('**/rest/v1/rpc/**', async (route: Route) => {
@@ -150,7 +251,14 @@ async function signInAs(page: Page, role: string, calls: RpcCalls = { exports: [
         return fulfillJson(route, REPORT);
       case 'get_school_report':
         if (body?.p_school_id !== SCHOOL_ONE) {
-          return fulfillJson(route, { code: 'P0001', message: 'insufficient_privilege: this school is outside your reporting scope' }, 400);
+          return fulfillJson(
+            route,
+            {
+              code: 'P0001',
+              message: 'insufficient_privilege: this school is outside your reporting scope',
+            },
+            400,
+          );
         }
         return fulfillJson(route, SCHOOL_REPORT);
       case 'record_government_report_export':
@@ -163,7 +271,9 @@ async function signInAs(page: Page, role: string, calls: RpcCalls = { exports: [
   return calls;
 }
 
-test('an education official lands on the district dashboard and sees only government pages', async ({ page }) => {
+test('an education official lands on the district dashboard and sees only government pages', async ({
+  page,
+}) => {
   await signInAs(page, 'education_official');
   await page.goto('/dashboard');
 
@@ -178,7 +288,9 @@ test('an education official lands on the district dashboard and sees only govern
   await expect(nav.getByRole('link', { name: 'Education Areas' })).toHaveCount(0);
 });
 
-test('the dashboard shows the database figures, flags schools and withholds small groups', async ({ page }) => {
+test('the dashboard shows the database figures, flags schools and withholds small groups', async ({
+  page,
+}) => {
   await signInAs(page, 'education_official');
   await page.goto('/district');
 
@@ -194,7 +306,9 @@ test('the dashboard shows the database figures, flags schools and withholds smal
   await expect(schoolsTable.getByRole('row').nth(2)).toContainText('On track');
 
   await expect(page.getByText('Withheld').first()).toBeVisible();
-  await expect(page.getByText('No EMIS number · Classes with no attendance recorded (2)')).toBeVisible();
+  await expect(
+    page.getByText('No EMIS number · Classes with no attendance recorded (2)'),
+  ).toBeVisible();
 });
 
 test('filters are sent to the database and kept in the URL', async ({ page }) => {
@@ -207,7 +321,9 @@ test('filters are sent to the database and kept in the URL', async ({ page }) =>
   await expect.poll(() => JSON.stringify(calls.reportFilters.at(-1))).toContain('"term":"2"');
 });
 
-test('drill-down goes from district to school to classes, without learner names for aggregate access', async ({ page }) => {
+test('drill-down goes from district to school to classes, without learner names for aggregate access', async ({
+  page,
+}) => {
   await signInAs(page, 'education_official');
   await page.goto('/district');
   await page.getByRole('link', { name: 'Thembalethu Secondary' }).first().click();
@@ -217,10 +333,14 @@ test('drill-down goes from district to school to classes, without learner names 
   await expect(page.getByRole('cell', { name: '10A' })).toBeVisible();
   // No learner-level grant: classes are not links to learner lists.
   await expect(page.getByRole('link', { name: '10A' })).toHaveCount(0);
-  await expect(page.getByText('Learner names are only shown to officials granted learner-level access.')).toBeVisible();
+  await expect(
+    page.getByText('Learner names are only shown to officials granted learner-level access.'),
+  ).toBeVisible();
 });
 
-test('a school id outside the official\'s scope in the URL shows a permission message, not data', async ({ page }) => {
+test("a school id outside the official's scope in the URL shows a permission message, not data", async ({
+  page,
+}) => {
   await signInAs(page, 'education_official');
   await page.goto(`/district/schools/${SCHOOL_OTHER}`);
 
@@ -239,7 +359,9 @@ test('government report exports are recorded before the file is produced', async
   const file = await download;
 
   expect(file.suggestedFilename()).toMatch(/^funda360-attendance-\d{4}-\d{2}-\d{2}\.csv$/);
-  expect(calls.exports).toEqual([expect.objectContaining({ p_report: 'attendance', p_format: 'csv' })]);
+  expect(calls.exports).toEqual([
+    expect.objectContaining({ p_report: 'attendance', p_format: 'csv' }),
+  ]);
 });
 
 test('a teacher cannot open the district dashboard', async ({ page }) => {
@@ -261,4 +383,53 @@ test('the district dashboard does not scroll sideways on a 320px phone', async (
     return main ? main.scrollWidth - main.clientWidth : 0;
   });
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('an official without two-factor authentication must set it up before any report loads', async ({
+  page,
+}) => {
+  const calls = await signInAs(page, 'education_official', undefined, 'none');
+  await page.goto('/district');
+
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Set up two-factor authentication' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /set up two-factor authentication/i }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'District dashboard' })).toHaveCount(0);
+  expect(calls.reportFilters).toEqual([]);
+});
+
+test('a platform administrator without two-factor authentication cannot open government reports', async ({
+  page,
+}) => {
+  const calls = await signInAs(page, 'platform_administrator', undefined, 'none');
+  await page.goto('/reports/government');
+
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Set up two-factor authentication' }),
+  ).toBeVisible();
+  expect(calls.reportFilters).toEqual([]);
+});
+
+test('a database mfa_required refusal is explained, not shown as data', async ({ page }) => {
+  await signInAs(page, 'education_official');
+  await page.route('**/rest/v1/rpc/get_reporting_scope', (route) =>
+    fulfillJson(
+      route,
+      {
+        code: 'P0001',
+        message:
+          'mfa_required: two-factor authentication is required for government reporting. Set it up under My Profile.',
+      },
+      400,
+    ),
+  );
+  await page.goto('/district');
+  await expect(
+    page.getByText(
+      'Two-factor authentication is required for government reporting. Set it up under My Profile.',
+    ),
+  ).toBeVisible();
 });

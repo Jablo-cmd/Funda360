@@ -65,6 +65,8 @@ export interface AuthContextValue {
   mfaChallengePending: boolean | null;
   /** True once the user has at least one verified MFA factor (regardless of whether this session has stepped up yet). Computed alongside mfaChallengePending from the same getAssuranceLevel() call — read this in MfaRequiredBanner instead of re-fetching, so the banner never flashes in after first paint. */
   hasMfaEnabled: boolean | null;
+  /** This session's Supabase Auth assurance level: 'aal2' once a TOTP challenge was completed in this session. Null until known. Government reporting requires 'aal2' for privileged roles (the database enforces it; see RequirePrivilegedMfa). */
+  assuranceLevel: 'aal1' | 'aal2' | null;
   signIn: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   signOut: (options?: SignOutOptions) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
