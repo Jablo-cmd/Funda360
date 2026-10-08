@@ -75,7 +75,7 @@ Last green run (2026-10-08):
 
 - typecheck, lint and build pass;
 - 330 unit tests, RLS 1018/1018, real-stack 47/47 (reporting) + 34/34 (API) + 50/50 (Funda AI), Deno 62/62;
-- Playwright: full run in progress at commit time; see the next commit.
+- Playwright 373/373 (0 retries; includes 5 Funda AI tests).
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 
