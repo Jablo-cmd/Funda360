@@ -309,6 +309,14 @@ const GovernmentReportsPage = named(
   'GovernmentReportsPage',
 );
 const EducationAreasPage = named(() => import('@/features/government/pages/EducationAreasPage'), 'EducationAreasPage');
+const ProvincialDashboardPage = named(
+  () => import('@/features/government/pages/ProvincialDashboardPage'),
+  'ProvincialDashboardPage',
+);
+const GovernmentIntegrationsPage = named(
+  () => import('@/features/government/pages/GovernmentIntegrationsPage'),
+  'GovernmentIntegrationsPage',
+);
 
 export function AppRoutes() {
   return (
@@ -469,6 +477,7 @@ export function AppRoutes() {
                   keep the menu and routes tidy. */}
               <Route element={<RequirePermission permission="government.view" />}>
                 <Route element={<RequirePrivilegedMfa />}>
+                  <Route path="/province" element={<ProvincialDashboardPage />} />
                   <Route path="/district" element={<DistrictDashboardPage />} />
                   <Route path="/district/schools/:schoolId" element={<DistrictSchoolPage />} />
                   <Route path="/district/schools/:schoolId/classes/:classId" element={<DistrictClassPage />} />
@@ -478,6 +487,7 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="government.manage" />}>
                 <Route element={<RequirePrivilegedMfa />}>
                   <Route path="/district/areas" element={<EducationAreasPage />} />
+                  <Route path="/district/integrations" element={<GovernmentIntegrationsPage />} />
                 </Route>
               </Route>
             </Route>

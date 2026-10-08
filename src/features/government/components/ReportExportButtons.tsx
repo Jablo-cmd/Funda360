@@ -5,7 +5,10 @@ import { useToast } from '@/components/ui/toast/useToast';
 import { getDbErrorMessage } from '@/lib/dbErrors';
 import { downloadCsv } from '@/features/reports/utils/downloadCsv';
 import { governmentReportService } from '@/features/government/services/governmentReportService';
-import type { ExportFormat, GovernmentReportFilters } from '@/features/government/types/government.types';
+import type {
+  ExportFormat,
+  GovernmentReportFilters,
+} from '@/features/government/types/government.types';
 import type { ReportTable } from '@/features/government/utils/reportDefinitions';
 import {
   downloadBlob,
@@ -21,6 +24,12 @@ export interface ReportExportButtonsProps {
   table: ReportTable;
   meta: ReportDocumentMeta;
   filters: GovernmentReportFilters;
+  /**
+   * Records the export server-side before the file is produced. Defaults to
+   * record_government_report_export; the Provincial Dashboard passes its
+   * province-checked equivalent.
+   */
+  record?: (format: ExportFormat) => Promise<void>;
 }
 
 /**
@@ -28,7 +37,13 @@ export interface ReportExportButtonsProps {
  * Each export is recorded in the audit log first; if that fails the file is
  * not produced.
  */
-export function ReportExportButtons({ reportId, table, meta, filters }: ReportExportButtonsProps) {
+export function ReportExportButtons({
+  reportId,
+  table,
+  meta,
+  filters,
+  record,
+}: ReportExportButtonsProps) {
   const { can } = usePermissions();
   const { showToast } = useToast();
   const [busy, setBusy] = useState<ExportFormat | null>(null);
@@ -38,7 +53,8 @@ export function ReportExportButtons({ reportId, table, meta, filters }: ReportEx
   const run = async (format: ExportFormat) => {
     setBusy(format);
     try {
-      await governmentReportService.recordExport(reportId, format, filters);
+      if (record) await record(format);
+      else await governmentReportService.recordExport(reportId, format, filters);
       if (format === 'csv') {
         downloadCsv(exportFilename(reportId, 'csv'), reportToCsv(table));
       } else if (format === 'excel_csv') {
@@ -56,7 +72,13 @@ export function ReportExportButtons({ reportId, table, meta, filters }: ReportEx
   const disabled = table.rows.length === 0 || busy !== null;
   return (
     <div className="grid w-full grid-cols-3 gap-2 lg:w-[24rem]">
-      <Button type="button" variant="secondary" disabled={disabled} isLoading={busy === 'csv'} onClick={() => void run('csv')}>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={disabled}
+        isLoading={busy === 'csv'}
+        onClick={() => void run('csv')}
+      >
         CSV
       </Button>
       <Button
@@ -68,7 +90,13 @@ export function ReportExportButtons({ reportId, table, meta, filters }: ReportEx
       >
         Excel (CSV)
       </Button>
-      <Button type="button" variant="secondary" disabled={disabled} isLoading={busy === 'pdf'} onClick={() => void run('pdf')}>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={disabled}
+        isLoading={busy === 'pdf'}
+        onClick={() => void run('pdf')}
+      >
         PDF
       </Button>
     </div>

@@ -6,6 +6,8 @@ import type {
   ClassLearnerReport,
   GovernmentReport,
   GovernmentReportFilters,
+  ProvinceOption,
+  ProvincialReport,
   ReportingScope,
   SchoolReport,
 } from '@/features/government/types/government.types';
@@ -18,7 +20,11 @@ interface AsyncState<T> {
 }
 
 /** Runs `load` whenever `key` changes; drops responses that arrive after a newer request. */
-function useAsync<T>(key: string | null, load: () => Promise<T>, fallbackError: string): AsyncState<T> {
+function useAsync<T>(
+  key: string | null,
+  load: () => Promise<T>,
+  fallbackError: string,
+): AsyncState<T> {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(key !== null);
   const [error, setError] = useState<string | null>(null);
@@ -58,12 +64,23 @@ function useAsync<T>(key: string | null, load: () => Promise<T>, fallbackError: 
 }
 
 export function useReportingScope(): AsyncState<ReportingScope> {
-  return useAsync('scope', () => governmentReportService.getScope(), 'Could not load your reporting scope.');
+  return useAsync(
+    'scope',
+    () => governmentReportService.getScope(),
+    'Could not load your reporting scope.',
+  );
 }
 
-export function useGovernmentReport(filters: GovernmentReportFilters, enabled = true): AsyncState<GovernmentReport> {
+export function useGovernmentReport(
+  filters: GovernmentReportFilters,
+  enabled = true,
+): AsyncState<GovernmentReport> {
   const key = enabled ? JSON.stringify(compactFilters(filters)) : null;
-  return useAsync(key, () => governmentReportService.getReport(filters), 'Could not load the report.');
+  return useAsync(
+    key,
+    () => governmentReportService.getReport(filters),
+    'Could not load the report.',
+  );
 }
 
 export function useSchoolReport(
@@ -71,7 +88,11 @@ export function useSchoolReport(
   filters: GovernmentReportFilters,
 ): AsyncState<SchoolReport> {
   const key = schoolId ? `${schoolId}|${JSON.stringify(compactFilters(filters))}` : null;
-  return useAsync(key, () => governmentReportService.getSchoolReport(schoolId!, filters), 'Could not load the school report.');
+  return useAsync(
+    key,
+    () => governmentReportService.getSchoolReport(schoolId!, filters),
+    'Could not load the school report.',
+  );
 }
 
 export function useClassLearnerReport(
@@ -83,5 +104,25 @@ export function useClassLearnerReport(
     key,
     () => governmentReportService.getClassLearnerReport(classId!, filters),
     'Could not load the class report.',
+  );
+}
+
+export function useProvincialScope(): AsyncState<ProvinceOption[]> {
+  return useAsync(
+    'provincial-scope',
+    () => governmentReportService.getProvincialScope(),
+    'Could not load your provinces.',
+  );
+}
+
+export function useProvincialReport(
+  provinceId: string | undefined,
+  filters: GovernmentReportFilters,
+): AsyncState<ProvincialReport> {
+  const key = provinceId ? `${provinceId}|${JSON.stringify(compactFilters(filters))}` : null;
+  return useAsync(
+    key,
+    () => governmentReportService.getProvincialReport(provinceId!, filters),
+    'Could not load the provincial report.',
   );
 }

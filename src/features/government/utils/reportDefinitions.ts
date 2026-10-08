@@ -40,7 +40,7 @@ export const ATTENTION_LABELS: Record<AttentionReason, string> = {
   data_quality: 'Data quality',
 };
 
-const DATA_QUALITY_LABELS: Record<keyof DataQualityIssues, string> = {
+export const DATA_QUALITY_LABELS: Record<keyof DataQualityIssues, string> = {
   missing_emis_number: 'No EMIS number',
   not_linked_to_area: 'Not linked to a district or circuit',
   no_academic_year: 'No academic year for the period',
@@ -49,13 +49,19 @@ const DATA_QUALITY_LABELS: Record<keyof DataQualityIssues, string> = {
   classes_without_attendance: 'Classes with no attendance recorded',
   classes_without_assessments: 'Classes with no assessments',
   assessments_missing_marks: 'Assessments with missing marks',
+  not_linked_to_circuit: 'Linked to a district that has circuits, not to a circuit',
+  incomplete_learner_records: 'Learners with no gender recorded',
 };
 
 /** Human-readable data-quality issues for one school, e.g. "Classes with no attendance recorded (3)". */
 export function describeDataQuality(issues: DataQualityIssues): string[] {
   return (Object.entries(issues) as [keyof DataQualityIssues, boolean | number | undefined][])
     .filter(([, value]) => value !== undefined && value !== false && value !== 0)
-    .map(([key, value]) => (typeof value === 'number' ? `${DATA_QUALITY_LABELS[key]} (${value})` : DATA_QUALITY_LABELS[key]));
+    .map(([key, value]) =>
+      typeof value === 'number'
+        ? `${DATA_QUALITY_LABELS[key]} (${value})`
+        : DATA_QUALITY_LABELS[key],
+    );
 }
 
 /** "86.7%" or an em dash when there is nothing to compute it from. */
@@ -71,7 +77,8 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
   {
     id: 'school_summary',
     title: 'School summary',
-    description: 'One row per school: enrolment, educators, attendance, performance and issues needing attention.',
+    description:
+      'One row per school: enrolment, educators, attendance, performance and issues needing attention.',
     build: (report) => ({
       columns: [
         { key: 'school', header: 'School' },
@@ -102,7 +109,8 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
   {
     id: 'enrolment_staffing',
     title: 'Enrolment and staffing',
-    description: 'Learners on the register, learners enrolled for the period, educators, all staff and classes per school.',
+    description:
+      'Learners on the register, learners enrolled for the period, educators, all staff and classes per school.',
     build: (report) => ({
       columns: [
         { key: 'school', header: 'School' },
@@ -131,7 +139,8 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
   {
     id: 'attendance',
     title: 'Attendance',
-    description: 'Attendance rate per school for the period: (present + late) / (present + late + absent). Excused days are excluded.',
+    description:
+      'Attendance rate per school for the period: (present + late) / (present + late + absent). Excused days are excluded.',
     build: (report) => ({
       columns: [
         { key: 'school', header: 'School' },
@@ -149,7 +158,12 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
         to: s.period_end,
         records: s.attendance_records,
         rate: s.attendance_rate,
-        below: s.attendance_rate === null ? null : s.attendance_rate < report.thresholds.attendance ? 'Yes' : 'No',
+        below:
+          s.attendance_rate === null
+            ? null
+            : s.attendance_rate < report.thresholds.attendance
+              ? 'Yes'
+              : 'No',
       })),
     }),
   },
@@ -178,7 +192,8 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
   {
     id: 'grade_statistics',
     title: 'Grade statistics',
-    description: 'Learners, classes, attendance and performance per grade across the selected schools. Small groups are suppressed.',
+    description:
+      'Learners, classes, attendance and performance per grade across the selected schools. Small groups are suppressed.',
     build: (report) => ({
       columns: [
         { key: 'grade', header: 'Grade' },
@@ -198,7 +213,9 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
         attendance: g.attendance_rate,
         average: g.average_percent,
         pass: g.pass_rate,
-        note: g.suppressed ? `Fewer than ${report.thresholds.minimum_group_size} learners; figures withheld` : null,
+        note: g.suppressed
+          ? `Fewer than ${report.thresholds.minimum_group_size} learners; figures withheld`
+          : null,
       })),
     }),
   },
@@ -301,11 +318,19 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
     build: (report) => {
       const periods = new Map<string, Record<string, CellValue>>();
       for (const point of report.attendance_trend) {
-        periods.set(point.period, { period: point.period, attendance: point.attendance_rate, records: point.records });
+        periods.set(point.period, {
+          period: point.period,
+          attendance: point.attendance_rate,
+          records: point.records,
+        });
       }
       for (const point of report.performance_trend) {
         const row = periods.get(point.period) ?? { period: point.period };
-        periods.set(point.period, { ...row, average: point.average_percent, results: point.results });
+        periods.set(point.period, {
+          ...row,
+          average: point.average_percent,
+          results: point.results,
+        });
       }
       return {
         columns: [
@@ -315,7 +340,9 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
           { key: 'average', header: 'Average mark %', numeric: true },
           { key: 'results', header: 'Results', numeric: true },
         ],
-        rows: [...periods.values()].sort((a, b) => String(a.period).localeCompare(String(b.period))),
+        rows: [...periods.values()].sort((a, b) =>
+          String(a.period).localeCompare(String(b.period)),
+        ),
       };
     },
   },

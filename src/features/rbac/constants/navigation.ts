@@ -69,9 +69,11 @@ export const NAV_MODEL: NavGroupDef[] = [
   {
     label: 'Government',
     items: [
+      { label: 'Provincial Dashboard', path: '/province', icon: BuildingIcon, permission: 'government.view' },
       { label: 'District Dashboard', path: '/district', icon: ChartIcon, permission: 'government.view', end: true },
       { label: 'Government Reports', path: '/reports/government', icon: ClipboardListIcon, permission: 'government.view' },
       { label: 'Education Areas', path: '/district/areas', icon: LayersIcon, permission: 'government.manage' },
+      { label: 'Integrations', path: '/district/integrations', icon: ShieldIcon, permission: 'government.manage' },
     ],
   },
   {

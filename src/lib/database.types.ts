@@ -100,7 +100,9 @@ export type EducationAreaRow = {
 export type EducationOfficialAssignmentRow = {
   id: string;
   profile_id: string;
-  area_id: string;
+  /** Exactly one of area_id and school_id is set. */
+  area_id: string | null;
+  school_id: string | null;
   can_view_learner_detail: boolean;
   active: boolean;
   notes: string | null;
@@ -108,6 +110,70 @@ export type EducationOfficialAssignmentRow = {
   granted_at: string;
   revoked_by: string | null;
   revoked_at: string | null;
+};
+
+export type GovernmentApiPermission =
+  | 'schools'
+  | 'learners'
+  | 'attendance'
+  | 'assessments'
+  | 'staff'
+  | 'interventions'
+  | 'data_quality'
+  | 'reports'
+  | 'imports';
+
+/** Readable columns of government_api_clients (token_hash is never granted). */
+export type GovernmentApiClientRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  area_id: string | null;
+  school_id: string | null;
+  permissions: GovernmentApiPermission[];
+  can_view_learner_detail: boolean;
+  rate_limit_per_minute: number;
+  token_prefix: string;
+  expires_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  revoked_at: string | null;
+  revoked_by: string | null;
+};
+
+export type GovernmentApiRequestRow = {
+  id: number;
+  request_id: string;
+  client_id: string | null;
+  token_prefix: string | null;
+  method: string;
+  path: string;
+  operation: string | null;
+  status: number;
+  error_code: string | null;
+  result_count: number | null;
+  duration_ms: number | null;
+  query: Json | null;
+  created_at: string;
+};
+
+export type GovernmentImportJobRow = {
+  id: string;
+  client_id: string;
+  kind: 'school_identifiers';
+  idempotency_key: string;
+  payload_hash: string;
+  status: 'validated' | 'failed' | 'committed' | 'rejected';
+  total_rows: number;
+  valid_rows: number;
+  error_rows: number;
+  rows: Json;
+  errors: Json;
+  request_id: string | null;
+  created_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
 };
 
 export type SchoolRow = {
@@ -2980,6 +3046,9 @@ export type Database = {
       };
       education_areas: RpcWrittenTable<EducationAreaRow>;
       education_official_assignments: RpcWrittenTable<EducationOfficialAssignmentRow>;
+      government_api_clients: RpcWrittenTable<GovernmentApiClientRow>;
+      government_api_requests: RpcWrittenTable<GovernmentApiRequestRow>;
+      government_import_jobs: RpcWrittenTable<GovernmentImportJobRow>;
       profiles: {
         Row: ProfileRow;
         Insert: ProfileInsert;
@@ -3440,6 +3509,51 @@ export type Database = {
       revoke_education_official_access: {
         Args: { p_assignment_id: string };
         Returns: undefined;
+      };
+      grant_education_official_school_access: {
+        Args: { p_profile_id: string; p_school_id: string; p_learner_detail?: boolean; p_notes?: string | null };
+        Returns: string;
+      };
+      get_provincial_scope: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_provincial_report: {
+        Args: { p_province_id: string; p_filters?: Json };
+        Returns: Json;
+      };
+      record_provincial_report_export: {
+        Args: { p_province_id: string; p_report: string; p_format: 'csv' | 'excel_csv' | 'pdf'; p_filters?: Json };
+        Returns: undefined;
+      };
+      create_government_api_client: {
+        Args: {
+          p_name: string;
+          p_description: string | null;
+          p_area_id: string | null;
+          p_school_id: string | null;
+          p_permissions: GovernmentApiPermission[];
+          p_learner_detail?: boolean;
+          p_rate_limit_per_minute?: number;
+          p_expires_at?: string | null;
+        };
+        Returns: { client_id: string; token: string }[];
+      };
+      revoke_government_api_client: {
+        Args: { p_client_id: string };
+        Returns: undefined;
+      };
+      list_government_api_clients: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      list_government_import_jobs: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      review_government_import_job: {
+        Args: { p_job_id: string; p_decision: 'commit' | 'reject'; p_notes?: string | null };
+        Returns: Json;
       };
       get_advanced_analytics: {
         Args: { p_school_id: string };

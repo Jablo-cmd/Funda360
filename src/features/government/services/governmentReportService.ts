@@ -1,8 +1,18 @@
 import { supabase } from '@/lib/supabase';
-import type { EducationAreaLevel, EducationAreaRow, EducationOfficialAssignmentRow, Json } from '@/lib/database.types';
+import type {
+  EducationAreaLevel,
+  EducationAreaRow,
+  EducationOfficialAssignmentRow,
+  GovernmentApiPermission,
+  Json,
+} from '@/lib/database.types';
 import type {
   ClassLearnerReport,
   ExportFormat,
+  GovernmentApiClientSummary,
+  GovernmentImportJob,
+  ProvinceOption,
+  ProvincialReport,
   GovernmentReport,
   GovernmentReportFilters,
   ReportingScope,
@@ -30,7 +40,10 @@ async function getReport(filters: GovernmentReportFilters): Promise<GovernmentRe
   return data as unknown as GovernmentReport;
 }
 
-async function getSchoolReport(schoolId: string, filters: GovernmentReportFilters): Promise<SchoolReport> {
+async function getSchoolReport(
+  schoolId: string,
+  filters: GovernmentReportFilters,
+): Promise<SchoolReport> {
   const { data, error } = await supabase.rpc('get_school_report', {
     p_school_id: schoolId,
     p_filters: compactFilters(filters) as unknown as Json,
@@ -39,7 +52,10 @@ async function getSchoolReport(schoolId: string, filters: GovernmentReportFilter
   return data as unknown as SchoolReport;
 }
 
-async function getClassLearnerReport(classId: string, filters: GovernmentReportFilters): Promise<ClassLearnerReport> {
+async function getClassLearnerReport(
+  classId: string,
+  filters: GovernmentReportFilters,
+): Promise<ClassLearnerReport> {
   const { data, error } = await supabase.rpc('get_class_learner_report', {
     p_class_id: classId,
     p_filters: compactFilters(filters) as unknown as Json,
@@ -48,11 +64,51 @@ async function getClassLearnerReport(classId: string, filters: GovernmentReportF
   return data as unknown as ClassLearnerReport;
 }
 
-async function recordExport(report: string, format: ExportFormat, filters: GovernmentReportFilters): Promise<void> {
+async function recordExport(
+  report: string,
+  format: ExportFormat,
+  filters: GovernmentReportFilters,
+): Promise<void> {
   const { error } = await supabase.rpc('record_government_report_export', {
     p_report: report,
     p_format: format,
     p_filters: compactFilters(filters) as unknown as Json,
+  });
+  if (error) throw error;
+}
+
+// --- Provincial reporting (province-level access, enforced in the database) ---
+
+async function getProvincialScope(): Promise<ProvinceOption[]> {
+  const { data, error } = await supabase.rpc('get_provincial_scope');
+  if (error) throw error;
+  return data as unknown as ProvinceOption[];
+}
+
+/** province_id is the province to report on; other filters may only narrow it. */
+async function getProvincialReport(
+  provinceId: string,
+  filters: GovernmentReportFilters,
+): Promise<ProvincialReport> {
+  const { data, error } = await supabase.rpc('get_provincial_report', {
+    p_province_id: provinceId,
+    p_filters: compactFilters({ ...filters, province_id: undefined }) as unknown as Json,
+  });
+  if (error) throw error;
+  return data as unknown as ProvincialReport;
+}
+
+async function recordProvincialExport(
+  provinceId: string,
+  report: string,
+  format: ExportFormat,
+  filters: GovernmentReportFilters,
+): Promise<void> {
+  const { error } = await supabase.rpc('record_provincial_report_export', {
+    p_province_id: provinceId,
+    p_report: report,
+    p_format: format,
+    p_filters: compactFilters({ ...filters, province_id: undefined }) as unknown as Json,
   });
   if (error) throw error;
 }
@@ -118,7 +174,10 @@ async function listSchoolAreaLinks(): Promise<SchoolAreaLink[]> {
 }
 
 async function setSchoolArea(schoolId: string, areaId: string | null): Promise<void> {
-  const { error } = await supabase.rpc('set_school_education_area', { p_school_id: schoolId, p_area_id: areaId });
+  const { error } = await supabase.rpc('set_school_education_area', {
+    p_school_id: schoolId,
+    p_area_id: areaId,
+  });
   if (error) throw error;
 }
 
@@ -166,7 +225,11 @@ async function listAssignments(): Promise<EducationOfficialAssignmentRow[]> {
   return data;
 }
 
-async function grantAccess(profileId: string, areaId: string, learnerDetail: boolean): Promise<void> {
+async function grantAccess(
+  profileId: string,
+  areaId: string,
+  learnerDetail: boolean,
+): Promise<void> {
   const { error } = await supabase.rpc('grant_education_official_access', {
     p_profile_id: profileId,
     p_area_id: areaId,
@@ -175,12 +238,99 @@ async function grantAccess(profileId: string, areaId: string, learnerDetail: boo
   if (error) throw error;
 }
 
+async function grantSchoolAccess(
+  profileId: string,
+  schoolId: string,
+  learnerDetail: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc('grant_education_official_school_access', {
+    p_profile_id: profileId,
+    p_school_id: schoolId,
+    p_learner_detail: learnerDetail,
+  });
+  if (error) throw error;
+}
+
 async function revokeAccess(assignmentId: string): Promise<void> {
-  const { error } = await supabase.rpc('revoke_education_official_access', { p_assignment_id: assignmentId });
+  const { error } = await supabase.rpc('revoke_education_official_access', {
+    p_assignment_id: assignmentId,
+  });
+  if (error) throw error;
+}
+
+// --- Government API clients and imports (platform administrators) ---
+
+async function listApiClients(): Promise<GovernmentApiClientSummary[]> {
+  const { data, error } = await supabase.rpc('list_government_api_clients');
+  if (error) throw error;
+  return data as unknown as GovernmentApiClientSummary[];
+}
+
+export interface NewApiClientInput {
+  name: string;
+  description: string | null;
+  areaId: string | null;
+  schoolId: string | null;
+  permissions: GovernmentApiPermission[];
+  learnerDetail: boolean;
+  rateLimitPerMinute: number;
+  expiresAt: string | null;
+}
+
+/** Returns the token. It is shown once and never stored in readable form. */
+async function createApiClient(
+  input: NewApiClientInput,
+): Promise<{ clientId: string; token: string }> {
+  const { data, error } = await supabase.rpc('create_government_api_client', {
+    p_name: input.name,
+    p_description: input.description,
+    p_area_id: input.areaId,
+    p_school_id: input.schoolId,
+    p_permissions: input.permissions,
+    p_learner_detail: input.learnerDetail,
+    p_rate_limit_per_minute: input.rateLimitPerMinute,
+    p_expires_at: input.expiresAt,
+  });
+  if (error) throw error;
+  const row = data[0];
+  if (!row) throw new Error('The API client was not created.');
+  return { clientId: row.client_id, token: row.token };
+}
+
+async function revokeApiClient(clientId: string): Promise<void> {
+  const { error } = await supabase.rpc('revoke_government_api_client', { p_client_id: clientId });
+  if (error) throw error;
+}
+
+async function listImportJobs(): Promise<GovernmentImportJob[]> {
+  const { data, error } = await supabase.rpc('list_government_import_jobs');
+  if (error) throw error;
+  return data as unknown as GovernmentImportJob[];
+}
+
+async function reviewImportJob(
+  jobId: string,
+  decision: 'commit' | 'reject',
+  notes: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('review_government_import_job', {
+    p_job_id: jobId,
+    p_decision: decision,
+    p_notes: notes,
+  });
   if (error) throw error;
 }
 
 export const governmentReportService = {
+  getProvincialScope,
+  getProvincialReport,
+  recordProvincialExport,
+  grantSchoolAccess,
+  listApiClients,
+  createApiClient,
+  revokeApiClient,
+  listImportJobs,
+  reviewImportJob,
   getScope,
   getReport,
   getSchoolReport,

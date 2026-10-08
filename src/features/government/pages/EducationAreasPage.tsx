@@ -11,7 +11,11 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { DataTable } from '@/components/ui/DataTable';
 import { useToast } from '@/components/ui/toast/useToast';
 import { getDbErrorMessage } from '@/lib/dbErrors';
-import type { EducationAreaLevel, EducationAreaRow, EducationOfficialAssignmentRow } from '@/lib/database.types';
+import type {
+  EducationAreaLevel,
+  EducationAreaRow,
+  EducationOfficialAssignmentRow,
+} from '@/lib/database.types';
 import {
   governmentReportService,
   type EducationOfficial,
@@ -63,7 +67,9 @@ export function EducationAreasPage() {
   const [areaCode, setAreaCode] = useState('');
 
   const [official, setOfficial] = useState({ firstName: '', lastName: '', email: '', phone: '' });
-  const [issuedPassword, setIssuedPassword] = useState<{ email: string; password: string } | null>(null);
+  const [issuedPassword, setIssuedPassword] = useState<{ email: string; password: string } | null>(
+    null,
+  );
 
   const [grantOfficial, setGrantOfficial] = useState('');
   const [grantArea, setGrantArea] = useState('');
@@ -117,7 +123,10 @@ export function EducationAreasPage() {
     [areas],
   );
   const allAreas = useMemo(
-    () => areas.map((a) => ({ id: a.id, label: `${areaPath(areas, a.id)} (${a.level})` })).sort((a, b) => a.label.localeCompare(b.label)),
+    () =>
+      areas
+        .map((a) => ({ id: a.id, label: `${areaPath(areas, a.id)} (${a.level})` }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
     [areas],
   );
   const parentLevel = PARENT_LEVEL[areaLevel];
@@ -168,7 +177,15 @@ export function EducationAreasPage() {
 
   const submitGrant = async (event: FormEvent) => {
     event.preventDefault();
-    const ok = await run(() => governmentReportService.grantAccess(grantOfficial, grantArea, grantDetail), 'Access granted.');
+    // "area:<id>" or "school:<id>": a school-level grant covers that one school only.
+    const [kind, targetId] = grantArea.split(':');
+    const ok = await run(
+      () =>
+        kind === 'school'
+          ? governmentReportService.grantSchoolAccess(grantOfficial, targetId!, grantDetail)
+          : governmentReportService.grantAccess(grantOfficial, targetId!, grantDetail),
+      'Access granted.',
+    );
     if (ok) setGrantDetail(false);
   };
 
@@ -200,7 +217,10 @@ export function EducationAreasPage() {
             ))}
           </ul>
         )}
-        <form onSubmit={(e) => void submitArea(e)} className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-4">
+        <form
+          onSubmit={(e) => void submitArea(e)}
+          className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <div>
             <label htmlFor={`${id}-level`} className={LABEL_CLASS}>
               Level
@@ -224,7 +244,13 @@ export function EducationAreasPage() {
               <label htmlFor={`${id}-parent`} className={LABEL_CLASS}>
                 {parentLevel === 'province' ? 'Province' : 'District'}
               </label>
-              <select id={`${id}-parent`} className={FIELD_CLASS} value={areaParent} required onChange={(e) => setAreaParent(e.target.value)}>
+              <select
+                id={`${id}-parent`}
+                className={FIELD_CLASS}
+                value={areaParent}
+                required
+                onChange={(e) => setAreaParent(e.target.value)}
+              >
                 <option value="">Choose…</option>
                 {parentOptions.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -234,10 +260,26 @@ export function EducationAreasPage() {
               </select>
             </div>
           )}
-          <TextField label="Name" value={areaName} required maxLength={160} onChange={(e) => setAreaName(e.target.value)} />
-          <TextField label="Code (optional)" value={areaCode} maxLength={40} onChange={(e) => setAreaCode(e.target.value)} />
+          <TextField
+            label="Name"
+            value={areaName}
+            required
+            maxLength={160}
+            onChange={(e) => setAreaName(e.target.value)}
+          />
+          <TextField
+            label="Code (optional)"
+            value={areaCode}
+            maxLength={40}
+            onChange={(e) => setAreaCode(e.target.value)}
+          />
           <div className="flex items-end">
-            <Button type="submit" className="w-full lg:w-auto" isLoading={busy} disabled={!areaName.trim() || (Boolean(parentLevel) && !areaParent)}>
+            <Button
+              type="submit"
+              className="w-full lg:w-auto"
+              isLoading={busy}
+              disabled={!areaName.trim() || (Boolean(parentLevel) && !areaParent)}
+            >
               Add area
             </Button>
           </div>
@@ -255,7 +297,9 @@ export function EducationAreasPage() {
                   <p className="font-medium">{s.name}</p>
                   <p className="text-xs text-content-tertiary">
                     {s.emisNumber ? `EMIS ${s.emisNumber}` : 'No EMIS number'}
-                    {s.province || s.district ? ` · recorded as ${[s.province, s.district].filter(Boolean).join(' / ')}` : ''}
+                    {s.province || s.district
+                      ? ` · recorded as ${[s.province, s.district].filter(Boolean).join(' / ')}`
+                      : ''}
                   </p>
                 </div>
               ),
@@ -269,7 +313,12 @@ export function EducationAreasPage() {
                   className={FIELD_CLASS}
                   value={s.educationAreaId ?? ''}
                   disabled={busy}
-                  onChange={(e) => void run(() => governmentReportService.setSchoolArea(s.id, e.target.value || null), 'School linked.')}
+                  onChange={(e) =>
+                    void run(
+                      () => governmentReportService.setSchoolArea(s.id, e.target.value || null),
+                      'School linked.',
+                    )
+                  }
                 >
                   <option value="">Not linked</option>
                   {linkableAreas.map((a) => (
@@ -289,19 +338,48 @@ export function EducationAreasPage() {
 
       <Card title="Education officials">
         {issuedPassword && (
-          <div role="status" className="rounded-md border border-border bg-surface-sunken p-3 text-sm">
-            <p className="font-medium text-content-primary">Account created for {issuedPassword.email}</p>
+          <div
+            role="status"
+            className="rounded-md border border-border bg-surface-sunken p-3 text-sm"
+          >
+            <p className="font-medium text-content-primary">
+              Account created for {issuedPassword.email}
+            </p>
             <p className="text-content-secondary">
-              Temporary password: <code className="font-mono">{issuedPassword.password}</code>. Share it securely; it is not shown again.
-              The official must set up two-factor authentication.
+              Temporary password: <code className="font-mono">{issuedPassword.password}</code>.
+              Share it securely; it is not shown again. The official must set up two-factor
+              authentication.
             </p>
           </div>
         )}
-        <form onSubmit={(e) => void submitOfficial(e)} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <TextField label="First name" required value={official.firstName} onChange={(e) => setOfficial({ ...official, firstName: e.target.value })} />
-          <TextField label="Last name" required value={official.lastName} onChange={(e) => setOfficial({ ...official, lastName: e.target.value })} />
-          <TextField label="Email" type="email" required value={official.email} onChange={(e) => setOfficial({ ...official, email: e.target.value })} />
-          <TextField label="Phone (optional)" value={official.phone} onChange={(e) => setOfficial({ ...official, phone: e.target.value })} />
+        <form
+          onSubmit={(e) => void submitOfficial(e)}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <TextField
+            label="First name"
+            required
+            value={official.firstName}
+            onChange={(e) => setOfficial({ ...official, firstName: e.target.value })}
+          />
+          <TextField
+            label="Last name"
+            required
+            value={official.lastName}
+            onChange={(e) => setOfficial({ ...official, lastName: e.target.value })}
+          />
+          <TextField
+            label="Email"
+            type="email"
+            required
+            value={official.email}
+            onChange={(e) => setOfficial({ ...official, email: e.target.value })}
+          />
+          <TextField
+            label="Phone (optional)"
+            value={official.phone}
+            onChange={(e) => setOfficial({ ...official, phone: e.target.value })}
+          />
           <div className="flex items-end">
             <Button type="submit" className="w-full lg:w-auto" isLoading={busy}>
               Create official account
@@ -309,12 +387,21 @@ export function EducationAreasPage() {
           </div>
         </form>
 
-        <form onSubmit={(e) => void submitGrant(e)} className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-4">
+        <form
+          onSubmit={(e) => void submitGrant(e)}
+          className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <div>
             <label htmlFor={`${id}-grant-official`} className={LABEL_CLASS}>
               Official
             </label>
-            <select id={`${id}-grant-official`} className={FIELD_CLASS} required value={grantOfficial} onChange={(e) => setGrantOfficial(e.target.value)}>
+            <select
+              id={`${id}-grant-official`}
+              className={FIELD_CLASS}
+              required
+              value={grantOfficial}
+              onChange={(e) => setGrantOfficial(e.target.value)}
+            >
               <option value="">Choose…</option>
               {officials
                 .filter((o) => o.status === 'active')
@@ -327,22 +414,46 @@ export function EducationAreasPage() {
           </div>
           <div>
             <label htmlFor={`${id}-grant-area`} className={LABEL_CLASS}>
-              Area
+              Area or school
             </label>
-            <select id={`${id}-grant-area`} className={FIELD_CLASS} required value={grantArea} onChange={(e) => setGrantArea(e.target.value)}>
+            <select
+              id={`${id}-grant-area`}
+              className={FIELD_CLASS}
+              required
+              value={grantArea}
+              onChange={(e) => setGrantArea(e.target.value)}
+            >
               <option value="">Choose…</option>
-              {allAreas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
+              <optgroup label="Areas (province, district or circuit)">
+                {allAreas.map((a) => (
+                  <option key={a.id} value={`area:${a.id}`}>
+                    {a.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Single school">
+                {schools.map((school) => (
+                  <option key={school.id} value={`school:${school.id}`}>
+                    {school.name}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
           <div className="flex items-end pb-2">
-            <Checkbox label="Allow learner-level detail" checked={grantDetail} onChange={(e) => setGrantDetail(e.target.checked)} />
+            <Checkbox
+              label="Allow learner-level detail"
+              checked={grantDetail}
+              onChange={(e) => setGrantDetail(e.target.checked)}
+            />
           </div>
           <div className="flex items-end">
-            <Button type="submit" className="w-full lg:w-auto" isLoading={busy} disabled={!grantOfficial || !grantArea}>
+            <Button
+              type="submit"
+              className="w-full lg:w-auto"
+              isLoading={busy}
+              disabled={!grantOfficial || !grantArea}
+            >
               Grant access
             </Button>
           </div>
@@ -351,9 +462,24 @@ export function EducationAreasPage() {
         <DataTable
           columns={[
             { key: 'official', header: 'Official', render: (g) => officialName(g.profile_id) },
-            { key: 'area', header: 'Area', render: (g) => areaPath(areas, g.area_id) },
-            { key: 'detail', header: 'Learner detail', render: (g) => (g.can_view_learner_detail ? 'Yes' : 'No') },
-            { key: 'granted', header: 'Granted', render: (g) => new Date(g.granted_at).toLocaleDateString('en-ZA') },
+            {
+              key: 'area',
+              header: 'Area or school',
+              render: (g) =>
+                g.school_id
+                  ? `School: ${schools.find((school) => school.id === g.school_id)?.name ?? g.school_id}`
+                  : areaPath(areas, g.area_id),
+            },
+            {
+              key: 'detail',
+              header: 'Learner detail',
+              render: (g) => (g.can_view_learner_detail ? 'Yes' : 'No'),
+            },
+            {
+              key: 'granted',
+              header: 'Granted',
+              render: (g) => new Date(g.granted_at).toLocaleDateString('en-ZA'),
+            },
             {
               key: 'revoke',
               header: '',
@@ -364,7 +490,9 @@ export function EducationAreasPage() {
                   variant="ghost"
                   className="w-auto"
                   disabled={busy}
-                  onClick={() => void run(() => governmentReportService.revokeAccess(g.id), 'Access revoked.')}
+                  onClick={() =>
+                    void run(() => governmentReportService.revokeAccess(g.id), 'Access revoked.')
+                  }
                 >
                   Revoke
                 </Button>

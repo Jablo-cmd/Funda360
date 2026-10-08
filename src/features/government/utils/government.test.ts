@@ -262,7 +262,7 @@ describe('status tones', () => {
 describe('education official access in the app shell', () => {
   it('sees only the government pages and their own profile', () => {
     const paths = resolveNavForRole('education_official').flatMap((group) => group.items.map((item) => item.path));
-    expect(paths).toEqual(['/district', '/reports/government', '/my-profile']);
+    expect(paths).toEqual(['/province', '/district', '/reports/government', '/my-profile']);
   });
 
   it('lands on the district dashboard', () => {
