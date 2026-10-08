@@ -63,10 +63,12 @@ Items 1-12 are merged to `main` (PRs #7 and #8):
 
 14. Government reporting and District Dashboard (2026-10-08, same branch). `20261009090000_education_official_role` (new `education_official` role, no school tenant) and `20261009091000_government_reporting` (`education_areas` province/district/circuit hierarchy seeded from the free-text `schools.province`/`district`; `schools.education_area_id`, changeable by platform admins only; `education_official_assignments` with a separate learner-detail grant; `get_reporting_scope`, `get_government_report`, `get_school_report`, `get_class_learner_report`, `record_government_report_export` and audited admin RPCs). Scope is computed in the database (`reporting_school_ids()`): platform admins all schools, officials their areas, school owner/principal their own school. UI: `/district`, `/district/schools/:id`, `/district/schools/:id/classes/:id`, `/reports/government`, `/district/areas` (`src/features/government/`). Design and formulas: `docs/GOVERNMENT_REPORTING.md`. Performance (scratch DB, 20 schools / 6,000 learners / 240k attendance rows): full district report 0.7-0.9 s, school drill-down 30 ms. `reporting_learner_stats` must keep its LATERAL lookups; a CTE-join version took 54 s.
 
+15. Privileged MFA hardening (2026-10-08, same branch): government reporting requires an `aal2` session for `education_official` and platform administrators (`session_is_aal2()`, `reporting_require_mfa()`, `reporting_platform_admin()`, all in `20261009091000`); `is_platform_admin()` elsewhere is unchanged. Frontend guard `RequirePrivilegedMfa`. Real-stack test `supabase/stack-tests/government-reporting.mjs` (GoTrue + PostgREST, real TOTP) 47/47. Load test unchanged by MFA (A/B in one session: 0.61-0.82 s with, 0.62-0.76 s without). Production checked read-only: schema fingerprint identical to the tested pre-PR schema; new migrations not applied yet.
+
 Last green run (2026-10-08):
 
 - typecheck, lint and build pass;
-- 309 unit tests, RLS 824/824, Deno check/lint/test 20/20;
+- 315 unit tests, RLS 839/839, real-stack 47/47, Deno check/lint/test 20/20;
 - Playwright 350/350 (0 retries).
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
@@ -97,4 +99,5 @@ All code-side criteria are met. Merging to `main` applies new migrations (`migra
 7. **Demo data.** Production holds the demo tenants (702 `*.funda360.dev` accounts, 375 learners). Decide whether to delete them or move real schools to a clean project. Never delete without a backup.
 8. **MFA.** No production account has a verified factor (platform owner and super-admin included). Enrol those accounts; the app only shows a banner.
 9. **Error monitoring.** Set the GitHub variable `VITE_ERROR_REPORT_URL` (Sentry store endpoint or a log drain) in the `github-pages` environment.
-10. **Government reporting set-up.** A platform administrator links each school to its district or circuit and creates/grants officials under Education Areas (`/district/areas`). The migration seeds areas from existing province/district text only where both are filled in.
+10. **MFA for government reporting.** Confirm TOTP is enabled in hosted Auth (dashboard), then the platform owner and super-admin enrol an authenticator; until then they get `mfa_required` on `/district`, `/reports/government` and `/district/areas`.
+11. **Government reporting set-up.** A platform administrator links each school to its district or circuit and creates/grants officials under Education Areas (`/district/areas`). The migration seeds areas from existing province/district text only where both are filled in.
