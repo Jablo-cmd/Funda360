@@ -7,9 +7,9 @@ Funda360 can give education department officials (province, district or circuit 
 | Piece | Where |
 | --- | --- |
 | Province → District → Circuit hierarchy | `education_areas` (migration `20261009091000_government_reporting.sql`) |
-| School → area link | `schools.education_area_id` (district or circuit). The old free-text `schools.province` / `schools.district` columns are kept and were used once to seed the hierarchy. |
+| School → area link | `schools.education_area_id` (district or circuit). The old free-text `schools.province` / `schools.district` columns are kept but are **not** used to build the hierarchy: current school records are demo data, so areas are created and schools linked by a platform administrator only. |
 | Official role | `education_official` (`20261009090000_education_official_role.sql`). No school tenant. Two-factor authentication is mandatory and enforced by the database (see below). |
-| Official access | `education_official_assignments`: one row per official per area. Access covers the area and everything under it. `can_view_learner_detail` is a separate grant. |
+| Official access | `education_official_assignments`: one row per official per area **or per school** (`20261010090000`). An area grant covers the area and everything under it; a school grant covers that school only. `can_view_learner_detail` is a separate grant. |
 | Reports and dashboard data | `get_reporting_scope()`, `get_government_report(filters)`, `get_school_report(school_id, filters)`, `get_class_learner_report(class_id, filters)` |
 | Export audit | `record_government_report_export(report, format, filters)` |
 | Administration | `upsert_education_area`, `set_school_education_area`, `provision_education_official`, `grant_education_official_access`, `revoke_education_official_access` (platform administrators only, all audited) |
@@ -85,7 +85,7 @@ CSV, Excel-compatible CSV (UTF-8 byte-order mark and header lines) and PDF. They
 
 ## Production deployment requirements
 
-1. Merge the branch to `main`; CI's `migrate` job applies `20261008090000`, `20261009090000` and `20261009091000`.
+1. Merge the branch to `main`; CI's `migrate` job applies `20261008090000`, `20261009090000`, `20261009091000` and `20261010090000`, and the `functions` job deploys `government-api` (see `docs/GOVERNMENT_API.md`).
 2. In the Supabase dashboard confirm **Authentication → Multi-Factor → TOTP** is enabled (enroll and verify). Without it nobody can reach `aal2` and government reporting is unusable for officials and platform administrators.
 3. The platform owner and super administrator enrol an authenticator (**My Profile → Two-factor authentication**) before using `/district`, `/reports/government` or `/district/areas`. At the 2026-10-08 check neither had a verified factor.
 4. Link every school to its district or circuit, create officials, and grant each one only the area of their mandate (learner-level detail only where required).
@@ -97,7 +97,7 @@ Checked read-only on the hosted project (`rzkybmkzhpwovpvrjkxk`) with SQL; nothi
 - 76 migrations applied; the three reporting/MFA migrations are **not** applied yet (they ship with the merge).
 - Schema matches the schema the migrations were tested against: 125 tables (column fingerprint identical), 260 policies (names identical), enum values identical, RLS forced on every table, 298 functions identical after normalising Windows line endings in 26 of them. No name collides with an object the new migrations create.
 - The migrations were rehearsed inside a rolled-back transaction on a copy of that schema: they apply cleanly, indexes are created, anon has no EXECUTE, no policy is left unoptimised, and a platform owner gets `mfa_required` at `aal1` and the report at `aal2`.
-- Seeding from existing text will create 3 provinces and 3 districts and link 3 schools; Townsview Primary has a province but no district and must be linked by hand.
+- The migrations no longer seed education areas from the schools' free-text province/district (those records are demo data). After the merge there are no areas and no school is linked until a platform administrator creates them.
 - Supabase security advisor (2026-10-08), production:
   - Anon can execute 40 SECURITY DEFINER functions: all trigger functions plus `trigger_fee_overdue_reminders` / `trigger_document_expiry_alerts`. Migration `20261008090000` (in this branch) revokes every one; with all migrations applied, anon can execute 0 of 231 SECURITY DEFINER functions.
   - Leaked-password protection is off. This is a dashboard setting.
@@ -111,6 +111,7 @@ Checked read-only on the hosted project (`rzkybmkzhpwovpvrjkxk`) with SQL; nothi
 - MFA is TOTP only (no SMS, WebAuthn or recovery codes). An `aal2` access token stays valid until it expires (one hour by default) even if the factor is removed meanwhile.
 - The MFA requirement covers government reporting only. Other platform-administrator functions still accept an `aal1` session (unchanged behaviour); extending it platform-wide is a separate decision.
 
+- See `docs/PROVINCIAL_DASHBOARD.md` and `docs/GOVERNMENT_API.md` for the provincial layer and the integration API.
 - No official DBE/provincial return layouts are implemented. The report catalogue (`src/features/government/utils/reportDefinitions.ts`) is where an official layout would be added once its specification is available.
 - No import from or export to SA-SAMS; schools still report through their existing systems.
 - Figures are computed live. This is fast at current data volumes; a district with hundreds of schools may need pre-aggregated reporting tables.
