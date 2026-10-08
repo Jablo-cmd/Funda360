@@ -38,9 +38,9 @@ Prettier is **not** enforced: about 430 legacy files are unformatted. Format onl
 - RLS test style: `do $$ … call test_util.record(name, passed, detail) … $$`. **No subqueries inside CALL arguments** (compute into variables first). Impersonate with `set_config('request.jwt.claims', test_util.jwt_claims(uid, role, tenant), true)` + `set local role authenticated`.
 - `supabase/seed.sql` generates a random password per run and aborts on databases with non-demo users. Never reintroduce a fixed password: the repo is **public**.
 
-## Status (2026-09-30)
+## Status (2026-10-08)
 
-Done and pushed on branch `ccr-3b8a9155-845trs` (not yet merged to `main`):
+Items 1-12 are merged to `main` (PRs #7 and #8):
 
 1. Audit (`/tmp` scratchpad report). Critical fixes: seed password removed, duplicate migration renamed to `20260919090001`, `20260930090000_revoke_public_worker_execute`, CI `migrate` job + duplicate-version check.
 2. Production: all 703 accounts that used the published demo password were rotated to random passwords and their sessions revoked (2026-09-30).
@@ -58,11 +58,13 @@ Done and pushed on branch `ccr-3b8a9155-845trs` (not yet merged to `main`):
 
 12. UI follow-up (2026-09-30): `AttendanceTrendChart` draws at its container's real pixel width (11px axis text at every width; it used to shrink to ~5px on phones) with y-axis labels, hover titles and a legend; `SchoolsTable` renders cards on phones (the switch action is no longer behind a sideways swipe) and a `TableScrollContainer` table from `sm`; dark-mode contrast: dark `--danger-600` is now the lighter text colour (6.3:1 on `--danger-50`, was 4.28:1) and solid red fills with white text use the new `danger-700` token; any `text-brand-600` is drawn as brand-300 in dark mode (base-layer rule), the logo wordmark has a dark variant, and `/trust` always renders light. Dark mode: 180 axe scans over all routes, 0 violations.
 
-Last green run (2026-09-30):
+13. Audit 2026-10-08 (branch `claude/funda360-audit-0foiq8`): production checked read-only. All 76 migrations were applied (CI `migrate` works); 125/125 public tables have RLS forced; every RPC and table the frontend calls exists. Fixes: `20261008090000_anon_execute_and_duplicate_cron_cleanup` (no anon EXECUTE on any SECURITY DEFINER function, no caller EXECUTE on trigger functions, unschedules the duplicate `funda360-*` cron jobs that would fail daily without a JWT); CI `functions` job deploys all Edge Functions after `migrate`; deploy passes optional `vars.VITE_ERROR_REPORT_URL`; homework marking uses the shared `Modal`; 44px touch targets on invoice filters, message/timetable/operations tabs and teacher quick actions; the responsive guard now covers 10 guardian/learner routes. `admissions-public` (version 8, with the P1-6 guards) was deployed to production on 2026-10-08; the other three functions were still the 2026-09-09 build at that time.
+
+Last green run (2026-10-08):
 
 - typecheck, lint and build pass;
-- 282 unit tests, RLS 759/759, Deno check/lint/test 20/20;
-- Playwright 275/275 (0 retries).
+- 285 unit tests, RLS 764/764, Deno check/lint/test 20/20;
+- Playwright 342/342 (0 retries).
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 
@@ -79,18 +81,16 @@ Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 - [x] P2 school owners can provision finance_manager / vice_principal / class_teacher / subject_teacher logins
 - [x] P2 unguessable admission references (existing references unchanged; resume still needs date of birth)
 
-All code-side criteria are met. What remains is applying the migrations to production (below).
+All code-side criteria are met. Merging to `main` applies new migrations (`migrate` job) and deploys Edge Functions (`functions` job, added 2026-10-08).
 
 ## Requires a human (cannot be done from the sandbox)
 
-1. **Apply pending migrations to production.** The auto-mode classifier blocked applying them from the agent session. Either:
-   - add GitHub `github-pages` environment secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` and `SUPABASE_PROJECT_REF=rzkybmkzhpwovpvrjkxk`, then merge to `main` (the CI `migrate` job runs `supabase db push`); or
-   - explicitly approve applying them in a session.
-
-   Production currently lacks: `20260919090001`, `20260929090000`, `20260929100000`, `20260929120000`, `20260929170000`, `20260930090000`, `20260930100000`, `20260930110000`, `20260930120000`, `20260930121000` and anything newer.
-
+1. **Merge this branch to `main`** so CI applies `20261008090000` and deploys `payments-initiate`, `payments-webhook` and `notifications-dispatch` (production ran their 2026-09-09 build at the 2026-10-08 audit).
 2. **Password resets.** Anyone who relied on a demo account must be re-issued a password by the platform owner.
 3. **Confirm the super-admin sessions.** Sessions from 41.116.x (Android) and 102.33.32.62 (Windows) were revoked; the owner should confirm those were theirs.
-4. Enable leaked-password protection in Supabase Auth settings (dashboard only).
-5. Migrations may be written (approved 2026-09-30). Applying them to production still needs item 1.
-6. **Email and login (2026-10-07):** production Site URL was `http://localhost:3000` and Auth used Supabase's built-in test mailer. Follow `docs/EMAIL_AND_LOGIN_SETUP.md` (Site URL, redirect URLs, HostAfrica SMTP, token-hash recovery template, email rate limit). The app accepts `?token_hash=…&type=…` links (`src/features/auth/utils/emailLink.ts`) so reset and guardian-activation links work on any device.
+4. Enable leaked-password protection in Supabase Auth settings (dashboard only). Still off at the 2026-10-08 audit.
+5. **Email and login (2026-10-07):** production Site URL was `http://localhost:3000` and Auth used Supabase's built-in test mailer. Follow `docs/EMAIL_AND_LOGIN_SETUP.md` (Site URL, redirect URLs, HostAfrica SMTP, token-hash recovery template, email rate limit). The app accepts `?token_hash=…&type=…` links (`src/features/auth/utils/emailLink.ts`) so reset and guardian-activation links work on any device. At the 2026-10-08 audit no email had been sent since, so the fix is unproven.
+6. **Backups.** The Supabase organisation is on the Free plan. Upgrade (Pro or above) and rehearse one restore before real schools use it.
+7. **Demo data.** Production holds the demo tenants (702 `*.funda360.dev` accounts, 375 learners). Decide whether to delete them or move real schools to a clean project. Never delete without a backup.
+8. **MFA.** No production account has a verified factor (platform owner and super-admin included). Enrol those accounts; the app only shows a banner.
+9. **Error monitoring.** Set the GitHub variable `VITE_ERROR_REPORT_URL` (Sentry store endpoint or a log drain) in the `github-pages` environment.
