@@ -35,6 +35,7 @@ Prettier is **not** enforced: about 430 legacy files are unformatted. Format onl
 - New `SECURITY DEFINER` functions: pin `set search_path = public`, `revoke execute … from public, anon`, and grant to `authenticated` only when the client calls them. `alter default privileges in schema public revoke … from public` does **not** work (per-schema defaults cannot remove global ones). Revoke per function.
 - A migration version must be unique: CI fails on duplicates.
 - `src/lib/database.types.ts` is **hand-maintained**. Add new tables and RPCs there.
+- Government reporting: never filter for security in the frontend; every reporting RPC must go through `reporting_resolve_schools()` / `reporting_school_ids()`. Officials have no tenant, so tenant-keyed RLS gives them nothing directly.
 - RLS test style: `do $$ … call test_util.record(name, passed, detail) … $$`. **No subqueries inside CALL arguments** (compute into variables first). Impersonate with `set_config('request.jwt.claims', test_util.jwt_claims(uid, role, tenant), true)` + `set local role authenticated`.
 - `supabase/seed.sql` generates a random password per run and aborts on databases with non-demo users. Never reintroduce a fixed password: the repo is **public**.
 
@@ -60,11 +61,13 @@ Items 1-12 are merged to `main` (PRs #7 and #8):
 
 13. Audit 2026-10-08 (branch `claude/funda360-audit-0foiq8`): production checked read-only. All 76 migrations were applied (CI `migrate` works); 125/125 public tables have RLS forced; every RPC and table the frontend calls exists. Fixes: `20261008090000_anon_execute_and_duplicate_cron_cleanup` (no anon EXECUTE on any SECURITY DEFINER function, no caller EXECUTE on trigger functions, unschedules the duplicate `funda360-*` cron jobs that would fail daily without a JWT); CI `functions` job deploys all Edge Functions after `migrate`; deploy passes optional `vars.VITE_ERROR_REPORT_URL`; homework marking uses the shared `Modal`; 44px touch targets on invoice filters, message/timetable/operations tabs and teacher quick actions; the responsive guard now covers 10 guardian/learner routes. `admissions-public` (version 8, with the P1-6 guards) was deployed to production on 2026-10-08; the other three functions were still the 2026-09-09 build at that time.
 
+14. Government reporting and District Dashboard (2026-10-08, same branch). `20261009090000_education_official_role` (new `education_official` role, no school tenant) and `20261009091000_government_reporting` (`education_areas` province/district/circuit hierarchy seeded from the free-text `schools.province`/`district`; `schools.education_area_id`, changeable by platform admins only; `education_official_assignments` with a separate learner-detail grant; `get_reporting_scope`, `get_government_report`, `get_school_report`, `get_class_learner_report`, `record_government_report_export` and audited admin RPCs). Scope is computed in the database (`reporting_school_ids()`): platform admins all schools, officials their areas, school owner/principal their own school. UI: `/district`, `/district/schools/:id`, `/district/schools/:id/classes/:id`, `/reports/government`, `/district/areas` (`src/features/government/`). Design and formulas: `docs/GOVERNMENT_REPORTING.md`. Performance (scratch DB, 20 schools / 6,000 learners / 240k attendance rows): full district report 0.7-0.9 s, school drill-down 30 ms. `reporting_learner_stats` must keep its LATERAL lookups; a CTE-join version took 54 s.
+
 Last green run (2026-10-08):
 
 - typecheck, lint and build pass;
-- 285 unit tests, RLS 764/764, Deno check/lint/test 20/20;
-- Playwright 342/342 (0 retries).
+- 309 unit tests, RLS 824/824, Deno check/lint/test 20/20;
+- Playwright 350/350 (0 retries).
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 
@@ -94,3 +97,4 @@ All code-side criteria are met. Merging to `main` applies new migrations (`migra
 7. **Demo data.** Production holds the demo tenants (702 `*.funda360.dev` accounts, 375 learners). Decide whether to delete them or move real schools to a clean project. Never delete without a backup.
 8. **MFA.** No production account has a verified factor (platform owner and super-admin included). Enrol those accounts; the app only shows a banner.
 9. **Error monitoring.** Set the GitHub variable `VITE_ERROR_REPORT_URL` (Sentry store endpoint or a log drain) in the `github-pages` environment.
+10. **Government reporting set-up.** A platform administrator links each school to its district or circuit and creates/grants officials under Education Areas (`/district/areas`). The migration seeds areas from existing province/district text only where both are filled in.
