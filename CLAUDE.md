@@ -69,11 +69,13 @@ Items 1-12 are merged to `main` (PRs #7 and #8):
 
 16. Provincial Dashboard + Government Data & Integration API (2026-10-08, same branch). `20261010090000_provincial_dashboard_and_government_api`: school-level official assignments; `get_provincial_report` / `get_provincial_scope` / `record_provincial_report_export` (province-level access only: platform admin, official assigned to the province, or API client scoped to it); API clients (SHA-256 token hash, scope, permissions, learner grant, expiry, rate limit), append-only `government_api_requests`, `government_import_jobs` (validate -> preview -> admin commit) and `gov_api_request()` (service role only). Scope functions were extended with an `api` caller kind that only exists inside `gov_api_request()` (service-role JWT + transaction-local setting). Edge Function `government-api` (HTTP adapter). UI: `/province`, `/district/integrations`, school-level grants on `/district/areas`. Docs: `docs/PROVINCIAL_DASHBOARD.md`, `docs/GOVERNMENT_API.md`, `docs/api/government-api-v1.openapi.yaml`. New tables need `revoke all ... from anon, authenticated` first: Supabase default privileges grant everything, so column grants alone do nothing.
 
+17. Funda AI Phase 1 foundation (2026-10-08, same branch). `20261011090000_funda_ai_foundation` (feature flags and policy, per-school switch, `ai_requests` usage/audit without content, `ai_tool_calls`, opt-in conversations, feedback; `ai_authorize_request()` policy gate run as the user; DB-counted rate limits and token budgets). Edge Function `funda-ai` (JWT verified): every tool reads through PostgREST with the caller's JWT, so RLS decides scope; service role only for the audit RPCs. Claude adapter via the official SDK (`claude-opus-5-5`, explicit effort, JSON-schema output, server-side refusal fallback enabled). Five read-only tools, code-only versioned prompt (`school_copilot` v1), safeguarding messages never reach the model, evidence figures verified against the cited tool output. UI: header launcher (shown only when enabled) + panel in `src/features/ai/`. Without `ANTHROPIC_API_KEY` the gateway answers 503 `ai_provider_not_configured`. Docs: `docs/FUNDA_AI.md`. Real-stack test `supabase/stack-tests/funda-ai.mjs` (mock model API via `ANTHROPIC_BASE_URL`, after `fixtures.sql` + `funda-ai-fixtures.sql`) 50/50. No real model has been called; answer quality is unevaluated.
+
 Last green run (2026-10-08):
 
 - typecheck, lint and build pass;
-- 324 unit tests, RLS 956/956, real-stack 47/47 (reporting) + 34/34 (API, through the real Edge Function), Deno 31/31;
-- Playwright 368/368 (0 retries).
+- 330 unit tests, RLS 1018/1018, real-stack 47/47 (reporting) + 34/34 (API) + 50/50 (Funda AI), Deno 62/62;
+- Playwright: full run in progress at commit time; see the next commit.
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 
@@ -106,3 +108,4 @@ All code-side criteria are met. Merging to `main` applies new migrations (`migra
 10. **MFA for government reporting.** Confirm TOTP is enabled in hosted Auth (dashboard), then the platform owner and super-admin enrol an authenticator; until then they get `mfa_required` on `/district`, `/reports/government` and `/district/areas`.
 11. **Government reporting set-up.** A platform administrator creates the areas, links each real school to its district or circuit and creates/grants officials under Education Areas (`/district/areas`). Nothing is seeded; the current schools are demo data and must not be onboarded as government schools.
 12. **Government API.** Decide a retention period for `government_api_requests` (POPIA) before issuing production tokens; issue tokens only to named integration owners under `/district/integrations`.
+13. **Funda AI.** After merge: set the `ANTHROPIC_API_KEY` Edge Function secret, decide retention/budget (POPIA), then a platform admin (aal2) enables `copilot` and pilot schools via `ai_admin_update_feature` / `ai_admin_set_school`. Run an answer-quality evaluation before wider rollout.

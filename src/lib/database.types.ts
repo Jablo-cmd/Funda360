@@ -157,6 +157,89 @@ export type GovernmentApiRequestRow = {
   created_at: string;
 };
 
+// Funda AI (20261011090000_funda_ai_foundation). Content is never stored in
+// ai_requests / ai_tool_calls; conversations exist only when a feature's
+// store_content policy is on.
+export type AiFeatureRow = {
+  key: string;
+  name: string;
+  description: string | null;
+  enabled: boolean;
+  allowed_roles: string[];
+  allowed_tools: string[];
+  prompt_id: string;
+  model_tier: 'simple' | 'standard' | 'complex';
+  max_input_chars: number;
+  max_output_tokens: number;
+  user_requests_per_minute: number;
+  user_requests_per_day: number;
+  school_requests_per_day: number;
+  school_monthly_token_budget: number | null;
+  allow_without_school: boolean;
+  store_content: boolean;
+  content_retention_days: number;
+  audit_retention_days: number;
+  requires_human_approval: boolean;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export type AiSchoolSettingsRow = {
+  school_id: string;
+  enabled: boolean;
+  enabled_features: string[] | null;
+  monthly_token_budget: number | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export type AiRequestRow = {
+  id: string;
+  user_id: string;
+  school_id: string | null;
+  role: string;
+  feature: string;
+  status: 'authorized' | 'blocked' | 'succeeded' | 'failed' | 'safety_escalated';
+  block_reason: string | null;
+  client_request_id: string | null;
+  input_chars: number;
+  provider: string | null;
+  model: string | null;
+  model_tier: string | null;
+  prompt_id: string | null;
+  prompt_version: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  estimated_cost_micros: number | null;
+  tool_calls: number;
+  safety_flags: string[];
+  human_approval: 'not_required' | 'required' | 'approved' | 'rejected';
+  error_code: string | null;
+  duration_ms: number | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type AiToolCallRow = {
+  id: number;
+  request_id: string;
+  tool: string;
+  status: 'ok' | 'empty' | 'denied' | 'invalid_input' | 'invalid_output' | 'error';
+  duration_ms: number | null;
+  result_count: number | null;
+  error_code: string | null;
+  created_at: string;
+};
+
+export type AiFeedbackRow = {
+  id: string;
+  request_id: string;
+  user_id: string;
+  rating: 'helpful' | 'not_helpful' | 'problem';
+  comment: string | null;
+  created_at: string;
+};
+
 export type GovernmentImportJobRow = {
   id: string;
   client_id: string;
@@ -3513,6 +3596,26 @@ export type Database = {
       grant_education_official_school_access: {
         Args: { p_profile_id: string; p_school_id: string; p_learner_detail?: boolean; p_notes?: string | null };
         Returns: string;
+      };
+      ai_my_features: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      ai_submit_feedback: {
+        Args: { p_request_id: string; p_rating: 'helpful' | 'not_helpful' | 'problem'; p_comment?: string | null };
+        Returns: undefined;
+      };
+      ai_usage_summary: {
+        Args: { p_from: string | null; p_to: string | null; p_school_id?: string | null };
+        Returns: Json;
+      };
+      ai_admin_update_feature: {
+        Args: { p_key: string; p_patch: Json };
+        Returns: undefined;
+      };
+      ai_admin_set_school: {
+        Args: { p_school_id: string; p_enabled: boolean; p_enabled_features?: string[] | null; p_monthly_token_budget?: number | null };
+        Returns: undefined;
       };
       get_provincial_scope: {
         Args: Record<string, never>;

@@ -4,6 +4,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { MenuIcon, SearchIcon } from '@/components/ui/icons';
 import { UserMenu } from '@/components/layout/UserMenu';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
+import { FundaAiLauncher } from '@/features/ai/components/FundaAiLauncher';
 import { useSchool } from '@/features/school/hooks/useSchool';
 import { useAcademic } from '@/features/academic/hooks/useAcademic';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -92,6 +93,7 @@ export function DashboardHeader({ onMenuClick, onSearchClick }: DashboardHeaderP
             </kbd>
           </button>
         )}
+        <FundaAiLauncher />
         <div className="hidden h-9 w-px bg-border lg:block" />
         <NotificationBell to="/notifications" />
         <ThemeToggle className="hidden sm:inline-flex" />
