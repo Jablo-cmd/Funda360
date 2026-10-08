@@ -62,7 +62,7 @@ jobs:
           deno-version: v2.x
       - name: Type-check Edge Functions
         working-directory: supabase/functions
-        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts _shared/providers/providers.test.ts _shared/providers/binding.test.ts _shared/admissions/guards.test.ts
+        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts government-api/index.ts _shared/providers/providers.test.ts _shared/providers/binding.test.ts _shared/admissions/guards.test.ts _shared/government/api.test.ts
       - name: Lint Edge Functions
         working-directory: supabase/functions
         run: deno lint
@@ -202,6 +202,7 @@ jobs:
           npx supabase functions deploy payments-webhook --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
           npx supabase functions deploy admissions-public --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
           npx supabase functions deploy notifications-dispatch --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy government-api --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
 
   deploy:
     if: github.event_name == 'push'
