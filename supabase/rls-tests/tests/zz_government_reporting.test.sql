@@ -141,8 +141,9 @@ insert into public.education_official_assignments (profile_id, area_id, can_view
   ('e0000000-0000-0000-0000-000000000007', 'ea000000-0000-0000-0000-000000000011', true, true, null);
 
 -- Runs p_sql as the given identity; returns the jsonb result, or
--- {"error": message} when it raises.
-create or replace function test_util.gr_call(p_uid uuid, p_role text, p_tenant uuid, p_sql text)
+-- {"error": message} when it raises. p_aal is the session's Supabase Auth
+-- assurance level; 'aal2' (MFA completed) unless a test says otherwise.
+create or replace function test_util.gr_call(p_uid uuid, p_role text, p_tenant uuid, p_sql text, p_aal text default 'aal2')
 returns jsonb
 language plpgsql
 as $$
@@ -150,7 +151,8 @@ declare
   v jsonb;
   v_err text;
 begin
-  perform set_config('request.jwt.claims', test_util.jwt_claims(p_uid, p_role, p_tenant), true);
+  perform set_config('request.jwt.claims',
+    (test_util.jwt_claims(p_uid, p_role, p_tenant)::jsonb || jsonb_build_object('aal', p_aal))::text, true);
   execute 'set local role authenticated';
   begin
     execute p_sql into v;
@@ -543,4 +545,85 @@ begin
     get stacked diagnostics v_err = message_text;
   end;
   call test_util.record('gov: a circuit must sit under a district', v_err like 'invalid_argument%', v_err);
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Mandatory MFA for officials and platform administrators
+-- ---------------------------------------------------------------------------
+
+do $$
+declare
+  v jsonb;
+begin
+  v := test_util.gr_call('e0000000-0000-0000-0000-000000000001', 'education_official', null,
+    'select public.get_government_report(''{}''::jsonb)', 'aal1');
+  call test_util.record('mfa: official without MFA cannot read the district report',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('e0000000-0000-0000-0000-000000000001', 'education_official', null,
+    'select public.get_reporting_scope()', 'aal1');
+  call test_util.record('mfa: official without MFA cannot read their reporting scope',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('e0000000-0000-0000-0000-000000000001', 'education_official', null,
+    'select public.get_school_report(''ec000000-0000-0000-0000-000000000001''::uuid, ''{}''::jsonb)', 'aal1');
+  call test_util.record('mfa: official without MFA cannot drill into a school',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('e0000000-0000-0000-0000-000000000002', 'education_official', null,
+    'select public.get_class_learner_report(''ef000000-0000-0000-0000-000000000002''::uuid, ''{}''::jsonb)', 'aal1');
+  call test_util.record('mfa: official with the learner grant but no MFA cannot list learners',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('e0000000-0000-0000-0000-000000000001', 'education_official', null,
+    'select to_jsonb(public.record_government_report_export(''school_summary'', ''csv'', ''{}''::jsonb))', 'aal1');
+  call test_util.record('mfa: official without MFA cannot record an export',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('e0000000-0000-0000-0000-000000000001', 'education_official', null,
+    'select to_jsonb((select count(*) from public.education_areas))', 'aal1');
+  call test_util.record('mfa: official without MFA sees no education areas', v::text = '0', v::text);
+
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select public.get_government_report(''{}''::jsonb)', 'aal1');
+  call test_util.record('mfa: platform administrator without MFA cannot read reports',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select to_jsonb(public.grant_education_official_access(''e0000000-0000-0000-0000-000000000004'', ''ea000000-0000-0000-0000-000000000021'', true))', 'aal1');
+  call test_util.record('mfa: platform administrator without MFA cannot grant access',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select to_jsonb(public.provision_education_official(''nomfa@department.test'', ''No'', ''Mfa''))', 'aal1');
+  call test_util.record('mfa: platform administrator without MFA cannot create official accounts',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select to_jsonb(public.set_school_education_area(''ec000000-0000-0000-0000-000000000003'', ''ea000000-0000-0000-0000-000000000011''))', 'aal1');
+  call test_util.record('mfa: platform administrator without MFA cannot move a school between areas',
+    coalesce(v ->> 'error', '') like 'mfa_required%', v::text);
+
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select to_jsonb((select count(*) from public.education_official_assignments))', 'aal1');
+  call test_util.record('mfa: platform administrator without MFA cannot list officials'' access grants', v::text = '0', v::text);
+
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select to_jsonb((select count(*) from public.schools))', 'aal1');
+  call test_util.record('mfa: the requirement is scoped to reporting; other platform administration is unchanged',
+    (v #>> '{}')::int >= 2, v::text);
+
+  v := test_util.gr_call('e0000000-0000-0000-0000-000000000001', 'education_official', null,
+    'select public.get_government_report(''{}''::jsonb)', 'aal2');
+  call test_util.record('mfa: the same official with an MFA session gets their district',
+    test_util.gr_ids(v) = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa,ec000000-0000-0000-0000-000000000001', v::text);
+
+  v := test_util.gr_call('22222222-2222-2222-2222-222222222222', 'school_owner', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'select public.get_government_report(''{}''::jsonb)', 'aal1');
+  call test_util.record('mfa: school owner reporting on their own school is unchanged',
+    test_util.gr_ids(v) = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', v::text);
+
+  v := test_util.gr_call('e0000000-0000-0000-0000-000000000001', 'education_official', null,
+    'select to_jsonb((select count(*) from public.education_official_assignments))', 'aal1');
+  call test_util.record('mfa: an official can still see their own access grants before setting up MFA', v::text = '1', v::text);
 end $$;

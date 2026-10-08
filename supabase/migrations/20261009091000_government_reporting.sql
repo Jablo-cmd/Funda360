@@ -28,7 +28,76 @@
 --   stored twice. Thresholds are request parameters with Funda360 defaults
 --   (attendance 80%, performance 50%); they are not official standards.
 --
+-- * Mandatory MFA (section 0). Education officials and platform
+--   administrators must hold an aal2 session (a verified TOTP factor,
+--   challenged in this session) for every reporting function, every
+--   reporting admin action and the area hierarchy. Without it the
+--   functions raise "mfa_required". School owners and principals are
+--   unchanged (their own school only, same rules as the rest of the app).
+--
 -- No existing table, policy or function is dropped or weakened.
+
+-- ===========================================================================
+-- 0. Mandatory MFA for privileged reporting roles
+-- ===========================================================================
+
+-- aal2 comes from Supabase Auth: it is set in the JWT only after the user
+-- has completed a TOTP challenge in this session.
+create or replace function public.session_is_aal2()
+returns boolean
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2'
+$$;
+
+-- Roles that see across schools and therefore must use MFA here.
+create or replace function public.is_privileged_reporting_role()
+returns boolean
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') in
+    ('platform_owner', 'super_administrator', 'platform_administrator', 'education_official')
+$$;
+
+-- A platform administrator, for reporting purposes: also requires aal2.
+-- Everywhere else in the app is_platform_admin() is unchanged.
+create or replace function public.reporting_platform_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.is_platform_admin() and public.session_is_aal2()
+$$;
+
+-- Raises a distinct, user-facing error so the app can send the user to MFA
+-- set-up instead of showing a generic permission message.
+create or replace function public.reporting_require_mfa()
+returns void
+language plpgsql
+stable
+set search_path = public
+as $$
+begin
+  if public.is_privileged_reporting_role() and not public.session_is_aal2() then
+    raise exception 'mfa_required: two-factor authentication is required for government reporting. Set it up under My Profile.';
+  end if;
+end;
+$$;
+
+revoke execute on function public.session_is_aal2() from public, anon;
+revoke execute on function public.is_privileged_reporting_role() from public, anon;
+revoke execute on function public.reporting_platform_admin() from public, anon;
+revoke execute on function public.reporting_require_mfa() from public, anon;
+grant execute on function public.session_is_aal2() to authenticated;
+grant execute on function public.is_privileged_reporting_role() to authenticated;
+grant execute on function public.reporting_platform_admin() to authenticated;
+grant execute on function public.reporting_require_mfa() to authenticated;
 
 -- ===========================================================================
 -- 1. Hierarchy
@@ -116,8 +185,11 @@ begin
   if tg_op = 'INSERT' and new.education_area_id is null then
     return new;
   end if;
-  if auth.uid() is not null and not public.is_platform_admin() then
-    raise exception 'insufficient_privilege: only a platform administrator can change a school''s education area';
+  if auth.uid() is not null then
+    perform public.reporting_require_mfa();
+    if not public.reporting_platform_admin() then
+      raise exception 'insufficient_privilege: only a platform administrator can change a school''s education area';
+    end if;
   end if;
   if new.education_area_id is not null then
     select level into v_level from public.education_areas where id = new.education_area_id;
@@ -203,9 +275,9 @@ as $$
   select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'education_official'
     and exists (
       select 1 from public.profiles p
-      where p.id = auth.uid() and p.status = 'active' and p.role = 'education_official'
+      where p.id = auth.uid() and p.status = 'active' and p.role::text = 'education_official'
     )
-    and public.session_mfa_satisfied()
+    and public.session_is_aal2()
 $$;
 
 -- Every area the caller may report on: each active assignment plus all
@@ -238,7 +310,7 @@ security definer
 set search_path = public
 as $$
   with recursive base as (
-    select id from public.education_areas where public.is_platform_admin()
+    select id from public.education_areas where public.reporting_platform_admin()
     union
     select unnest(public.official_area_ids())
     union
@@ -265,7 +337,7 @@ security definer
 set search_path = public
 as $$
   select case
-    when public.is_platform_admin() then
+    when public.reporting_platform_admin() then
       (select coalesce(array_agg(id), '{}') from public.schools)
     when public.is_education_official() then
       (select coalesce(array_agg(s.id), '{}') from public.schools s
@@ -285,7 +357,7 @@ security definer
 set search_path = public
 as $$
   select case
-    when public.is_platform_admin() then 'platform'
+    when public.reporting_platform_admin() then 'platform'
     when public.is_education_official() then 'official'
     when public.current_tenant_id() is not null and public.can_manage_academic(public.current_tenant_id()) then 'school'
     else null
@@ -302,7 +374,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.is_platform_admin()
+  select public.reporting_platform_admin()
     or (p_school_id = public.current_tenant_id() and public.can_manage_academic(p_school_id))
     or (
       public.is_education_official()
@@ -335,7 +407,7 @@ create policy education_areas_select on public.education_areas
 
 create policy education_official_assignments_select on public.education_official_assignments
   for select to authenticated
-  using ((select public.is_platform_admin()) or profile_id = (select auth.uid()));
+  using ((select public.reporting_platform_admin()) or profile_id = (select auth.uid()));
 
 grant select on public.education_areas to authenticated;
 grant select on public.education_official_assignments to authenticated;
@@ -361,6 +433,7 @@ declare
   v_school uuid;
   v_result uuid[];
 begin
+  perform public.reporting_require_mfa();
   if v_kind is null then
     raise exception 'insufficient_privilege: no reporting access';
   end if;
@@ -552,6 +625,7 @@ declare
   v_schools uuid[];
   v_areas uuid[];
 begin
+  perform public.reporting_require_mfa();
   if v_kind is null then
     raise exception 'insufficient_privilege: no reporting access';
   end if;
@@ -1134,7 +1208,8 @@ as $$
 declare
   v_id uuid;
 begin
-  if not public.is_platform_admin() then
+  perform public.reporting_require_mfa();
+  if not public.reporting_platform_admin() then
     raise exception 'insufficient_privilege: only a platform administrator can manage education areas';
   end if;
   if p_id is null then
@@ -1165,7 +1240,8 @@ as $$
 declare
   v_before uuid;
 begin
-  if not public.is_platform_admin() then
+  perform public.reporting_require_mfa();
+  if not public.reporting_platform_admin() then
     raise exception 'insufficient_privilege: only a platform administrator can link schools to education areas';
   end if;
   select education_area_id into v_before from public.schools where id = p_school_id;
@@ -1190,7 +1266,8 @@ declare
   v_id uuid := gen_random_uuid();
   v_password text := encode(gen_random_bytes(18), 'base64');
 begin
-  if not public.is_platform_admin() then
+  perform public.reporting_require_mfa();
+  if not public.reporting_platform_admin() then
     raise exception 'insufficient_privilege: only a platform administrator can create education official accounts';
   end if;
   perform public.check_rate_limit('account_provisioning', 20, interval '1 hour');
@@ -1236,11 +1313,12 @@ as $$
 declare
   v_id uuid;
 begin
-  if not public.is_platform_admin() then
+  perform public.reporting_require_mfa();
+  if not public.reporting_platform_admin() then
     raise exception 'insufficient_privilege: only a platform administrator can grant reporting access';
   end if;
   if not exists (select 1 from public.profiles p
-                 where p.id = p_profile_id and p.role = 'education_official' and p.status = 'active') then
+                 where p.id = p_profile_id and p.role::text = 'education_official' and p.status = 'active') then
     raise exception 'invalid_argument: access can only be granted to an active education official';
   end if;
   if not exists (select 1 from public.education_areas where id = p_area_id) then
@@ -1271,7 +1349,8 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.is_platform_admin() then
+  perform public.reporting_require_mfa();
+  if not public.reporting_platform_admin() then
     raise exception 'insufficient_privilege: only a platform administrator can revoke reporting access';
   end if;
   update public.education_official_assignments
