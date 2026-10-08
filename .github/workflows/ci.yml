@@ -9,12 +9,13 @@ on:
 # Cancel superseded runs on the same branch/PR so pushes don't queue behind
 # stale ones.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
   quality:
     name: Typecheck, lint, unit tests, build
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +55,7 @@ jobs:
 
   edge-functions:
     name: Edge Function (Deno) tests
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +74,7 @@ jobs:
 
   rls-tests:
     name: RLS / trigger / SECURITY DEFINER regression suite
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,6 +88,7 @@ jobs:
 
   e2e:
     name: Playwright end-to-end suite
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     env:
       # The e2e suite is fully network-mocked and never reaches a real

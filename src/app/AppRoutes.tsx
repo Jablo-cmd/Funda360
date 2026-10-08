@@ -252,6 +252,7 @@ const TimetablePage = named(
 );
 const TransportPage = named(() => import('@/features/transport/pages/TransportPage'), 'TransportPage');
 const OperationsHubPage = named(() => import('@/features/operations/pages/OperationsHubPage'), 'OperationsHubPage');
+const Funda360NextPage = named(() => import('@/features/intelligence/pages/Funda360NextPage'), 'Funda360NextPage');
 const AssessmentReportPage = named(
   () => import('@/features/reports/pages/AssessmentReportPage'),
   'AssessmentReportPage',
@@ -410,6 +411,7 @@ export function AppRoutes() {
               </Route>
               <Route element={<RequirePermission permission="operations.view" />}>
                 <Route path="/operations" element={<OperationsHubPage />} />
+                <Route path="/intelligence" element={<Funda360NextPage />} />
               </Route>
 
               <Route element={<RequirePermission permission="guardian.view" />}>
