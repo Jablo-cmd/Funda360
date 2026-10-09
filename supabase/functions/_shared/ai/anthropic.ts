@@ -6,7 +6,8 @@
 //   output_config.format (json_schema).
 // * Refused requests are re-run by the API on Anthropic's recommended
 //   fallback model when the route enables it (fallbacks: "default").
-// * The SDK handles retries (408/409/429/5xx) and the timeout.
+// * The SDK handles retries (408/409/429/5xx) and the per-call timeout; the
+//   gateway's deadline signal aborts the call and any remaining retries.
 // * The assistant turn is kept verbatim (raw) so a tool loop replays it
 //   unchanged, as the API requires for reasoning blocks.
 
@@ -64,6 +65,8 @@ function stopReasonOf(reason: string | null | undefined): StopReason {
 /** Maps SDK errors to provider-neutral kinds; the message never carries request content. */
 export function mapAnthropicError(error: unknown): ProviderError {
   if (error instanceof ProviderError) return error;
+  // Must precede the APIError checks: it is a subclass.
+  if (error instanceof Anthropic.APIUserAbortError) return new ProviderError('timeout', 'The request deadline passed.', false);
   if (error instanceof Anthropic.APIConnectionTimeoutError) return new ProviderError('timeout', 'The AI provider timed out.', true);
   if (error instanceof Anthropic.RateLimitError) return new ProviderError('rate_limited', 'The AI provider is rate limiting requests.', true);
   if (error instanceof Anthropic.AuthenticationError || error instanceof Anthropic.PermissionDeniedError) {
@@ -120,7 +123,7 @@ export function createAnthropicProvider(apiKey: string, options: { maxRetries?: 
       try {
         response = await client.beta.messages.create(
           params as unknown as Anthropic.Beta.MessageCreateParamsNonStreaming,
-          { timeout: request.timeoutMs },
+          { timeout: request.timeoutMs, signal: request.signal },
         );
       } catch (error) {
         throw mapAnthropicError(error);

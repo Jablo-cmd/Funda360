@@ -28,9 +28,10 @@ insert into public.assessment_results (school_id, assessment_id, learner_id, mar
 
 -- Funda AI on for R1 and R2 only.
 update public.ai_features set enabled = true where key = 'copilot';
-insert into public.ai_school_settings (school_id, enabled) values
-  ('ec000000-0000-0000-0000-000000000001', true),
-  ('ec000000-0000-0000-0000-000000000002', true);
+-- A school's feature list is explicit (empty = none).
+insert into public.ai_school_settings (school_id, enabled, enabled_features) values
+  ('ec000000-0000-0000-0000-000000000001', true, array['copilot', 'stack_family_test', 'stack_rate_test']),
+  ('ec000000-0000-0000-0000-000000000002', true, array['copilot', 'stack_family_test', 'stack_rate_test']);
 
 -- A test-only feature that admits family roles, to show the tool registry
 -- still refuses them every tool.
@@ -41,6 +42,16 @@ values ('stack_family_test', 'Stack family test', 'Test only', true, array['pare
 
 -- The bulk of the test sends many requests per user; a separate feature
 -- with a limit of 2 per minute checks the distributed rate limit.
-update public.ai_features set user_requests_per_minute = 120, user_requests_per_day = 10000 where key = 'copilot';
+update public.ai_features set user_requests_per_minute = 120, user_requests_per_day = 10000,
+       school_monthly_token_budget = 1000000000, user_monthly_token_budget = 1000000000 where key = 'copilot';
 insert into public.ai_features (key, name, description, enabled, allowed_roles, allowed_tools, prompt_id, model_tier, user_requests_per_minute)
 values ('stack_rate_test', 'Stack rate test', 'Test only', true, array['principal'], array[]::text[], 'school_copilot', 'simple', 2);
+
+-- Budget reservation test: school R4 with a 5,000-token budget and a feature
+-- that reserves 1,000 tokens per request, so at most 5 can run at once.
+insert into public.schools (id, name, status) values ('ec000000-0000-0000-0000-000000000004', 'Budget Test School', 'active');
+insert into public.ai_features (key, name, description, enabled, allowed_roles, allowed_tools, prompt_id, model_tier,
+                                user_requests_per_minute, request_token_reservation)
+values ('stack_budget_test', 'Stack budget test', 'Test only', true, array['principal'], array[]::text[], 'school_copilot', 'simple', 120, 1000);
+insert into public.ai_school_settings (school_id, enabled, enabled_features, monthly_token_budget)
+values ('ec000000-0000-0000-0000-000000000004', true, array['stack_budget_test'], 5000);

@@ -60,9 +60,24 @@ export function AiAnswerCard({ answer }: { answer: AiAnswer }) {
         )}
       </div>
 
-      <p className="whitespace-pre-line break-words text-sm text-content-primary">
-        {answer.answer}
-      </p>
+      {answer.answerWithheld ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-warning-500/40 bg-warning-50 px-3 py-2.5 text-sm text-warning-600 dark:bg-warning-500/15 dark:text-warning-500"
+        >
+          <p className="font-semibold">Answer not shown</p>
+          <p className="mt-1 break-words">{answer.answer}</p>
+          {answer.unsupportedFigures.length > 0 && (
+            <p className="mt-1 break-words">
+              Figures that could not be checked: {answer.unsupportedFigures.join(', ')}
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="whitespace-pre-line break-words text-sm text-content-primary">
+          {answer.answer}
+        </p>
+      )}
 
       {answer.evidence.length > 0 && (
         <section aria-label="Evidence">
@@ -85,7 +100,9 @@ export function AiAnswerCard({ answer }: { answer: AiAnswer }) {
                       : 'border-warning-500/40 bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500',
                   )}
                 >
-                  {item.verified ? 'Matches Funda360 data' : 'Not verified'}
+                  {item.verified
+                    ? 'Matches Funda360 data'
+                    : 'Rejected: does not match the cited data'}
                 </span>
               </li>
             ))}

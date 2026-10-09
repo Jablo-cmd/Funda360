@@ -1,32 +1,62 @@
 // Funda AI gateway: the only path from a Funda360 user to a model.
 //
 //   browser --(user JWT)--> funda-ai Edge Function --> handleFundaAi()
-//     1. ai_authorize_request() as the user: flags, role, school, limits,
-//        budget. Every decision is recorded in ai_requests.
-//     2. Safety screen. Safeguarding signals end the request with fixed
-//        guidance; no model call.
-//     3. Prompt from the code registry; model route from configuration.
-//     4. Model <-> tool loop. Tools run as the user (RLS) and their output is
+//     1. ai_authorize_request() as the user: flags, role, school, input and
+//        history sizes, rate limits, budget pre-check, under per-user and
+//        per-school locks. Every decision is recorded in ai_requests.
+//     2. ai_start_request() (service role): reserves budget for this request
+//        and returns its policy. Single use.
+//     3. Safety: every turn (message AND history) is screened. Safeguarding
+//        signals end the request with fixed guidance; medical content is
+//        blocked unless the feature allows it; SA ID numbers are redacted.
+//        No model call happens for blocked or escalated requests.
+//     4. Prompt from the code registry; model route from configuration.
+//     5. Model <-> tool loop under ONE deadline for the whole request (all
+//        turns and retries). Tools run as the user (RLS); their output is
 //        passed back as labelled untrusted data.
-//     5. Output validated against the prompt's schema; evidence figures are
-//        checked against the tool outputs they cite.
-//     6. Usage, tool calls and outcome recorded (service role, no content);
-//        content stored only if the feature's policy allows it.
+//     6. Output validated against the prompt's schema; each evidence item is
+//        checked at the exact field it cites; numbers in the answer that are
+//        not verified evidence cause the answer to be withheld.
+//     7. Settlement: usage, tool calls and outcome recorded (service role, no
+//        content). If a provider call was cut off, usage is unknown and the
+//        reservation stays charged. Content stored only if policy allows.
 //
 // The model never writes anything: there are no write tools.
 
 import { corsHeaders } from '../cors.ts';
 import type { ReadOnlyData } from './data.ts';
+import {
+  type CheckedEvidence,
+  type Confidence,
+  decideConfidence,
+  type EvidenceItem,
+  unsupportedFigures,
+  verifyEvidence,
+} from './evidence.ts';
 import { getActivePrompt, renderSystemPrompt } from './prompts.ts';
 import { type AiMessage, type AiProvider, ProviderError, type Usage } from './provider.ts';
 import { estimateCostMicros, type ModelPrice, type ModelRoute, type ModelTier } from './routing.ts';
-import { containsInjection, SAFEGUARDING_GUIDANCE, type SafetyFlag, screenUserInput, wrapToolResult } from './safety.ts';
+import {
+  containsInjection,
+  MEDICAL_NOTICE,
+  redactIdentifiers,
+  SAFEGUARDING_GUIDANCE,
+  type SafetyFlag,
+  screenConversation,
+  wrapToolResult,
+} from './safety.ts';
 import { type JsonSchema, validate } from './schema.ts';
 import { type Principal, type ToolRegistry, type ToolStatus } from './tools.ts';
+
+export { normaliseFigure, verifyEvidence } from './evidence.ts';
 
 export const MAX_BODY_BYTES = 64 * 1024;
 export const MAX_MODEL_TURNS = 5;
 export const MAX_TOOL_CALLS = 8;
+/** Below this, another model call cannot finish before the deadline. */
+export const MIN_CALL_MS = 3_000;
+/** Free plan: 150 s worker wall clock; leave room to settle and reply. */
+export const DEFAULT_DEADLINE_MS = 110_000;
 
 export interface Policy {
   feature: string;
@@ -34,22 +64,31 @@ export interface Policy {
   model_tier: ModelTier;
   allowed_tools: string[];
   max_input_chars: number;
+  max_history_chars: number;
   max_output_tokens: number;
+  medical_content_policy: 'block' | 'allow';
   store_content: boolean;
   content_retention_days: number;
   requires_human_approval: boolean;
 }
 
+/** What ai_authorize_request returns to its caller: no policy details. */
 export interface Authorization {
   allowed: boolean;
   reason?: string;
   request_id?: string;
+}
+
+/** What ai_start_request (service role) returns. */
+export interface StartResult {
+  ok: boolean;
+  reason?: string;
   principal?: { user_id: string; school_id: string | null; role: string };
   policy?: Policy;
 }
 
 export interface Completion {
-  status: 'succeeded' | 'failed' | 'safety_escalated';
+  status: 'succeeded' | 'failed' | 'safety_escalated' | 'policy_blocked';
   provider: string | null;
   model: string | null;
   promptId: string | null;
@@ -60,11 +99,21 @@ export interface Completion {
   durationMs: number;
   safetyFlags: string[];
   errorCode: string | null;
+  /** A provider call was cut off: the provider may have billed tokens we never saw. */
+  usageUnknown: boolean;
 }
 
 export interface GatewayDeps {
   /** Calls ai_authorize_request as the user. */
-  authorize(jwt: string, feature: string, inputChars: number, clientRequestId: string | null): Promise<{ data: Authorization | null; error: { status?: number; code?: string } | null }>;
+  authorize(
+    jwt: string,
+    feature: string,
+    inputChars: number,
+    historyChars: number,
+    clientRequestId: string | null,
+  ): Promise<{ data: Authorization | null; error: { status?: number; code?: string } | null }>;
+  /** Calls ai_start_request with the service role. */
+  startRequest(requestId: string): Promise<StartResult>;
   /** Read-only data access as the user. */
   userData(jwt: string): ReadOnlyData;
   /** Service-role audit writes. */
@@ -75,6 +124,8 @@ export interface GatewayDeps {
   routes: Record<ModelTier, ModelRoute[]>;
   pricing: Record<string, ModelPrice>;
   tools: ToolRegistry;
+  /** Total time allowed for one request, all model turns and retries included. */
+  deadlineMs: number;
   now(): Date;
   log(event: Record<string, unknown>): void;
 }
@@ -109,18 +160,11 @@ interface Body {
   client_request_id?: string;
 }
 
-interface EvidenceItem {
-  claim: string;
-  value: string;
-  period: string;
-  source_tool_call: string;
-}
-
 interface ModelAnswer {
   answer: string;
   evidence: EvidenceItem[];
   limitations: string[];
-  confidence: 'low' | 'medium' | 'high';
+  confidence: Confidence;
   follow_up_questions: string[];
   declined_actions: string[];
 }
@@ -148,41 +192,16 @@ const PROVIDER_STATUS: Record<string, { status: number; code: string }> = {
   unknown: { status: 502, code: 'ai_failed' },
 };
 
+/** Provider errors after which the provider may still have billed the call. */
+const USAGE_UNKNOWN_KINDS = new Set(['timeout', 'unavailable', 'unknown']);
+
+export const WITHHELD_ANSWER =
+  'Funda AI\'s answer included figures that could not be matched to your Funda360 data, so it is not shown. The figures that were checked are listed below.';
+
 function reply(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-  });
-}
-
-/** Comparable form of a figure: "R 1 234,50" / "1234.5" / "85%" -> "1234.5" / "85". */
-export function normaliseFigure(value: unknown): string | null {
-  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : null;
-  if (typeof value !== 'string') return null;
-  const stripped = value.trim().replace(/^R\s*/i, '').replace(/%$/, '').replace(/[\s ]/g, '');
-  const numeric = stripped.replace(/,(?=\d{3}(\D|$))/g, '').replace(/,/g, '.');
-  if (/^-?\d+(\.\d+)?$/.test(numeric)) return String(Number(numeric));
-  return value.trim().toLowerCase();
-}
-
-function collectFigures(value: unknown, out: Set<string>) {
-  if (Array.isArray(value)) value.forEach((v) => collectFigures(v, out));
-  else if (value && typeof value === 'object') Object.values(value).forEach((v) => collectFigures(v, out));
-  else {
-    const n = normaliseFigure(value);
-    if (n !== null) out.add(n);
-  }
-}
-
-/** Marks each evidence item verified when its value appears in the output of the tool call it cites. */
-export function verifyEvidence(evidence: EvidenceItem[], toolOutputs: Map<string, unknown>) {
-  return evidence.map((item) => {
-    const output = toolOutputs.get(item.source_tool_call);
-    if (output === undefined) return { ...item, verified: false };
-    const figures = new Set<string>();
-    collectFigures(output, figures);
-    const value = normaliseFigure(item.value);
-    return { ...item, verified: value !== null && figures.has(value) };
   });
 }
 
@@ -193,6 +212,9 @@ function johannesburgDate(now: Date): string {
 export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
   if (req.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
+
+  const started = Date.now();
+  const deadlineAt = started + deps.deadlineMs;
 
   const auth = req.headers.get('authorization') ?? '';
   const jwt = /^Bearer\s+(\S+)$/i.exec(auth)?.[1];
@@ -214,29 +236,52 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
     return reply({ error: 'invalid_request', details: ['$.history: turns must alternate user/assistant'] }, 400);
   }
 
-  const started = Date.now();
-  const inputChars = body.message.length + history.reduce((n, h) => n + h.text.length, 0);
+  // The new message and the history have separate allowances.
+  const historyChars = history.reduce((n, h) => n + h.text.length, 0);
 
   // 1. Policy gate, as the user.
-  const { data: decision, error: authError } = await deps.authorize(jwt, body.feature, inputChars, body.client_request_id ?? null);
+  const { data: decision, error: authError } = await deps.authorize(
+    jwt,
+    body.feature,
+    body.message.length,
+    historyChars,
+    body.client_request_id ?? null,
+  );
   if (authError || !decision) {
     if (authError?.status === 401 || authError?.code === 'PGRST301') return reply({ error: 'not_authenticated' }, 401);
     deps.log({ event: 'funda_ai.policy_unavailable', code: authError?.code ?? null });
     return reply({ error: 'ai_policy_unavailable' }, 503);
   }
-  if (!decision.allowed || !decision.policy || !decision.principal || !decision.request_id) {
+  if (!decision.allowed || !decision.request_id) {
     const reason = decision.reason ?? 'feature_disabled';
     deps.log({ event: 'funda_ai.blocked', feature: body.feature, reason, request_id: decision.request_id ?? null });
     return reply({ error: reason, request_id: decision.request_id ?? null }, REASON_STATUS[reason] ?? 403);
   }
-
   const requestId = decision.request_id;
-  const policy = decision.policy;
-  const principal: Principal = { userId: decision.principal.user_id, schoolId: decision.principal.school_id, role: decision.principal.role };
+
+  // 2. Reserve budget and load the policy (service role).
+  let start: StartResult;
+  try {
+    start = await deps.startRequest(requestId);
+  } catch {
+    deps.log({ event: 'funda_ai.start_failed', request_id: requestId });
+    return reply({ error: 'ai_policy_unavailable', request_id: requestId }, 503);
+  }
+  if (!start.ok || !start.policy || !start.principal) {
+    const reason = start.reason === 'budget_exhausted' ? 'budget_exhausted' : 'ai_unavailable';
+    deps.log({ event: 'funda_ai.blocked', feature: body.feature, reason, request_id: requestId });
+    return reply({ error: reason, request_id: requestId }, reason === 'budget_exhausted' ? 429 : 503);
+  }
+
+  const policy = start.policy;
+  const principal: Principal = { userId: start.principal.user_id, schoolId: start.principal.school_id, role: start.principal.role };
   const flags = new Set<SafetyFlag>();
   let usage: Usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
   let served: { provider: string; model: string } | null = null;
+  let usageUnknown = false;
   const prompt = getActivePrompt(policy.prompt_id);
+  const deadline = new AbortController();
+  const timer = setTimeout(() => deadline.abort(), Math.max(0, deadlineAt - Date.now()));
 
   const finish = async (status: Completion['status'], errorCode: string | null) => {
     const price = served ? deps.pricing[served.model] : undefined;
@@ -252,10 +297,12 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       durationMs: Date.now() - started,
       safetyFlags: [...flags],
       errorCode,
+      usageUnknown,
     };
     try {
       await deps.completeRequest(requestId, completion);
     } catch {
+      // The stale-request sweep closes it later, keeping the reservation charged.
       deps.log({ event: 'funda_ai.audit_write_failed', request_id: requestId });
     }
     // Telemetry: identifiers, counts and codes only; never content.
@@ -271,25 +318,35 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       prompt_version: completion.promptVersion,
       input_tokens: completion.inputTokens,
       output_tokens: completion.outputTokens,
+      usage_unknown: usageUnknown,
       duration_ms: completion.durationMs,
       safety_flags: completion.safetyFlags,
     });
   };
 
   try {
-    // 2. Safety screen.
-    const screen = screenUserInput(body.message);
+    // 3. Safety: every turn, before anything leaves Funda360.
+    const screen = screenConversation([body.message, ...history.map((h) => h.text)]);
     screen.flags.forEach((f) => flags.add(f));
     if (screen.escalate) {
       await finish('safety_escalated', `safeguarding_${screen.escalate}`);
-      return reply({
-        kind: 'safeguarding',
-        request_id: requestId,
-        message: SAFEGUARDING_GUIDANCE[screen.escalate],
-      });
+      return reply({ kind: 'safeguarding', request_id: requestId, message: SAFEGUARDING_GUIDANCE[screen.escalate] });
     }
+    if (flags.has('medical_topic') && policy.medical_content_policy !== 'allow') {
+      await finish('policy_blocked', 'medical_content_blocked');
+      return reply({ kind: 'policy_notice', request_id: requestId, message: MEDICAL_NOTICE });
+    }
+    let redactions = 0;
+    const redact = (text: string) => {
+      const r = redactIdentifiers(text);
+      redactions += r.count;
+      return r.text;
+    };
+    const message = redact(body.message);
+    const turns = history.map((h) => ({ role: h.role, text: redact(h.text) }));
+    if (redactions > 0) flags.add('personal_identifier_redacted');
 
-    // 3. Prompt and route.
+    // 4. Prompt and route.
     if (!prompt) {
       await finish('failed', 'prompt_not_found');
       return reply({ error: 'ai_unavailable', request_id: requestId }, 503);
@@ -309,16 +366,23 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       tools: tools.length > 0 ? tools.map((t) => t.name).join(', ') : 'none',
     });
 
-    const messages: AiMessage[] = history.map((h) => ({ role: h.role, content: [{ type: 'text', text: h.text }] }));
-    messages.push({ role: 'user', content: [{ type: 'text', text: body.message }] });
+    const messages: AiMessage[] = turns.map((h) => ({ role: h.role, content: [{ type: 'text', text: h.text }] }));
+    messages.push({ role: 'user', content: [{ type: 'text', text: message }] });
 
     const toolCtx = { data: deps.userData(jwt), principal, today };
     const toolOutputs = new Map<string, unknown>();
     const toolsUsed: { tool: string; status: ToolStatus }[] = [];
     let routeIndex = 0;
 
-    // 4. Model <-> tool loop.
+    const deadlineExceeded = async () => {
+      await finish('failed', 'deadline_exceeded');
+      return reply({ error: 'ai_timeout', request_id: requestId }, 504);
+    };
+
+    // 5. Model <-> tool loop, under one deadline.
     for (let turn = 0; turn < MAX_MODEL_TURNS; turn++) {
+      const remaining = deadlineAt - Date.now();
+      if (remaining < MIN_CALL_MS || deadline.signal.aborted) return await deadlineExceeded();
       const route = routes[routeIndex];
       let result;
       try {
@@ -331,10 +395,13 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
           maxOutputTokens: policy.max_output_tokens,
           effort: route.effort,
           refusalFallback: route.refusalFallback,
-          timeoutMs: route.timeoutMs,
+          timeoutMs: Math.min(route.timeoutMs, remaining),
+          signal: deadline.signal,
         });
       } catch (error) {
         const pe = error instanceof ProviderError ? error : new ProviderError('unknown', 'provider call failed');
+        if (USAGE_UNKNOWN_KINDS.has(pe.kind)) usageUnknown = true;
+        if (deadline.signal.aborted) return await deadlineExceeded();
         // Fall back to the next route only before the conversation is bound to a provider.
         if (turn === 0 && pe.retryable && routeIndex + 1 < routes.length) {
           routeIndex += 1;
@@ -369,6 +436,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         const results: AiMessage['content'] = [];
         for (const call of calls) {
           if (call.type !== 'tool_call') continue;
+          if (deadline.signal.aborted) return await deadlineExceeded();
           if (toolsUsed.length >= MAX_TOOL_CALLS) {
             results.push({ type: 'tool_result', toolCallId: call.id, content: wrapToolResult(call.id, call.name, { error: 'tool_call_limit_reached' }), isError: true });
             continue;
@@ -395,7 +463,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         continue;
       }
 
-      // 5. Final answer.
+      // 6. Final answer.
       const text = result.content.filter((b) => b.type === 'text').map((b) => (b.type === 'text' ? b.text : '')).join('');
       let answer: ModelAnswer;
       try {
@@ -409,19 +477,30 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         return reply({ error: 'ai_invalid_output', request_id: requestId }, 502);
       }
 
-      const evidence = verifyEvidence(answer.evidence, toolOutputs);
+      const evidence: CheckedEvidence[] = verifyEvidence(answer.evidence, toolOutputs);
+      const unsupported = unsupportedFigures(answer.answer, message, evidence);
+      const withheld = unsupported.length > 0;
+      const toolsReturnedData = toolsUsed.some((t) => t.status === 'ok');
+      const confidence = decideConfidence({ model: answer.confidence, evidence, toolsReturnedData, unsupported: unsupported.length });
       const limitations = [...answer.limitations];
       if (evidence.some((e) => !e.verified)) {
-        limitations.push('Some figures could not be matched to the Funda360 data returned for this question. Check them before relying on them.');
+        limitations.push('Some figures did not match the Funda360 data they cited and are marked as rejected. Do not rely on them.');
       }
+      if (toolsReturnedData && !evidence.some((e) => e.verified)) {
+        limitations.push('No figure in this answer could be checked against your Funda360 data.');
+      }
+      if (withheld) flags.add('unsupported_figures');
+      const answerText = withheld ? WITHHELD_ANSWER : answer.answer;
       const response = {
         kind: 'answer',
         request_id: requestId,
         conversation_id: null as string | null,
-        answer: answer.answer,
+        answer: answerText,
+        answer_withheld: withheld,
+        unsupported_figures: unsupported,
         evidence,
         limitations,
-        confidence: evidence.some((e) => !e.verified) ? 'low' : answer.confidence,
+        confidence,
         follow_up_questions: answer.follow_up_questions,
         declined_actions: answer.declined_actions,
         tools_used: toolsUsed,
@@ -429,14 +508,15 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         generated_by: { provider: result.provider, model: result.model, prompt: prompt.id, prompt_version: prompt.version },
       };
 
-      // 6. Record; store content only when the policy allows it.
-      await finish('succeeded', null);
+      // 7. Settle; store content only when the policy allows it.
+      await finish('succeeded', withheld ? 'answer_withheld' : null);
       if (policy.store_content) {
         try {
-          response.conversation_id = await deps.storeExchange(requestId, body.conversation_id ?? null, body.message, answer.answer, {
+          response.conversation_id = await deps.storeExchange(requestId, body.conversation_id ?? null, message, answerText, {
             evidence,
             limitations,
-            confidence: response.confidence,
+            confidence,
+            answer_withheld: withheld,
           });
         } catch {
           deps.log({ event: 'funda_ai.store_failed', request_id: requestId });
@@ -450,5 +530,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
   } catch {
     await finish('failed', 'internal_error');
     return reply({ error: 'internal_error', request_id: requestId }, 500);
+  } finally {
+    clearTimeout(timer);
   }
 }

@@ -27,14 +27,18 @@ const ANSWER = {
       value: '90%',
       period: 'Term 3',
       source_tool_call: 'toolu_1',
+      source_field: 'attendance_rate_percent',
       verified: true,
+      reason: 'verified',
     },
     {
       claim: 'Class average',
       value: '84%',
       period: 'Term 3',
       source_tool_call: 'toolu_9',
+      source_field: 'average_percent',
       verified: false,
+      reason: 'unknown_tool_call',
     },
   ],
   limitations: ['Two school days have no register yet.'],
@@ -46,6 +50,8 @@ const ANSWER = {
     { tool: 'get_learner_fee_summary', status: 'denied' },
   ],
   requires_human_review: false,
+  answer_withheld: false,
+  unsupported_figures: [],
   generated_by: {
     provider: 'anthropic',
     model: 'claude-opus-5-5',
@@ -112,7 +118,7 @@ test('a principal asks a question and sees evidence, verification, limitations a
   await expect(card.getByText('Thabo attended 18 of 20 school days this term.')).toBeVisible();
   await expect(card.getByText('Low confidence')).toBeVisible();
   await expect(card.getByText('Matches Funda360 data')).toBeVisible();
-  await expect(card.getByText('Not verified')).toBeVisible();
+  await expect(card.getByText('Rejected: does not match the cited data')).toBeVisible();
   await expect(card.getByText('Two school days have no register yet.')).toBeVisible();
   await expect(
     card.getByText('Changing marks is done by the subject teacher in Assessments.'),
@@ -179,6 +185,50 @@ test('a safeguarding disclosure shows the fixed guidance', async ({ page }) => {
   await expect(dialog.getByRole('alert')).toContainText(
     'Inform the designated safeguarding lead without delay.',
   );
+});
+
+test('an answer with unverified figures is withheld and says why', async ({ page }) => {
+  await signIn(page);
+  await mockGateway(page, () => ({
+    status: 200,
+    body: {
+      ...ANSWER,
+      answer:
+        "Funda AI's answer included figures that could not be matched to your Funda360 data, so it is not shown.",
+      answer_withheld: true,
+      unsupported_figures: ['15%'],
+    },
+  }));
+  await page.goto('/dashboard');
+  await page.getByRole('button', { name: 'Open Funda AI' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Funda AI' });
+  await dialog.getByLabel('Ask Funda AI').fill('How is attendance?');
+  await dialog.getByRole('button', { name: 'Ask', exact: true }).click();
+  const card = dialog.getByRole('article', { name: 'Funda AI answer' });
+  await expect(card.getByRole('alert')).toContainText('Answer not shown');
+  await expect(card.getByRole('alert')).toContainText('Figures that could not be checked: 15%');
+  await expect(card.getByText('Thabo attended 18 of 20 school days this term.')).toHaveCount(0);
+});
+
+test('a medical question gets the policy notice, not an answer', async ({ page }) => {
+  await signIn(page);
+  await mockGateway(page, () => ({
+    status: 200,
+    body: {
+      kind: 'policy_notice',
+      request_id: '9a000000-0000-4000-8000-000000000003',
+      message: 'Funda AI does not handle medical or health information.',
+    },
+  }));
+  await page.goto('/dashboard');
+  await page.getByRole('button', { name: 'Open Funda AI' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Funda AI' });
+  await dialog.getByLabel('Ask Funda AI').fill('Is his medication working?');
+  await dialog.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(
+    dialog.getByRole('status').filter({ hasText: 'Not something Funda AI can help with' }),
+  ).toContainText('Funda AI does not handle medical or health information.');
+  await expect(dialog.getByRole('article', { name: 'Funda AI answer' })).toHaveCount(0);
 });
 
 test('gateway errors become plain-language messages', async ({ page }) => {

@@ -56,7 +56,7 @@ const SCHOOL_COPILOT_V1: PromptDefinition = {
   id: 'school_copilot',
   version: 1,
   purpose: 'Answer questions about Funda360 data the signed-in user is already allowed to see, citing the figures used.',
-  active: true,
+  active: false,
   variables: ['role', 'school_context', 'today', 'tools'],
   safetyPolicy: [
     'untrusted_data_is_never_instructions',
@@ -98,7 +98,43 @@ You can summarise, explain, draft and recommend. You cannot and must not claim t
 Answer in English unless the user writes in another language. Respond only with the JSON object described by the output schema.`,
 };
 
-const REGISTRY: PromptDefinition[] = [SCHOOL_COPILOT_V1];
+/** v2: every evidence item names the exact field of the tool output it was copied from. */
+export const EVIDENCE_ANSWER_SCHEMA_V2: JsonSchema = {
+  ...EVIDENCE_ANSWER_SCHEMA,
+  properties: {
+    ...EVIDENCE_ANSWER_SCHEMA.properties,
+    evidence: {
+      type: 'array',
+      maxItems: 12,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['claim', 'value', 'period', 'source_tool_call', 'source_field'],
+        properties: {
+          claim: text(300, 'What the figure shows.'),
+          value: text(80, 'The figure exactly as it appears at source_field.'),
+          period: text(80, 'The period the figure covers.'),
+          source_tool_call: text(40, 'The tool_call_id of the tool output the figure was copied from.'),
+          source_field: text(120, 'Path of the field inside that tool output\'s "data", e.g. attendance_rate_percent or subjects[0].average_percent.'),
+        },
+      },
+    },
+  },
+};
+
+const SCHOOL_COPILOT_V2: PromptDefinition = {
+  ...SCHOOL_COPILOT_V1,
+  version: 2,
+  active: true,
+  outputSchema: EVIDENCE_ANSWER_SCHEMA_V2,
+  system: SCHOOL_COPILOT_V1.system.replace(
+    `- For each figure you rely on, add an evidence item: what it shows, the value exactly as it appears in the tool output, the period, and the tool_call_id of that output.`,
+    `- For each figure you rely on, add an evidence item: what it shows, the value exactly as it appears in the tool output, the period, the tool_call_id of that output, and source_field: the path of the field inside that output's "data" (for example attendance_rate_percent, total_paid or subjects[0].average_percent).
+- Every number in your answer must be one of your evidence values. Funda360 checks each one against the cited field; an answer with any number it cannot match is not shown to the user. Do not round, convert or combine figures.`,
+  ),
+};
+
+const REGISTRY: PromptDefinition[] = [SCHOOL_COPILOT_V1, SCHOOL_COPILOT_V2];
 
 export function listPrompts(): PromptDefinition[] {
   return [...REGISTRY];

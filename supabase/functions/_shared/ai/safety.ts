@@ -1,11 +1,15 @@
 // Safety layer: deterministic screening around the model.
 //
-// * Safeguarding signals (self-harm, abuse, violence) stop the request
-//   before any model call; the user gets fixed guidance to involve the
-//   school's designated safeguarding lead. Funda AI never handles these.
-// * Prompt-injection, data-exfiltration, restricted-action, identity-number
-//   and medical signals are flagged for audit. They do not grant or remove
-//   access: the tools run as the user under RLS whatever the model is told.
+// * EVERY turn (the new message and each history turn the client sends) is
+//   screened. Safeguarding signals (self-harm, abuse, violence) in any turn
+//   stop the request before any model call; the user gets fixed guidance to
+//   involve the school's designated safeguarding lead.
+// * South African ID numbers are redacted before anything is sent.
+// * Medical/health topics are blocked or allowed per feature policy
+//   (ai_features.medical_content_policy, default "block").
+// * Prompt-injection, data-exfiltration and restricted-action signals are
+//   flagged for audit. They do not grant or remove access: the tools run as
+//   the user under RLS whatever the model is told.
 // * Tool outputs are wrapped as untrusted data before the model sees them.
 //
 // Pattern screening is a backstop, not a classifier: it will miss things and
@@ -19,8 +23,10 @@ export type SafetyFlag =
   | 'data_exfiltration_suspected'
   | 'restricted_action_requested'
   | 'personal_identifier_in_input'
+  | 'personal_identifier_redacted'
   | 'medical_topic'
-  | 'injection_in_tool_data';
+  | 'injection_in_tool_data'
+  | 'unsupported_figures';
 
 export interface ScreenResult {
   flags: SafetyFlag[];
@@ -29,7 +35,10 @@ export interface ScreenResult {
 
 const PATTERNS: [SafetyFlag, RegExp][] = [
   ['safeguarding_self_harm', /\b(suicid\w*|kill (my|him|her|them)sel(f|ves)|self[- ]?harm\w*|hurt(ing)? (my|him|her)self|cutting (my|him|her)self|wants? to die|end (my|his|her) life)\b/i],
-  ['safeguarding_abuse', /\b(sexual(ly)? abus\w*|molest\w*|rap(e|ed)\b|groom(ing|ed)\b|being abused|abused (at|by)|beaten at home|touch(es|ed|ing) (me|him|her) inappropriately|neglect(ed)? at home)\b/i],
+  ['safeguarding_abuse', /\b(sexual(ly)? abus\w*|molest\w*|rap(e|ed)\b|groom(ing|ed)\b|being abused|abused (at|by)|abuses? (him|her|them|me)\b|beaten at home|touch(es|ed|ing) (me|him|her) inappropriately|neglect(ed)? at home|unsafe at home|(afraid|scared) to go home|(doesn'?t|does not|won'?t) want to go home)\b/i],
+  ['safeguarding_abuse', /\b(father|stepfather|step-father|dad|mother|stepmother|mom|mum|uncle|aunt|brother|sister|cousin|boyfriend|girlfriend|partner|grandfather|grandmother|guardian|parent|parents|someone at home|teacher|coach)\s+(hits?|hitting|beats?|beating|slaps?|slapping|kicks?|kicking|punch(es)?|punching|burns?|burnt|chokes?|choking|hurts?|hurting|touches|touching|abuses?|abusing|threatens?|threatening|starves?|starving|locks?)\s+(me|him|her|them|us|the (child|learner|boy|girl|kids?|children))\b/i],
+  ['safeguarding_abuse', /\b(hit|beaten|slapped|kicked|burnt|burned|choked|punched|whipped|assaulted|touched) by (his|her|their|a|an|the) \w+/i],
+  ['safeguarding_abuse', /\b(bruises?|welts?|burn marks?|black eye) (on|all over) (his|her|their)\b/i],
   ['safeguarding_violence', /\b((bring|brought|has|have) (a )?(gun|knife|weapon)s? (to|at) school|shoot (up )?the school|school shooting|bomb (the|a) school|threat(en|ened)? to (kill|stab|shoot))\b/i],
   ['prompt_injection_suspected', /(ignore|disregard|forget) (all |any )?(the )?(previous|prior|above|earlier) (instructions|rules|prompts?)|reveal (your|the) (system )?(prompt|instructions)|you are now|developer mode|jailbreak|act as (an? )?(admin|administrator|system)/i],
   ['data_exfiltration_suspected', /\b(all|every) (learners?|pupils?|students?|schools?|records)( in| across| from)? (the )?(country|province|platform|system|database|all schools)|\b(dump|export|list) (the )?(whole|entire|full) (database|table)|other schools?'? (data|learners|records)|select \* from|drop table/i],
@@ -39,7 +48,7 @@ const PATTERNS: [SafetyFlag, RegExp][] = [
 ];
 
 export function screenUserInput(text: string): ScreenResult {
-  const flags = PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([flag]) => flag);
+  const flags = [...new Set(PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([flag]) => flag))];
   const escalate = flags.includes('safeguarding_self_harm')
     ? 'self_harm'
     : flags.includes('safeguarding_abuse')
@@ -49,6 +58,40 @@ export function screenUserInput(text: string): ScreenResult {
         : null;
   return { flags, escalate };
 }
+
+/** Screens every turn; escalation in any turn escalates the request. */
+export function screenConversation(texts: string[]): ScreenResult {
+  const flags = new Set<SafetyFlag>();
+  for (const t of texts) screenUserInput(t).flags.forEach((f) => flags.add(f));
+  const all = [...flags];
+  return {
+    flags: all,
+    escalate: all.includes('safeguarding_self_harm')
+      ? 'self_harm'
+      : all.includes('safeguarding_abuse')
+        ? 'abuse'
+        : all.includes('safeguarding_violence')
+          ? 'violence'
+          : null,
+  };
+}
+
+// 13-digit South African ID numbers (optionally spaced 6-4-3).
+const SA_ID = /\b\d{6}\s?\d{4}\s?\d{3}\b/g;
+export const ID_PLACEHOLDER = '[ID number removed]';
+
+/** Removes South African ID numbers before text leaves Funda360. */
+export function redactIdentifiers(text: string): { text: string; count: number } {
+  let count = 0;
+  const out = text.replace(SA_ID, () => {
+    count += 1;
+    return ID_PLACEHOLDER;
+  });
+  return { text: out, count };
+}
+
+export const MEDICAL_NOTICE =
+  'Funda AI does not handle medical or health information about learners or staff. Please work from the learner\'s record in Funda360 and follow your school\'s procedures for health matters; ask Funda AI again without health details.';
 
 const INJECTION_IN_DATA = /(ignore|disregard|forget) (all |any )?(the )?(previous|prior|above|earlier) (instructions|rules)|system prompt|you are now|new instructions:/i;
 

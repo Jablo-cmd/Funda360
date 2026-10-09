@@ -17,7 +17,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   input_too_large: 'That question is too long. Shorten it and try again.',
   payload_too_large: 'That question is too long. Shorten it and try again.',
   rate_limited: 'You have asked a lot of questions in a short time. Wait a minute and try again.',
-  budget_exhausted: "Your school's Funda AI allowance for this month has been used.",
+  budget_exhausted: "The Funda AI allowance for this month (yours or your school's) has been used.",
   ai_provider_not_configured:
     'Funda AI has not been connected to an AI provider yet. Your administrator can set this up.',
   ai_provider_misconfigured:
@@ -59,8 +59,8 @@ export function parseAiResult(raw: unknown): AiResult | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
   if (!isString(r.request_id)) return null;
-  if (r.kind === 'safeguarding' && isString(r.message)) {
-    return { kind: 'safeguarding', requestId: r.request_id, message: r.message };
+  if ((r.kind === 'safeguarding' || r.kind === 'policy_notice') && isString(r.message)) {
+    return { kind: r.kind, requestId: r.request_id, message: r.message };
   }
   if (r.kind !== 'answer' || !isString(r.answer)) return null;
   const confidence: AiConfidence =
@@ -74,6 +74,7 @@ export function parseAiResult(raw: unknown): AiResult | null {
         value: item.value,
         period: isString(item.period) ? item.period : '',
         sourceToolCall: isString(item.source_tool_call) ? item.source_tool_call : '',
+        sourceField: isString(item.source_field) ? item.source_field : '',
         verified: item.verified === true,
       },
     ];
@@ -95,14 +96,24 @@ export function parseAiResult(raw: unknown): AiResult | null {
     declinedActions: strings(r.declined_actions),
     toolsUsed,
     requiresHumanReview: r.requires_human_review === true,
+    answerWithheld: r.answer_withheld === true,
+    unsupportedFigures: strings(r.unsupported_figures),
   };
 }
 
 /**
+ * Longest text replayed per history turn. Three pairs stay well inside the
+ * gateway's history allowance (ai_features.max_history_chars, 12,000 by
+ * default), so a follow-up after a long answer is never refused for size.
+ */
+export const HISTORY_TURN_CHARS = 1500;
+
+/**
  * The previous turns sent with a new question: at most the last three
  * question/answer pairs, oldest first, always starting with a question.
- * Only answer text is sent back (no evidence or data), and safeguarding
- * notices are never replayed.
+ * Only answer text is sent back (no evidence or data), each turn trimmed to
+ * HISTORY_TURN_CHARS. Safeguarding and policy notices, and answers that were
+ * withheld for unverified figures, are never replayed.
  */
 export function buildHistory(
   turns: { question: string; result: AiResult | null }[],
@@ -111,11 +122,11 @@ export function buildHistory(
   return turns
     .filter(
       (t): t is { question: string; result: Extract<AiResult, { kind: 'answer' }> } =>
-        t.result?.kind === 'answer',
+        t.result?.kind === 'answer' && !t.result.answerWithheld,
     )
     .slice(-maxPairs)
     .flatMap((t) => [
-      { role: 'user' as const, text: t.question.slice(0, 4000) },
-      { role: 'assistant' as const, text: t.result.answer.slice(0, 4000) },
+      { role: 'user' as const, text: t.question.slice(0, HISTORY_TURN_CHARS) },
+      { role: 'assistant' as const, text: t.result.answer.slice(0, HISTORY_TURN_CHARS) },
     ]);
 }

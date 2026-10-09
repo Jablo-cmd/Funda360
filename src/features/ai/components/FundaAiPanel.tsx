@@ -155,6 +155,15 @@ export function FundaAiPanel({ feature, isOpen, onClose }: FundaAiPanelProps) {
                 <p className="mt-1">{turn.result.message}</p>
               </div>
             )}
+            {turn.result?.kind === 'policy_notice' && (
+              <div
+                role="status"
+                className="rounded-lg border border-border-strong bg-surface-sunken px-3.5 py-3 text-sm text-content-primary"
+              >
+                <p className="font-semibold">Not something Funda AI can help with</p>
+                <p className="mt-1">{turn.result.message}</p>
+              </div>
+            )}
             <ErrorAlert message={turn.error} />
             {!turn.result && !turn.error && pending && i === turns.length - 1 && (
               <p role="status" className="text-sm text-content-secondary">

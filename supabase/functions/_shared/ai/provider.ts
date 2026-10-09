@@ -39,7 +39,10 @@ export interface GenerateRequest {
   effort?: Effort;
   /** Ask the provider to retry a refused request on its recommended fallback model. */
   refusalFallback?: boolean;
+  /** Per-call timeout; never more than what is left of the request deadline. */
   timeoutMs: number;
+  /** Aborted when the whole request's deadline passes (stops retries too). */
+  signal?: AbortSignal;
 }
 
 export type StopReason = 'end' | 'tool_use' | 'max_tokens' | 'refusal' | 'other';

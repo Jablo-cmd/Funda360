@@ -174,7 +174,12 @@ export type AiFeatureRow = {
   user_requests_per_minute: number;
   user_requests_per_day: number;
   school_requests_per_day: number;
-  school_monthly_token_budget: number | null;
+  school_monthly_token_budget: number;
+  user_monthly_token_budget: number;
+  request_token_reservation: number;
+  max_history_chars: number;
+  medical_content_policy: 'block' | 'allow';
+  feedback_retention_days: number;
   allow_without_school: boolean;
   store_content: boolean;
   content_retention_days: number;
@@ -187,7 +192,8 @@ export type AiFeatureRow = {
 export type AiSchoolSettingsRow = {
   school_id: string;
   enabled: boolean;
-  enabled_features: string[] | null;
+  /** Explicit list; empty means no features. */
+  enabled_features: string[];
   monthly_token_budget: number | null;
   updated_at: string;
   updated_by: string | null;
@@ -199,10 +205,16 @@ export type AiRequestRow = {
   school_id: string | null;
   role: string;
   feature: string;
-  status: 'authorized' | 'blocked' | 'succeeded' | 'failed' | 'safety_escalated';
+  status: 'authorized' | 'blocked' | 'succeeded' | 'failed' | 'safety_escalated' | 'policy_blocked';
   block_reason: string | null;
   client_request_id: string | null;
   input_chars: number;
+  history_chars: number;
+  started_at: string | null;
+  reserved_tokens: number;
+  /** Counts against budgets: reservation while running, actual once settled. */
+  charged_tokens: number;
+  usage_estimated: boolean;
   provider: string | null;
   model: string | null;
   model_tier: string | null;
@@ -3614,7 +3626,13 @@ export type Database = {
         Returns: undefined;
       };
       ai_admin_set_school: {
-        Args: { p_school_id: string; p_enabled: boolean; p_enabled_features?: string[] | null; p_monthly_token_budget?: number | null };
+        Args: {
+          p_school_id: string;
+          p_enabled?: boolean | null;
+          p_enabled_features?: string[] | null;
+          p_monthly_token_budget?: number | null;
+          p_clear_budget?: boolean;
+        };
         Returns: undefined;
       };
       get_provincial_scope: {

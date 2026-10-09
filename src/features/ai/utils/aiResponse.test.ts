@@ -3,6 +3,7 @@ import {
   aiErrorMessage,
   buildHistory,
   GENERIC_AI_ERROR,
+  HISTORY_TURN_CHARS,
   parseAiResult,
   toolLabel,
 } from '@/features/ai/utils/aiResponse';
@@ -35,6 +36,40 @@ describe('parseAiResult', () => {
     expect(r.confidence).toBe('low');
     expect(r.toolsUsed).toEqual([{ tool: 'find_learners', status: 'ok' }]);
     expect(r.requiresHumanReview).toBe(true);
+  });
+
+  it('parses the withheld flag, unsupported figures and the cited field', () => {
+    const r = parseAiResult({
+      ...answer,
+      answer_withheld: true,
+      unsupported_figures: ['15%', 3],
+      evidence: [
+        {
+          claim: 'Rate',
+          value: '90%',
+          period: 'T3',
+          source_tool_call: 't1',
+          source_field: 'rate',
+          verified: true,
+        },
+      ],
+    });
+    if (r?.kind !== 'answer') throw new Error('expected an answer');
+    expect(r.answerWithheld).toBe(true);
+    expect(r.unsupportedFigures).toEqual(['15%']);
+    expect(r.evidence[0]?.sourceField).toBe('rate');
+    const plain = parseAiResult(answer);
+    expect(plain?.kind === 'answer' && plain.answerWithheld).toBe(false);
+  });
+
+  it('parses a policy notice', () => {
+    expect(
+      parseAiResult({ kind: 'policy_notice', request_id: 'r3', message: 'No medical details' }),
+    ).toEqual({
+      kind: 'policy_notice',
+      requestId: 'r3',
+      message: 'No medical details',
+    });
   });
 
   it('parses a safeguarding notice', () => {
@@ -85,8 +120,24 @@ describe('buildHistory', () => {
     ]);
   });
 
-  it('caps each text at the gateway limit', () => {
-    expect(buildHistory([turn('x'.repeat(5000), 'y')])[0]?.text).toHaveLength(4000);
+  it('caps each text so three pairs always fit the gateway history allowance (12,000)', () => {
+    const history = buildHistory([
+      turn('x'.repeat(5000), 'y'.repeat(5000)),
+      turn('q', 'a'),
+      turn('q', 'a'),
+    ]);
+    expect(history[0]?.text).toHaveLength(HISTORY_TURN_CHARS);
+    expect(history[1]?.text).toHaveLength(HISTORY_TURN_CHARS);
+    const worst = buildHistory([1, 2, 3].map(() => turn('x'.repeat(4000), 'y'.repeat(4000))));
+    expect(worst.reduce((n, t) => n + t.text.length, 0)).toBeLessThanOrEqual(12000);
+  });
+
+  it('never replays an answer that was withheld', () => {
+    const withheld = {
+      question: 'q2',
+      result: parseAiResult({ ...answer, answer: 'w', answer_withheld: true }),
+    };
+    expect(buildHistory([turn('q1', 'a1'), withheld]).map((t) => t.text)).toEqual(['q1', 'a1']);
   });
 });
 

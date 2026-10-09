@@ -125,11 +125,21 @@ begin
   v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
   call test_util.record('ai: a feature on globally still needs the school enabled', v ->> 'reason' = 'school_not_enabled', v::text);
 
+  -- A school's feature list is explicit (20261012090000): enabled with no
+  -- features means no features.
   insert into public.ai_school_settings (school_id, enabled) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true);
-
   v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
-  call test_util.record('ai: an allowed role in an enabled school is authorised with its own school and role',
-    (v ->> 'allowed')::boolean and v -> 'principal' ->> 'school_id' = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  call test_util.record('ai: an enabled school with no feature list gets no features', v ->> 'reason' = 'school_not_enabled', v::text);
+  update public.ai_school_settings set enabled_features = array['copilot'] where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+  -- The caller learns only the decision; the policy goes to the service role
+  -- through ai_start_request, with the school and role recorded at authorisation.
+  v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  call test_util.record('ai: an allowed role in an enabled school is authorised (decision only, no policy disclosed)',
+    (v ->> 'allowed')::boolean and v ? 'request_id' and not (v ? 'policy') and not (v ? 'principal'), v::text);
+  v := test_util.ai_service(format('select public.ai_start_request(%L)', v ->> 'request_id'));
+  call test_util.record('ai: the started request carries its own school, role and policy',
+    (v ->> 'ok')::boolean and v -> 'principal' ->> 'school_id' = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
       and v -> 'principal' ->> 'role' = 'teacher' and v -> 'policy' -> 'allowed_tools' ? 'get_learner_attendance_summary',
     v::text);
 
@@ -197,13 +207,18 @@ begin
   call test_util.record('ai: the per-school daily limit is enforced', v ->> 'reason' = 'rate_limited', v::text);
 
   delete from public.ai_requests;
-  update public.ai_features set school_requests_per_day = 3000 where key = 'copilot';
-  update public.ai_school_settings set monthly_token_budget = 100 where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  insert into public.ai_requests (user_id, school_id, role, feature, status, input_tokens, output_tokens)
-  values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'school_owner', 'copilot', 'succeeded', 80, 40);
+  update public.ai_features set school_requests_per_day = 3000, request_token_reservation = 1000 where key = 'copilot';
+  update public.ai_school_settings set monthly_token_budget = 2000 where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  insert into public.ai_requests (user_id, school_id, role, feature, status, input_tokens, output_tokens, charged_tokens)
+  values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'school_owner', 'copilot', 'succeeded', 500, 100, 600);
+  v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  call test_util.record('ai: a request fits while used + reservation is within the school budget', (v ->> 'allowed')::boolean, v::text);
+  insert into public.ai_requests (user_id, school_id, role, feature, status, input_tokens, output_tokens, charged_tokens)
+  values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'school_owner', 'copilot', 'succeeded', 400, 100, 500);
   v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
   call test_util.record('ai: the school''s monthly token budget is enforced', v ->> 'reason' = 'budget_exhausted', v::text);
   update public.ai_school_settings set monthly_token_budget = null where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  update public.ai_features set request_token_reservation = 120000 where key = 'copilot';
 end $$;
 
 -- Audit rows, service-only writes, feedback, conversations.

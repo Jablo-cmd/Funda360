@@ -12,7 +12,9 @@ export interface AiEvidence {
   value: string;
   period: string;
   sourceToolCall: string;
-  /** True when the figure was found in the output of the lookup it cites. */
+  /** The field of that lookup's output the figure was copied from. */
+  sourceField: string;
+  /** True only when the figure equals the value at that exact field. */
   verified: boolean;
 }
 
@@ -32,6 +34,9 @@ export interface AiAnswer {
   declinedActions: string[];
   toolsUsed: AiToolUse[];
   requiresHumanReview: boolean;
+  /** The model's text was replaced because it contained figures that could not be verified. */
+  answerWithheld: boolean;
+  unsupportedFigures: string[];
 }
 
 /** Returned instead of an answer when a message suggests a child may be at risk. */
@@ -41,7 +46,14 @@ export interface AiSafeguardingNotice {
   message: string;
 }
 
-export type AiResult = AiAnswer | AiSafeguardingNotice;
+/** Returned instead of an answer when a content policy stops the request (e.g. medical information). */
+export interface AiPolicyNotice {
+  kind: 'policy_notice';
+  requestId: string;
+  message: string;
+}
+
+export type AiResult = AiAnswer | AiSafeguardingNotice | AiPolicyNotice;
 
 export interface AiHistoryTurn {
   role: 'user' | 'assistant';

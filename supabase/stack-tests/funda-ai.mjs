@@ -33,6 +33,7 @@ if (!AUTH || !REST || !ANON || !SERVICE) {
 const R1 = 'ec000000-0000-0000-0000-000000000001';
 const R2 = 'ec000000-0000-0000-0000-000000000002';
 const R3 = 'ec000000-0000-0000-0000-000000000003';
+const R4 = 'ec000000-0000-0000-0000-000000000004';
 const L = (school, n) => `e1000000-0000-0000-0000-0000000000${school}${n}`;
 const PASSWORD = crypto.randomBytes(18).toString('base64url');
 const RUN = crypto.randomBytes(4).toString('hex');
@@ -91,7 +92,7 @@ async function createUser(label, role, tenantId) {
 
 // --- Mock model -------------------------------------------------------------
 
-const mock = { queue: [], requests: [] };
+const mock = { queue: [], requests: [], delayMs: 0, hang: false };
 function startMockModel() {
   const server = http.createServer((req, res) => {
     let raw = '';
@@ -99,22 +100,26 @@ function startMockModel() {
     req.on('end', () => {
       const body = JSON.parse(raw || '{}');
       mock.requests.push({ path: req.url, headers: req.headers, body });
-      const next = mock.queue.shift() ?? { content: [{ type: 'text', text: 'unscripted' }], stop_reason: 'end_turn' };
-      res.writeHead(200, { 'Content-Type': 'application/json', 'request-id': `req_${RUN}` });
-      res.end(
-        JSON.stringify({
-          id: `msg_${crypto.randomBytes(6).toString('hex')}`,
-          type: 'message',
-          role: 'assistant',
-          model: body.model,
-          content: next.content,
-          stop_reason: next.stop_reason,
-          stop_sequence: null,
-          usage: { input_tokens: 120, output_tokens: 30, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
-        }),
-      );
+      if (mock.hang) return; // never answers: the gateway's deadline must end the request
+      setTimeout(() => respond(res, body), mock.delayMs);
     });
   });
+  function respond(res, body) {
+    const next = mock.queue.shift() ?? { content: [{ type: 'text', text: 'unscripted' }], stop_reason: 'end_turn' };
+    res.writeHead(200, { 'Content-Type': 'application/json', 'request-id': `req_${RUN}` });
+    res.end(
+      JSON.stringify({
+        id: `msg_${crypto.randomBytes(6).toString('hex')}`,
+        type: 'message',
+        role: 'assistant',
+        model: body.model,
+        content: next.content,
+        stop_reason: next.stop_reason,
+        stop_sequence: null,
+        usage: { input_tokens: 120, output_tokens: 30, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+      }),
+    );
+  }
   return new Promise((resolve) => server.listen(MOCK_PORT, '127.0.0.1', () => resolve(server)));
 }
 
@@ -122,12 +127,12 @@ const toolUse = (name, input) => ({
   content: [{ type: 'tool_use', id: `toolu_${crypto.randomBytes(4).toString('hex')}`, name, input }],
   stop_reason: 'tool_use',
 });
-const final = (evidence = []) => ({
+const final = (evidence = [], answer = 'Summary of the data available to you.') => ({
   content: [
     {
       type: 'text',
       text: JSON.stringify({
-        answer: 'Summary of the data available to you.',
+        answer,
         evidence,
         limitations: [],
         confidence: 'medium',
@@ -202,6 +207,8 @@ async function startFunction(supabaseUrl) {
       SUPABASE_SERVICE_ROLE_KEY: SERVICE,
       ANTHROPIC_API_KEY: 'stack-test-placeholder-not-a-real-key',
       ANTHROPIC_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`,
+      // Short request deadline so the deadline test finishes quickly.
+      FUNDA_AI_DEADLINE_MS: '8000',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -326,8 +333,8 @@ async function main() {
     // Evidence verification end to end.
     const tid = toolUse('get_learner_attendance_summary', { learner_id: L(1, 6), ...FEB });
     mock.queue = [tid, final([
-      { claim: 'Attendance rate', value: '20%', period: 'February 2026', source_tool_call: tid.content[0].id },
-      { claim: 'Invented', value: '97%', period: 'February 2026', source_tool_call: tid.content[0].id },
+      { claim: 'Attendance rate', value: '20%', period: 'February 2026', source_tool_call: tid.content[0].id, source_field: 'attendance_rate_percent' },
+      { claim: 'Invented', value: '97%', period: 'February 2026', source_tool_call: tid.content[0].id, source_field: 'attendance_rate_percent' },
     ])];
     r = await callFunction(principalA.token, { feature: 'copilot', message: 'attendance?' });
     check('evidence: a figure from the tool output is verified, an invented one is not',
@@ -380,11 +387,112 @@ async function main() {
     for (let i = 0; i < 3; i += 1) statuses.push((await callFunction(limited.token, { feature: 'stack_rate_test', message: 'hi' })).status);
     check('the per-user rate limit refuses the third request in a minute', statuses.join(',') === '200,200,429', statuses.join(','));
 
+
+    // --- Pre-pilot hardening (audit 2026-10-09) ------------------------------
+
+    // H1: 50 parallel requests through the gateway against a 2-per-minute limit.
+    const racer = await createUser('ai-racer', 'principal', R1);
+    mock.queue = [];
+    const raced = await Promise.all(Array.from({ length: 50 }, () => callFunction(racer.token, { feature: 'stack_rate_test', message: 'hi' })));
+    const admitted = raced.filter((x) => x.status !== 429).length;
+    check('H1: 50 parallel gateway requests, limit 2/min -> exactly 2 admitted', admitted === 2, `admitted ${admitted}`);
+
+    // H1: the same race straight at the policy gate (no gateway in between).
+    const direct = await createUser('ai-direct', 'principal', R1);
+    const directRes = await Promise.all(Array.from({ length: 50 }, () =>
+      request(`${REST}/rpc/ai_authorize_request`, { method: 'POST', token: direct.token, body: { p_feature: 'stack_rate_test', p_input_chars: 1 } })));
+    const directAllowed = directRes.filter((x) => x.json?.allowed === true).length;
+    check('H1: 50 parallel direct policy-gate calls, limit 2/min -> exactly 2 allowed', directAllowed === 2, `allowed ${directAllowed}`);
+    check('L1: the policy gate returns no policy or limits to the caller',
+      directRes.every((x) => x.json && !('policy' in x.json) && !('principal' in x.json)), JSON.stringify(directRes[0].json));
+
+    // H1: budget reservation under concurrency. School R4: budget 5,000, reservation 1,000.
+    const budgetUsers = await Promise.all([1, 2, 3, 4, 5].map((n) => createUser(`ai-budget-${n}`, 'principal', R4)));
+    mock.queue = [];
+    mock.delayMs = 3000; // keep the first requests in flight while the rest arrive
+    const budgetRes = await Promise.all(Array.from({ length: 50 }, (_, i) =>
+      callFunction(budgetUsers[i % 5].token, { feature: 'stack_budget_test', message: 'hi' })));
+    mock.delayMs = 0;
+    const ran = budgetRes.filter((x) => x.status !== 429).length;
+    const refused = budgetRes.filter((x) => x.status === 429 && x.json?.error === 'budget_exhausted').length;
+    const startedRows = await service(`/ai_requests?select=id&school_id=eq.${R4}&started_at=not.is.null`);
+    check('H1: 50 parallel requests against a 5-request budget -> exactly 5 run, 45 refused budget_exhausted',
+      ran === 5 && refused === 45 && startedRows.json?.length === 5, `ran ${ran}, refused ${refused}, started ${startedRows.json?.length}`);
+    const settled = await service(`/ai_requests?select=charged_tokens,reserved_tokens,status&school_id=eq.${R4}&started_at=not.is.null`);
+    check('H1: settled requests are charged actual usage, not the reservation',
+      settled.json?.every((x) => x.reserved_tokens === 1000 && x.charged_tokens === 150), JSON.stringify(settled.json));
+
+    // H2: disclosures in history never reach the model, in either role.
+    for (const [label, history] of [
+      ['user', [{ role: 'user', text: 'A learner told me she is being abused at home by her uncle' }, { role: 'assistant', text: 'Noted.' }]],
+      ['assistant', [{ role: 'user', text: 'hi' }, { role: 'assistant', text: 'Her stepfather hits her when he drinks' }]],
+    ]) {
+      const before2 = mock.requests.length;
+      r = await callFunction(teacherA.token, { feature: 'copilot', message: 'Summarise attendance', history });
+      check(`H2: a disclosure in a ${label} history turn gets safeguarding guidance and no model call`,
+        r.json?.kind === 'safeguarding' && mock.requests.length === before2, r.text);
+    }
+
+    // M1: ID numbers are redacted; medical content is blocked by default.
+    mock.queue = [final()];
+    let before3 = mock.requests.length;
+    r = await callFunction(principalA.token, { feature: 'copilot', message: `Find learner with ID 0801015800083 ${RUN}` });
+    const sentNow = JSON.stringify(mock.requests.slice(before3));
+    check('M1: an SA ID number is redacted before the provider call', r.status === 200 && !sentNow.includes('0801015800083') && sentNow.includes('[ID number removed]'), sentNow.slice(0, 300));
+    before3 = mock.requests.length;
+    r = await callFunction(principalA.token, { feature: 'copilot', message: 'Is his ADHD medication affecting his marks?' });
+    const medRow = await service(`/ai_requests?select=status,error_code&id=eq.${r.json?.request_id}`);
+    check('M1: medical content is blocked before the provider call',
+      r.json?.kind === 'policy_notice' && mock.requests.length === before3 && medRow.json?.[0]?.status === 'policy_blocked', r.text + medRow.text);
+
+    // M3: a normal follow-up after a long answer is accepted; oversized history is refused.
+    mock.queue = [final()];
+    r = await callFunction(principalA.token, { feature: 'copilot', message: 'And last term?', history: [{ role: 'user', text: 'How is Grade 10 attendance?' }, { role: 'assistant', text: 'a'.repeat(3990) }] });
+    check('M3: a follow-up after a 3,990-character answer is accepted', r.status === 200, r.text);
+    r = await callFunction(principalA.token, { feature: 'copilot', message: 'more', history: [
+      { role: 'user', text: 'q'.repeat(3500) }, { role: 'assistant', text: 'a'.repeat(3500) },
+      { role: 'user', text: 'q'.repeat(3500) }, { role: 'assistant', text: 'a'.repeat(3500) }] });
+    check('M3: history over its allowance is refused safely (413)', r.status === 413 && r.json?.error === 'input_too_large', r.text);
+
+    // M2: a figure that exists elsewhere in the output but not at the cited field is rejected; the answer is withheld.
+    const t4 = toolUse('get_learner_attendance_summary', { learner_id: L(1, 6), ...FEB });
+    mock.queue = [t4, final([{ claim: 'Attendance rate', value: '1%', period: 'February 2026', source_tool_call: t4.content[0].id, source_field: 'attendance_rate_percent' }], 'The attendance rate was 1%.')];
+    r = await callFunction(principalA.token, { feature: 'copilot', message: 'attendance?' });
+    check('M2: a wrong-field figure is rejected and the answer withheld (audit P4)',
+      r.json?.evidence?.[0]?.verified === false && r.json?.evidence?.[0]?.reason === 'value_mismatch' && r.json?.answer_withheld === true &&
+        r.json?.confidence === 'low' && !String(r.json?.answer).includes('1%'), r.text);
+    const t5 = toolUse('get_learner_attendance_summary', { learner_id: L(1, 6), ...FEB });
+    mock.queue = [t5, final([{ claim: 'Attendance rate', value: '20%', period: 'February 2026', source_tool_call: t5.content[0].id, source_field: 'attendance_rate_percent' }], 'The attendance rate was 20% in February.')];
+    r = await callFunction(principalA.token, { feature: 'copilot', message: 'attendance?' });
+    check('M2: a correctly cited figure is verified and the answer shown',
+      r.json?.evidence?.[0]?.verified === true && r.json?.answer_withheld === false && r.json?.answer === 'The attendance rate was 20% in February.', r.text);
+
+    // H3: one deadline for the whole request (8 s here); usage unknown keeps the reservation.
+    mock.hang = true;
+    const tDeadline = Date.now();
+    r = await callFunction(principalA.token, { feature: 'copilot', message: 'slow question' });
+    const took = Date.now() - tDeadline;
+    mock.hang = false;
+    const dlRow = await service(`/ai_requests?select=status,error_code,usage_estimated,charged_tokens,reserved_tokens&id=eq.${r.json?.request_id}`);
+    check('H3: a hung provider call ends at the request deadline with 504 ai_timeout',
+      r.status === 504 && r.json?.error === 'ai_timeout' && took < 12000, `${r.status} ${r.text} after ${took} ms`);
+    check('H3: the timed-out request is settled as failed with its reservation charged (estimated)',
+      dlRow.json?.[0]?.status === 'failed' && dlRow.json?.[0]?.error_code === 'deadline_exceeded' && dlRow.json?.[0]?.usage_estimated === true &&
+        dlRow.json?.[0]?.charged_tokens === dlRow.json?.[0]?.reserved_tokens, dlRow.text);
+
+    // L1: direct blocked calls are not recorded without limit.
+    const flooder = await createUser('ai-flood', 'teacher', R1);
+    for (let i = 0; i < 30; i += 1) {
+      await request(`${REST}/rpc/ai_authorize_request`, { method: 'POST', token: flooder.token, body: { p_feature: 'stack_rate_test', p_input_chars: 1 } });
+    }
+    const floodRows = await service(`/ai_requests?select=id&user_id=eq.${flooder.id}`);
+    check('L1: 30 blocked direct calls record at most 20 rows', floodRows.json?.length === 20, `${floodRows.json?.length} rows`);
+
     // Audit and usage, without content.
     const reqs = await service(`/ai_requests?select=*&user_id=eq.${principalA.id}`);
     const calls = await service(`/ai_tool_calls?select=tool,status,request_id&order=created_at`);
     check('usage is recorded per request (tokens, model, prompt version)',
-      reqs.json?.some((x) => x.status === 'succeeded' && x.input_tokens === 240 && x.model === 'claude-opus-5-5' && x.prompt_version === 1), reqs.text.slice(0, 400));
+      reqs.json?.some((x) => x.status === 'succeeded' && x.input_tokens === 240 && x.model === 'claude-opus-5-5' && x.prompt_version === 2), reqs.text.slice(0, 400));
     check('tool calls are recorded with their outcome',
       calls.json?.some((c) => c.tool === 'get_reporting_summary' && c.status === 'denied') &&
         calls.json?.some((c) => c.tool === 'get_learner_fee_summary' && c.status === 'ok'), calls.text.slice(0, 400));
@@ -409,6 +517,26 @@ async function main() {
     check('a user cannot give feedback on another user\'s request', r.status >= 400, r.text);
     r = await request(`${REST}/rpc/ai_submit_feedback`, { method: 'POST', token: principalA.token, body: { p_request_id: reqId, p_rating: 'problem', p_comment: 'stack test' } });
     check('a user can report a problem on their own request', r.status < 300, r.text);
+
+    // H3: a function killed mid-request leaves a started request; the sweep closes it, charged conservatively.
+    const victim = await createUser('ai-victim', 'principal', R1);
+    mock.hang = true;
+    const pending = callFunction(victim.token, { feature: 'copilot', message: 'killed' }).catch(() => null);
+    await new Promise((res) => setTimeout(res, 2000));
+    fn.child.kill('SIGKILL');
+    await pending;
+    mock.hang = false;
+    let vRows = await service(`/ai_requests?select=id,status,started_at&user_id=eq.${victim.id}`);
+    check('H3: a killed request is left open (status authorized, started)',
+      vRows.json?.length === 1 && vRows.json[0].status === 'authorized' && vRows.json[0].started_at, vRows.text);
+    const victimId = vRows.json?.[0]?.id;
+    await service(`/ai_requests?id=eq.${victimId}`, { method: 'PATCH', body: { started_at: new Date(Date.now() - 10 * 60_000).toISOString() } });
+    const sweep = await request(`${REST}/rpc/ai_recover_stale_requests`, { method: 'POST', token: SERVICE, apikey: SERVICE, body: {} });
+    vRows = await service(`/ai_requests?select=status,error_code,usage_estimated,charged_tokens,reserved_tokens&id=eq.${victimId}`);
+    check('H3: the stale-request sweep closes it as failed and keeps the reservation charged',
+      sweep.status === 200 && vRows.json?.[0]?.status === 'failed' && vRows.json?.[0]?.error_code === 'stale_request' &&
+        vRows.json?.[0]?.usage_estimated === true && vRows.json?.[0]?.charged_tokens === vRows.json?.[0]?.reserved_tokens &&
+        vRows.json?.[0]?.reserved_tokens > 0, sweep.text + vRows.text);
   } finally {
     fn.child.kill();
     model.close();
