@@ -6,8 +6,9 @@
 //   output_config.format (json_schema).
 // * Refused requests are re-run by the API on Anthropic's recommended
 //   fallback model when the route enables it (fallbacks: "default").
-// * The SDK handles retries (408/409/429/5xx) and the per-call timeout; the
-//   gateway's deadline signal aborts the call and any remaining retries.
+// * The SDK applies the per-call timeout but does not retry: the gateway
+//   retries once and accounts for every attempt. The deadline signal aborts
+//   the call.
 // * The assistant turn is kept verbatim (raw) so a tool loop replays it
 //   unchanged, as the API requires for reasoning blocks.
 
@@ -88,7 +89,9 @@ export function mapAnthropicError(error: unknown): ProviderError {
 }
 
 export function createAnthropicProvider(apiKey: string, options: { maxRetries?: number; baseURL?: string } = {}): AiProvider {
-  const client = new Anthropic({ apiKey, maxRetries: options.maxRetries ?? 2, baseURL: options.baseURL });
+  // No SDK retries: the gateway retries once itself, so every attempt (and
+  // the chance that a failed attempt was billed) is visible to accounting.
+  const client = new Anthropic({ apiKey, maxRetries: options.maxRetries ?? 0, baseURL: options.baseURL });
 
   return {
     id: 'anthropic',

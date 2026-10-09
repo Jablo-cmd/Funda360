@@ -34,9 +34,9 @@ export interface ScreenResult {
 }
 
 const PATTERNS: [SafetyFlag, RegExp][] = [
-  ['safeguarding_self_harm', /\b(suicid\w*|kill (my|him|her|them)sel(f|ves)|self[- ]?harm\w*|hurt(ing)? (my|him|her)self|cutting (my|him|her)self|wants? to die|end (my|his|her) life)\b/i],
+  ['safeguarding_self_harm', /\b(selfmoord\w*|suicid\w*|kill (my|him|her|them)sel(f|ves)|self[- ]?harm\w*|hurt(ing)? (my|him|her)self|cutting (my|him|her)self|wants? to die|end (my|his|her) life)\b/i],
   ['safeguarding_abuse', /\b(sexual(ly)? abus\w*|molest\w*|rap(e|ed)\b|groom(ing|ed)\b|being abused|abused (at|by)|abuses? (him|her|them|me)\b|beaten at home|touch(es|ed|ing) (me|him|her) inappropriately|neglect(ed)? at home|unsafe at home|(afraid|scared) to go home|(doesn'?t|does not|won'?t) want to go home)\b/i],
-  ['safeguarding_abuse', /\b(father|stepfather|step-father|dad|mother|stepmother|mom|mum|uncle|aunt|brother|sister|cousin|boyfriend|girlfriend|partner|grandfather|grandmother|guardian|parent|parents|someone at home|teacher|coach)\s+(hits?|hitting|beats?|beating|slaps?|slapping|kicks?|kicking|punch(es)?|punching|burns?|burnt|chokes?|choking|hurts?|hurting|touches|touching|abuses?|abusing|threatens?|threatening|starves?|starving|locks?)\s+(me|him|her|them|us|the (child|learner|boy|girl|kids?|children))\b/i],
+  ['safeguarding_abuse', /\b(father|stepfather|step-father|dad|mother|stepmother|mom|mum|uncle|aunt|brother|sister|cousin|boyfriend|girlfriend|partner|grandfather|grandmother|guardian|parent|parents|someone at home|teacher|coach)\s+(hits?|hitting|beats?|beating|slaps?|slapping|kicks?|kicking|punch(es)?|punching|burns?|burnt|chokes?|choking|hurts?|hurting|touches|touching|abuses?|abusing|threatens?|threatening|starves?|starving|locks?)\s+(me|him|her|them|us|(the|my|a|our|this) (child|learner|pupil|student|boy|girl|kids?|children|son|daughter))\b/i],
   ['safeguarding_abuse', /\b(hit|beaten|slapped|kicked|burnt|burned|choked|punched|whipped|assaulted|touched) by (his|her|their|a|an|the) \w+/i],
   ['safeguarding_abuse', /\b(bruises?|welts?|burn marks?|black eye) (on|all over) (his|her|their)\b/i],
   ['safeguarding_violence', /\b((bring|brought|has|have) (a )?(gun|knife|weapon)s? (to|at) school|shoot (up )?the school|school shooting|bomb (the|a) school|threat(en|ened)? to (kill|stab|shoot))\b/i],
@@ -47,8 +47,14 @@ const PATTERNS: [SafetyFlag, RegExp][] = [
   ['medical_topic', /\b(diagnos\w*|adhd|autis\w*|depress\w*|hiv|tb\b|tuberculosis|medication|prescri\w*|epileps\w*|dyslexi\w*)\b/i],
 ];
 
+function patternFlags(text: string): SafetyFlag[] {
+  return PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([flag]) => flag);
+}
+
+/** Screens one text (normalised, and again with separators inside words removed). */
 export function screenUserInput(text: string): ScreenResult {
-  const flags = [...new Set(PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([flag]) => flag))];
+  const normal = normaliseText(text);
+  const flags = [...new Set([...patternFlags(normal), ...patternFlags(collapsed(normal))])];
   const escalate = flags.includes('safeguarding_self_harm')
     ? 'self_harm'
     : flags.includes('safeguarding_abuse')
@@ -59,10 +65,36 @@ export function screenUserInput(text: string): ScreenResult {
   return { flags, escalate };
 }
 
-/** Screens every turn; escalation in any turn escalates the request. */
-export function screenConversation(texts: string[]): ScreenResult {
+/**
+ * The canonical form of user-supplied text: NFKC (full-width digits and
+ * letters become ASCII) and no invisible format characters (zero-width
+ * spaces, joiners, bidi marks). Screening, redaction and the provider all see
+ * this same text, so a character trick cannot pass the checks yet still be
+ * read by the model.
+ */
+export function normaliseText(text: string): string {
+  return text.normalize('NFKC').replace(/\p{Cf}/gu, '');
+}
+
+/** A copy with separators inside words removed ("sui-cidal", "s.e.l.f harm"), screened in addition. */
+function collapsed(text: string): string {
+  return text.replace(/(?<=\p{L})[-._*'’](?=\p{L})/gu, '');
+}
+
+
+/**
+ * Screens the conversation. Safeguarding signals in ANY turn escalate, user
+ * and assistant alike (assistant turns come from the client and could carry a
+ * disclosure; a false escalation is the safe failure). Medical and other
+ * content flags come from user turns only: the model's own replies say things
+ * like "I cannot diagnose", which must not block every follow-up.
+ */
+export function screenConversation(userTexts: string[], assistantTexts: string[] = []): ScreenResult {
   const flags = new Set<SafetyFlag>();
-  for (const t of texts) screenUserInput(t).flags.forEach((f) => flags.add(f));
+  for (const t of userTexts) screenUserInput(t).flags.forEach((f) => flags.add(f));
+  for (const t of assistantTexts) {
+    screenUserInput(t).flags.filter((f) => f.startsWith('safeguarding_')).forEach((f) => flags.add(f));
+  }
   const all = [...flags];
   return {
     flags: all,
@@ -76,14 +108,16 @@ export function screenConversation(texts: string[]): ScreenResult {
   };
 }
 
-// 13-digit South African ID numbers (optionally spaced 6-4-3).
-const SA_ID = /\b\d{6}\s?\d{4}\s?\d{3}\b/g;
+// 13-digit South African ID numbers, with any spaces, dots or hyphens
+// between the groups, not part of a longer digit run. Apply to
+// normaliseText() output so full-width and zero-width tricks are gone.
+const SA_ID = /(?<!\d)\d{6}[\s.\-]*\d{4}[\s.\-]*\d{3}(?!\d)/g;
 export const ID_PLACEHOLDER = '[ID number removed]';
 
-/** Removes South African ID numbers before text leaves Funda360. */
+/** Removes South African ID numbers before text leaves Funda360 (normalises the text first). */
 export function redactIdentifiers(text: string): { text: string; count: number } {
   let count = 0;
-  const out = text.replace(SA_ID, () => {
+  const out = normaliseText(text).replace(SA_ID, () => {
     count += 1;
     return ID_PLACEHOLDER;
   });

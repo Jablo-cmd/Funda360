@@ -157,7 +157,7 @@ export type GovernmentApiRequestRow = {
   created_at: string;
 };
 
-// Funda AI (20261011090000_funda_ai_foundation). Content is never stored in
+// Funda AI (20261009093000_funda_ai_foundation). Content is never stored in
 // ai_requests / ai_tool_calls; conversations exist only when a feature's
 // store_content policy is on.
 export type AiFeatureRow = {

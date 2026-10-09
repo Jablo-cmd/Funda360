@@ -1,4 +1,4 @@
--- Regression suite for 20261011090000_funda_ai_foundation.sql.
+-- Regression suite for 20261009093000_funda_ai_foundation.sql.
 --
 -- Part 1 tests the AI control plane (policy gate, flags, rate limits,
 -- budgets, audit rows, service-only writes, conversations, feedback, admin).
@@ -125,7 +125,7 @@ begin
   v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
   call test_util.record('ai: a feature on globally still needs the school enabled', v ->> 'reason' = 'school_not_enabled', v::text);
 
-  -- A school's feature list is explicit (20261012090000): enabled with no
+  -- A school's feature list is explicit (20261009094000): enabled with no
   -- features means no features.
   insert into public.ai_school_settings (school_id, enabled) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true);
   v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
@@ -207,7 +207,7 @@ begin
   call test_util.record('ai: the per-school daily limit is enforced', v ->> 'reason' = 'rate_limited', v::text);
 
   delete from public.ai_requests;
-  update public.ai_features set school_requests_per_day = 3000, request_token_reservation = 1000 where key = 'copilot';
+  update public.ai_features set school_requests_per_day = 3000, max_output_tokens = 1000, request_token_reservation = 1000 where key = 'copilot';
   update public.ai_school_settings set monthly_token_budget = 2000 where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   insert into public.ai_requests (user_id, school_id, role, feature, status, input_tokens, output_tokens, charged_tokens)
   values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'school_owner', 'copilot', 'succeeded', 500, 100, 600);
@@ -218,7 +218,7 @@ begin
   v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
   call test_util.record('ai: the school''s monthly token budget is enforced', v ->> 'reason' = 'budget_exhausted', v::text);
   update public.ai_school_settings set monthly_token_budget = null where school_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  update public.ai_features set request_token_reservation = 120000 where key = 'copilot';
+  update public.ai_features set request_token_reservation = 120000, max_output_tokens = 16000 where key = 'copilot';
 end $$;
 
 -- Audit rows, service-only writes, feedback, conversations.

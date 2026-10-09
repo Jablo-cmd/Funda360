@@ -126,7 +126,21 @@ export function buildHistory(
     )
     .slice(-maxPairs)
     .flatMap((t) => [
-      { role: 'user' as const, text: t.question.slice(0, HISTORY_TURN_CHARS) },
-      { role: 'assistant' as const, text: t.result.answer.slice(0, HISTORY_TURN_CHARS) },
+      { role: 'user' as const, text: trimAtBoundary(t.question, HISTORY_TURN_CHARS) },
+      { role: 'assistant' as const, text: trimAtBoundary(t.result.answer, HISTORY_TURN_CHARS) },
     ]);
+}
+
+/**
+ * Shortens text to at most `max` characters at a whitespace boundary, so a
+ * long number (e.g. an ID the gateway would redact) is never cut into a
+ * fragment that no longer looks like one, and no surrogate pair is split.
+ */
+export function trimAtBoundary(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max + 1);
+  const space = cut.search(/\s\S*$/);
+  return (
+    space > 0 ? cut.slice(0, space) : cut.slice(0, max).replace(/[\uD800-\uDBFF]$/, '')
+  ).trimEnd();
 }

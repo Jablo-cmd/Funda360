@@ -125,7 +125,7 @@ export const EVIDENCE_ANSWER_SCHEMA_V2: JsonSchema = {
 const SCHOOL_COPILOT_V2: PromptDefinition = {
   ...SCHOOL_COPILOT_V1,
   version: 2,
-  active: true,
+  active: false,
   outputSchema: EVIDENCE_ANSWER_SCHEMA_V2,
   system: SCHOOL_COPILOT_V1.system.replace(
     `- For each figure you rely on, add an evidence item: what it shows, the value exactly as it appears in the tool output, the period, and the tool_call_id of that output.`,
@@ -134,7 +134,18 @@ const SCHOOL_COPILOT_V2: PromptDefinition = {
   ),
 };
 
-const REGISTRY: PromptDefinition[] = [SCHOOL_COPILOT_V1, SCHOOL_COPILOT_V2];
+/** v3: quantities in digits; numbers in notes and questions are checked too. */
+const SCHOOL_COPILOT_V3: PromptDefinition = {
+  ...SCHOOL_COPILOT_V2,
+  version: 3,
+  active: true,
+  system: SCHOOL_COPILOT_V2.system.replace(
+    `Do not round, convert or combine figures.`,
+    `Do not round, convert or combine figures. Write quantities in digits, never in words. The same check applies to limitations, follow-up questions and declined actions: do not put numbers there unless they are evidence values.`,
+  ),
+};
+
+const REGISTRY: PromptDefinition[] = [SCHOOL_COPILOT_V1, SCHOOL_COPILOT_V2, SCHOOL_COPILOT_V3];
 
 export function listPrompts(): PromptDefinition[] {
   return [...REGISTRY];

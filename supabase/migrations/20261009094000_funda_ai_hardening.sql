@@ -1,5 +1,5 @@
 -- Funda AI pre-pilot hardening (audit of 2026-10-09). Forward-only; changes
--- 20261011090000_funda_ai_foundation without editing it.
+-- 20261009093000_funda_ai_foundation without editing it.
 --
 --   H1  Rate limits and budgets are decided under per-user and per-school
 --       advisory locks, so parallel requests are serialised. Budget is

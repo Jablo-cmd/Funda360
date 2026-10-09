@@ -9,7 +9,7 @@ Funda360 can give education department officials (province, district or circuit 
 | Province → District → Circuit hierarchy | `education_areas` (migration `20261009091000_government_reporting.sql`) |
 | School → area link | `schools.education_area_id` (district or circuit). The old free-text `schools.province` / `schools.district` columns are kept but are **not** used to build the hierarchy: current school records are demo data, so areas are created and schools linked by a platform administrator only. |
 | Official role | `education_official` (`20261009090000_education_official_role.sql`). No school tenant. Two-factor authentication is mandatory and enforced by the database (see below). |
-| Official access | `education_official_assignments`: one row per official per area **or per school** (`20261010090000`). An area grant covers the area and everything under it; a school grant covers that school only. `can_view_learner_detail` is a separate grant. |
+| Official access | `education_official_assignments`: one row per official per area **or per school** (`20261009092000`). An area grant covers the area and everything under it; a school grant covers that school only. `can_view_learner_detail` is a separate grant. |
 | Reports and dashboard data | `get_reporting_scope()`, `get_government_report(filters)`, `get_school_report(school_id, filters)`, `get_class_learner_report(class_id, filters)` |
 | Export audit | `record_government_report_export(report, format, filters)` |
 | Administration | `upsert_education_area`, `set_school_education_area`, `provision_education_official`, `grant_education_official_access`, `revoke_education_official_access` (platform administrators only, all audited) |
@@ -85,7 +85,7 @@ CSV, Excel-compatible CSV (UTF-8 byte-order mark and header lines) and PDF. They
 
 ## Production deployment requirements
 
-1. Merge the branch to `main`; CI's `migrate` job applies `20261008090000`, `20261009090000`, `20261009091000` and `20261010090000`, and the `functions` job deploys `government-api` (see `docs/GOVERNMENT_API.md`).
+1. Merge the branch to `main`; CI's `migrate` job applies `20261008090000`, `20261009090000`, `20261009091000` and `20261009092000`, and the `functions` job deploys `government-api` (see `docs/GOVERNMENT_API.md`).
 2. In the Supabase dashboard confirm **Authentication → Multi-Factor → TOTP** is enabled (enroll and verify). Without it nobody can reach `aal2` and government reporting is unusable for officials and platform administrators.
 3. The platform owner and super administrator enrol an authenticator (**My Profile → Two-factor authentication**) before using `/district`, `/reports/government` or `/district/areas`. At the 2026-10-08 check neither had a verified factor.
 4. Link every school to its district or circuit, create officials, and grant each one only the area of their mandate (learner-level detail only where required).

@@ -62,7 +62,7 @@ jobs:
           deno-version: v2.x
       - name: Type-check Edge Functions
         working-directory: supabase/functions
-        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts government-api/index.ts _shared/providers/providers.test.ts _shared/providers/binding.test.ts _shared/admissions/guards.test.ts _shared/government/api.test.ts funda-ai/index.ts _shared/ai/ai.test.ts
+        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts government-api/index.ts _shared/providers/providers.test.ts _shared/providers/binding.test.ts _shared/admissions/guards.test.ts _shared/government/api.test.ts funda-ai/index.ts _shared/ai/ai.test.ts _shared/ai/eval/eval.test.ts
       - name: Lint Edge Functions
         working-directory: supabase/functions
         run: deno lint

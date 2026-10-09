@@ -5,6 +5,7 @@ import {
   GENERIC_AI_ERROR,
   HISTORY_TURN_CHARS,
   parseAiResult,
+  trimAtBoundary,
   toolLabel,
 } from '@/features/ai/utils/aiResponse';
 
@@ -149,5 +150,21 @@ describe('messages', () => {
     expect(aiErrorMessage(null)).toBe(GENERIC_AI_ERROR);
     expect(toolLabel('get_learner_fee_summary')).toBe('Fee account');
     expect(toolLabel('new_tool')).toBe('new tool');
+  });
+});
+
+describe('trimAtBoundary', () => {
+  it('never cuts a number or a word in half', () => {
+    const id = '0801015800083';
+    const text = `${'word '.repeat(298)}${id} tail`;
+    const out = trimAtBoundary(text, 1500);
+    expect(out.length).toBeLessThanOrEqual(1500);
+    expect(out.endsWith('word')).toBe(true);
+    expect(out).not.toMatch(/\d$/);
+  });
+
+  it('leaves short text alone and handles text without spaces', () => {
+    expect(trimAtBoundary('short', 1500)).toBe('short');
+    expect(trimAtBoundary('x'.repeat(2000), 1500)).toHaveLength(1500);
   });
 });

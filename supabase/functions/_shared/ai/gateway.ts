@@ -27,10 +27,12 @@ import { corsHeaders } from '../cors.ts';
 import type { ReadOnlyData } from './data.ts';
 import {
   type CheckedEvidence,
+  checkClaims,
+  checkFigures,
   type Confidence,
+  knownStringsIn,
   decideConfidence,
   type EvidenceItem,
-  unsupportedFigures,
   verifyEvidence,
 } from './evidence.ts';
 import { getActivePrompt, renderSystemPrompt } from './prompts.ts';
@@ -55,6 +57,10 @@ export const MAX_MODEL_TURNS = 5;
 export const MAX_TOOL_CALLS = 8;
 /** Below this, another model call cannot finish before the deadline. */
 export const MIN_CALL_MS = 3_000;
+/** Below this many reserved tokens left, no further model turn starts. */
+export const MIN_TURN_TOKENS = 1_024;
+/** The gateway retries a retryable provider error this many times (the SDK itself does not retry). */
+export const PROVIDER_RETRIES = 1;
 /** Free plan: 150 s worker wall clock; leave room to settle and reply. */
 export const DEFAULT_DEADLINE_MS = 110_000;
 
@@ -66,6 +72,8 @@ export interface Policy {
   max_input_chars: number;
   max_history_chars: number;
   max_output_tokens: number;
+  /** Tokens reserved for this request; the gateway stops before exceeding it. */
+  request_token_reservation: number;
   medical_content_policy: 'block' | 'allow';
   store_content: boolean;
   content_retention_days: number;
@@ -326,7 +334,10 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
 
   try {
     // 3. Safety: every turn, before anything leaves Funda360.
-    const screen = screenConversation([body.message, ...history.map((h) => h.text)]);
+    const screen = screenConversation(
+      [body.message, ...history.filter((h) => h.role === 'user').map((h) => h.text)],
+      history.filter((h) => h.role === 'assistant').map((h) => h.text),
+    );
     screen.flags.forEach((f) => flags.add(f));
     if (screen.escalate) {
       await finish('safety_escalated', `safeguarding_${screen.escalate}`);
@@ -379,10 +390,19 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       return reply({ error: 'ai_timeout', request_id: requestId }, 504);
     };
 
-    // 5. Model <-> tool loop, under one deadline.
+    // 5. Model <-> tool loop, under one deadline and within the reservation.
+    let retriesLeft = PROVIDER_RETRIES;
     for (let turn = 0; turn < MAX_MODEL_TURNS; turn++) {
       const remaining = deadlineAt - Date.now();
       if (remaining < MIN_CALL_MS || deadline.signal.aborted) return await deadlineExceeded();
+      // The next call's input is at least everything sent so far; never let
+      // output push the request past what was reserved for it.
+      const tokensLeft = policy.request_token_reservation - (usage.inputTokens + usage.outputTokens);
+      // (A feature with a small output cap may run turns smaller than MIN_TURN_TOKENS.)
+      if (tokensLeft < Math.min(MIN_TURN_TOKENS, policy.max_output_tokens)) {
+        await finish('failed', 'reservation_exhausted');
+        return reply({ error: 'ai_incomplete', request_id: requestId }, 502);
+      }
       const route = routes[routeIndex];
       let result;
       try {
@@ -392,7 +412,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
           messages,
           tools: tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
           outputSchema: prompt.outputSchema,
-          maxOutputTokens: policy.max_output_tokens,
+          maxOutputTokens: Math.min(policy.max_output_tokens, tokensLeft),
           effort: route.effort,
           refusalFallback: route.refusalFallback,
           timeoutMs: Math.min(route.timeoutMs, remaining),
@@ -402,6 +422,15 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         const pe = error instanceof ProviderError ? error : new ProviderError('unknown', 'provider call failed');
         if (USAGE_UNKNOWN_KINDS.has(pe.kind)) usageUnknown = true;
         if (deadline.signal.aborted) return await deadlineExceeded();
+        // One retry of the same call for transient errors (the SDK does not
+        // retry, so every attempt is visible here and billed attempts are
+        // reflected in usageUnknown).
+        if (pe.retryable && retriesLeft > 0 && deadlineAt - Date.now() >= MIN_CALL_MS) {
+          retriesLeft -= 1;
+          turn -= 1;
+          deps.log({ event: 'funda_ai.provider_retry', request_id: requestId, kind: pe.kind });
+          continue;
+        }
         // Fall back to the next route only before the conversation is bound to a provider.
         if (turn === 0 && pe.retryable && routeIndex + 1 < routes.length) {
           routeIndex += 1;
@@ -477,19 +506,46 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         return reply({ error: 'ai_invalid_output', request_id: requestId }, 502);
       }
 
-      const evidence: CheckedEvidence[] = verifyEvidence(answer.evidence, toolOutputs);
-      const unsupported = unsupportedFigures(answer.answer, message, evidence);
+      const known = knownStringsIn(toolOutputs.values());
+      const evidence: CheckedEvidence[] = checkClaims(verifyEvidence(answer.evidence, toolOutputs), message, known);
+      const figures = checkFigures(answer.answer, message, evidence, known);
+      const unsupported = [...figures.unsupported];
       const withheld = unsupported.length > 0;
+      // Notes shown under the answer get the same check; items with unchecked numbers are dropped.
+      let droppedNotes = 0;
+      const keepChecked = (items: string[]) =>
+        items.filter((item) => {
+          const c = checkFigures(item, message, evidence, known);
+          if (c.unsupported.length === 0) return true;
+          droppedNotes += 1;
+          unsupported.push(...c.unsupported);
+          return false;
+        });
+      const modelLimitations = keepChecked(answer.limitations);
+      const followUps = keepChecked(answer.follow_up_questions);
+      const declined = keepChecked(answer.declined_actions);
       const toolsReturnedData = toolsUsed.some((t) => t.status === 'ok');
-      const confidence = decideConfidence({ model: answer.confidence, evidence, toolsReturnedData, unsupported: unsupported.length });
-      const limitations = [...answer.limitations];
+      const confidence = decideConfidence({
+        model: answer.confidence,
+        evidence,
+        toolsReturnedData,
+        unsupported: unsupported.length,
+        userOnly: figures.userOnly.length,
+      });
+      const limitations = [...modelLimitations];
+      if (figures.userOnly.length > 0) {
+        limitations.push(`These figures come from your question and were not checked against Funda360 data: ${figures.userOnly.join(', ')}.`);
+      }
+      if (droppedNotes > 0) {
+        limitations.push('Some notes contained figures that could not be checked and were removed.');
+      }
       if (evidence.some((e) => !e.verified)) {
         limitations.push('Some figures did not match the Funda360 data they cited and are marked as rejected. Do not rely on them.');
       }
       if (toolsReturnedData && !evidence.some((e) => e.verified)) {
         limitations.push('No figure in this answer could be checked against your Funda360 data.');
       }
-      if (withheld) flags.add('unsupported_figures');
+      if (unsupported.length > 0) flags.add('unsupported_figures');
       const answerText = withheld ? WITHHELD_ANSWER : answer.answer;
       const response = {
         kind: 'answer',
@@ -497,12 +553,13 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         conversation_id: null as string | null,
         answer: answerText,
         answer_withheld: withheld,
-        unsupported_figures: unsupported,
+        unsupported_figures: [...new Set(unsupported)].slice(0, 10),
+        unchecked_user_figures: figures.userOnly,
         evidence,
         limitations,
         confidence,
-        follow_up_questions: answer.follow_up_questions,
-        declined_actions: answer.declined_actions,
+        follow_up_questions: followUps,
+        declined_actions: declined,
         tools_used: toolsUsed,
         requires_human_review: policy.requires_human_approval,
         generated_by: { provider: result.provider, model: result.model, prompt: prompt.id, prompt_version: prompt.version },

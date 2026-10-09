@@ -51,7 +51,7 @@ values ('stack_rate_test', 'Stack rate test', 'Test only', true, array['principa
 -- that reserves 1,000 tokens per request, so at most 5 can run at once.
 insert into public.schools (id, name, status) values ('ec000000-0000-0000-0000-000000000004', 'Budget Test School', 'active');
 insert into public.ai_features (key, name, description, enabled, allowed_roles, allowed_tools, prompt_id, model_tier,
-                                user_requests_per_minute, request_token_reservation)
-values ('stack_budget_test', 'Stack budget test', 'Test only', true, array['principal'], array[]::text[], 'school_copilot', 'simple', 120, 1000);
+                                user_requests_per_minute, max_output_tokens, request_token_reservation)
+values ('stack_budget_test', 'Stack budget test', 'Test only', true, array['principal'], array[]::text[], 'school_copilot', 'simple', 120, 1000, 1000);
 insert into public.ai_school_settings (school_id, enabled, enabled_features, monthly_token_budget)
 values ('ec000000-0000-0000-0000-000000000004', true, array['stack_budget_test'], 5000);

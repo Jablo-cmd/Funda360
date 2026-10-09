@@ -1,4 +1,4 @@
--- Regression suite for 20261010090000_provincial_dashboard_and_government_api.sql.
+-- Regression suite for 20261009092000_provincial_dashboard_and_government_api.sql.
 --
 -- Runs after zz_government_reporting.test.sql and reuses its fixtures:
 --   P1 Test Province One ── D1 ── C1 (circuit)      School A -> D1, R1 -> C1

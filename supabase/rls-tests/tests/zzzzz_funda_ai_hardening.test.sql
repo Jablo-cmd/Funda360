@@ -1,4 +1,4 @@
--- Funda AI pre-pilot hardening (20261012090000), audit of 2026-10-09.
+-- Funda AI pre-pilot hardening (20261009094000), audit of 2026-10-09.
 -- Runs after zzzz_funda_ai.test.sql and reuses its helpers
 -- (test_util.ai_authorize, test_util.ai_service, test_util.gr_call).
 -- Concurrency itself is exercised against a real stack by
@@ -18,7 +18,7 @@ begin
   delete from public.ai_requests;
   update public.ai_features
      set enabled = true, user_requests_per_minute = 100, user_requests_per_day = 10000, school_requests_per_day = 100000,
-         request_token_reservation = 1000, school_monthly_token_budget = 3000000, user_monthly_token_budget = 500000,
+         max_output_tokens = 1000, request_token_reservation = 1000, school_monthly_token_budget = 3000000, user_monthly_token_budget = 500000,
          max_input_chars = 4000, max_history_chars = 12000
    where key = 'copilot';
   update public.ai_school_settings set enabled = true, enabled_features = array['copilot'], monthly_token_budget = null
@@ -298,5 +298,97 @@ begin
     call test_util.record('ai hardening: without pg_cron the migration applies and schedules nothing (verified on the real stack)', true,
       'pg_cron not installed in this image');
   end if;
+  delete from public.ai_requests;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Pre-merge fixes (20261009095000): independent review of 2026-10-09
+-- ---------------------------------------------------------------------------
+
+do $$
+declare
+  v jsonb;
+  v_err text;
+  v_n int;
+  v_row uuid;
+  v_ok boolean;
+begin
+  -- #4 a reservation smaller than one maximal output is refused.
+  begin
+    update public.ai_features set request_token_reservation = 500, max_output_tokens = 1000 where key = 'copilot';
+    v_err := 'no error';
+  exception when check_violation then
+    v_err := 'check_violation';
+  end;
+  call test_util.record('ai pre-merge: a reservation must cover the largest single output (#4)', v_err = 'check_violation', v_err);
+
+  -- #10 the budget month starts at midnight in South Africa.
+  v_ok := public.ai_month_start() = (date_trunc('month', now() at time zone 'Africa/Johannesburg') at time zone 'Africa/Johannesburg')
+          and extract(day from public.ai_month_start() at time zone 'Africa/Johannesburg') = 1
+          and (public.ai_month_start() at time zone 'Africa/Johannesburg')::time = '00:00';
+  call test_util.record('ai pre-merge: budget months follow Africa/Johannesburg (#10)', v_ok, public.ai_month_start()::text);
+
+  -- ai_start_request returns the reservation the gateway caps output with.
+  delete from public.ai_requests;
+  v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  v := test_util.ai_service(format('select public.ai_start_request(%L)', v ->> 'request_id'));
+  call test_util.record('ai pre-merge: the started policy carries the reservation (#4)',
+    (v -> 'policy' ->> 'request_token_reservation')::int = 1000, v::text);
+
+  -- #5 retention never deletes rows from the current budget month.
+  alter table public.ai_features drop constraint ai_features_audit_retention_days_check;
+  update public.ai_features set audit_retention_days = 1 where key = 'copilot';
+  delete from public.ai_requests;
+  if now() - public.ai_month_start() > interval '1 day 1 hour' then
+    insert into public.ai_requests (user_id, school_id, role, feature, status, created_at, charged_tokens)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'teacher', 'copilot', 'succeeded',
+            public.ai_month_start() + interval '1 minute', 900)
+    returning id into v_row;
+    perform test_util.ai_service('select public.ai_purge_expired()');
+    select count(*) into v_n from public.ai_requests where id = v_row;
+    call test_util.record('ai pre-merge: retention keeps this month''s rows so budgets stay correct (#5)', v_n = 1, v_n::text);
+  else
+    call test_util.record('ai pre-merge: retention keeps this month''s rows (#5) (first day of month: not measurable today)', true, 'skipped by date');
+  end if;
+  insert into public.ai_requests (user_id, school_id, role, feature, status, created_at)
+  values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'teacher', 'copilot', 'succeeded',
+          public.ai_month_start() - interval '2 days')
+  returning id into v_row;
+  perform test_util.ai_service('select public.ai_purge_expired()');
+  select count(*) into v_n from public.ai_requests where id = v_row;
+  call test_util.record('ai pre-merge: rows from earlier months past retention are still purged (#5)', v_n = 0, v_n::text);
+  update public.ai_features set audit_retention_days = 365 where key = 'copilot';
+  alter table public.ai_features add constraint ai_features_audit_retention_days_check check (audit_retention_days between 30 and 3650);
+
+  -- #6 usage summary: charged tokens; aal2 for platform administrators.
+  delete from public.ai_requests;
+  insert into public.ai_requests (user_id, school_id, role, feature, status, input_tokens, output_tokens, charged_tokens, usage_estimated)
+  values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'teacher', 'copilot', 'failed', 10, 0, 1000, true),
+         ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'teacher', 'copilot', 'policy_blocked', null, null, 0, false);
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select public.ai_usage_summary(current_date - 1, current_date)', 'aal1');
+  call test_util.record('ai pre-merge: platform-wide AI usage needs an aal2 session (#6)', v ->> 'error' like 'mfa_required%', v::text);
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select public.ai_usage_summary(current_date - 1, current_date)');
+  call test_util.record('ai pre-merge: usage reports charged tokens, estimates and policy blocks (#6)',
+    (v -> 0 ->> 'charged_tokens')::int = 1000 and (v -> 0 ->> 'estimated_usage_requests')::int = 1
+      and (v -> 0 ->> 'policy_blocked')::int = 1, v::text);
+  v := test_util.gr_call('22222222-2222-2222-2222-222222222222', 'school_owner', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'select public.ai_usage_summary(current_date - 1, current_date)', 'aal1');
+  call test_util.record('ai pre-merge: a school owner still sees their own school''s usage (unchanged)', jsonb_array_length(v) >= 1, v::text);
+
+  -- #6 platform-administrator reads of other users' AI rows need aal2; own rows do not.
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select to_jsonb(count(*)) from public.ai_requests', 'aal1');
+  call test_util.record('ai pre-merge: an aal1 platform administrator reads no other users'' AI requests (#6)', v::text = '0', v::text);
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select to_jsonb(count(*)) from public.ai_requests');
+  call test_util.record('ai pre-merge: an aal2 platform administrator can audit AI requests', (v #>> '{}')::int = 2, v::text);
+  v := test_util.gr_call('44444444-4444-4444-4444-444444444444', 'platform_administrator', null,
+    'select to_jsonb(count(*)) from public.ai_features', 'aal1');
+  call test_util.record('ai pre-merge: an aal1 platform administrator cannot read AI policy (#6)', v::text = '0', v::text);
+  v := test_util.gr_call('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'select to_jsonb(count(*)) from public.ai_requests', 'aal1');
+  call test_util.record('ai pre-merge: users still read their own AI requests without aal2', (v #>> '{}')::int = 2, v::text);
   delete from public.ai_requests;
 end $$;

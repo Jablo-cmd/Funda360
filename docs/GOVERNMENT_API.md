@@ -23,7 +23,7 @@ client ──HTTPS──▶ Edge Function government-api ──service role─�
   - It holds the service-role key server-side only; it is never sent to a browser.
   - It is deployed with `--no-verify-jwt`, because API tokens are not Supabase JWTs.
   - No CORS headers are sent: the API is for server-to-server use.
-- **Database:** `gov_api_request()` (migration `20261010090000`) is executable by `service_role` only.
+- **Database:** `gov_api_request()` (migration `20261009092000`) is executable by `service_role` only.
   1. It hashes the bearer token (SHA-256) and finds the client.
   2. It refuses revoked or expired clients.
   3. It applies the per-client rate limit.

@@ -1,14 +1,16 @@
-# Funda AI: Phase 1 foundation and pre-pilot hardening
+# Funda AI
 
-Status (2026-10-09): code complete on branch `claude/funda360-audit-0foiq8`, hardened against the 2026-10-09 audit, and tested locally and on a real local Supabase stack. **Not deployed and not ready for a pilot**: the human privacy and deployment decisions in section 12 are still open.
+Status (2026-10-09): code complete on branch `claude/funda360-audit-0foiq8` (PR #9, **open, not merged**). Hardened against two reviews on 2026-10-09 and tested locally and on a real local Supabase stack.
 
-Production has no AI tables, the `funda-ai` function is not deployed, and no model provider key is configured. Every feature is off by default. No real model has been called, so answer quality is unmeasured.
+- **Not deployed and not verified in production.** Production has no AI tables and no `funda-ai` function, and no model provider key is configured.
+- Every feature is off by default.
+- No real model has been called, so answer quality is unmeasured.
 
-This document describes only what exists in the code. Section 10 lists what is designed for but not built.
+Release gates: `docs/FUNDA_AI_PILOT_READINESS.md`. Evaluation: `docs/FUNDA_AI_EVALUATION.md`. This document describes only what exists in the code.
 
 ## 1. What a user can do
 
-Staff with an enabled role at a school with Funda AI enabled see a **Funda AI** button in the dashboard header. They ask about data they can already see. Funda AI may look up:
+Staff with an enabled role at a school with Funda AI enabled see a **Funda AI** button in the dashboard header. Read-only lookups:
 
 | Tool                             | Reads                                                                     | Roles (tool level)                                                 | RLS that decides the rows    |
 | -------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------- |
@@ -18,220 +20,199 @@ Staff with an enabled role at a school with Funda AI enabled see a **Funda AI** 
 | `get_learner_fee_summary`        | the four `learner_fee_*` ledgers, `active = true`, same formula as the UI | school_owner, principal, finance_manager                           | `can_view_learner_financial` |
 | `get_reporting_summary`          | `get_government_report()` (own school for school leaders)                 | school_owner, principal                                            | `reporting_school_ids()`     |
 
-An answer shows:
+There are **no write tools** and no safeguarding or medical lookups. Parents, learners, officials and platform administrators are not in the seeded feature's roles.
 
-- the text;
-- **evidence**: each figure with its period, and whether it matched the exact field it cites ("Matches Funda360 data") or not ("Rejected");
-- **limitations**;
-- **confidence**;
-- actions that need a person;
-- which lookups ran or were refused;
-- **Helpful / Not helpful / Report a problem** feedback.
+### Pilot scope: teachers (no permission changed)
 
-If the answer text contains a number that is not a verified figure, the text is **withheld** and replaced by a notice (section 7).
+Funda360's existing `can_view_academic` (`20260803150000_academic_structure.sql:250`) lets `teacher`, `class_teacher` and `subject_teacher` read attendance and results for **every learner in their school**. Funda AI does not widen this, but makes such lookups faster.
 
-Funda AI has **no write tools**. It cannot change marks, fees, admissions, discipline, safeguarding or government submissions.
-
-Parents, learners, education officials and platform administrators are not in the seeded feature's roles, and no tool lists a family role.
-
-### Teacher scope: recommended pilot policy (no permission changed)
-
-Funda360's existing rule `can_view_academic` (`20260803150000_academic_structure.sql`) lets `teacher`, `class_teacher` and `subject_teacher` read attendance and assessment results for **every learner in their school**, not only their own classes. Funda AI does not widen this, but it makes school-wide lookups much faster.
-
-Recommendation, for a human decision before the pilot:
-
-1. Pilot with **school_owner and principal only**. At enablement, a platform admin sets `ai_admin_update_feature('copilot', '{"allowed_roles": ["school_owner", "principal"]}')`.
-2. Before adding teachers, add class-scoped tools that filter by the teacher's `teaching_assignments` and `class_teacher_assignments` (Phase 2).
-3. Decide separately whether the school-wide teacher rule itself should change. That is a change to Funda360's permissions, not to Funda AI, and is out of scope here.
-
-## 2. Architecture
+**Recommended pilot:** school_owner and principal only:
 
 ```
-browser (user JWT)
-  └─ supabase.functions.invoke('funda-ai')    JWT verified by the platform
-       └─ handleFundaAi()                     supabase/functions/_shared/ai/gateway.ts
-            1. ai_authorize_request()         as the user: flag, role, school, message + history sizes,
-                                              rate limits, budget pre-check, under per-user/per-school locks
-            2. ai_start_request()             service role: reserve budget, return policy (single use)
-            3. safety screen                  EVERY turn; safeguarding -> guidance, medical -> notice,
-                                              SA ID numbers redacted; no model call when stopped
-            4. prompt registry + routing      code-only prompt (school_copilot v2), model from config
-            5. model <-> tool loop            ONE deadline (default 110 s) for all turns and retries;
-                                              ≤5 model turns, ≤8 tool calls; tools run as the user (RLS)
-            6. output validation              JSON schema; field-level evidence; unsupported figures withhold
-            7. ai_complete_request()          service role: settle actual usage (or keep the reservation
-                                              when usage is unknown); no content
-     pg_cron: ai_recover_stale_requests() every minute; ai_purge_expired() daily 02:20 UTC
+ai_admin_update_feature('copilot', '{"allowed_roles": ["school_owner", "principal"]}')
 ```
 
-**Authority stays in the database.** The gateway never holds a database credential for user data. The policy decision and every data read use a supabase-js client that carries the caller's JWT, so the existing RLS and SECURITY DEFINER checks apply exactly as on the user's own screens.
+Add teachers only after class-scoped tools exist (filtered by `teaching_assignments` / `class_teacher_assignments`). Whether to narrow the teacher rule itself is a separate Funda360 permission decision.
 
-The service-role key is used only for `ai_start_request`, `ai_record_tool_call`, `ai_complete_request` and `ai_store_exchange`, which are executable by `service_role` alone.
+## 2. Request lifecycle
 
-## 3. Files
+```
+browser (user JWT) ── supabase.functions.invoke('funda-ai')        JWT verified by the platform
+  1. ai_authorize_request()      as the user. Per-user, then per-school advisory locks; flag, role, school
+                                 feature list, message + history sizes, rate limits, budget pre-check.
+                                 Returns only allowed / reason / request_id.
+  2. ai_start_request()          service role, single use, within 2 minutes. Re-checks both budgets including
+                                 requests in flight, reserves request_token_reservation, returns principal + policy.
+  3. safety                      text normalised (NFKC, invisible characters removed).
+                                 Safeguarding: every turn screened -> fixed guidance, no model call.
+                                 Medical (user turns) -> notice, no model call.
+                                 SA ID numbers redacted in every turn.
+  4. prompt + route              code-only prompt school_copilot v3; model route from configuration.
+  5. model <-> tool loop         one deadline (default 110 s) for all turns and retries; each turn's output
+                                 capped by what is left of the reservation; at most 5 turns and 8 tool calls;
+                                 at most 1 gateway retry for transient errors; tools run as the user (RLS).
+  6. answer checks               JSON schema; evidence verified at the exact cited field; numbers in the answer,
+                                 notes and claims checked (section 6).
+  7. ai_complete_request()       service role. Settles actual tokens, or keeps the reservation when usage is
+                                 unknown. Records outcome and flags; no content.
+  pg_cron: ai_recover_stale_requests() every minute; ai_purge_expired() daily at 02:20 UTC.
+```
 
-| Path                                                         | Purpose                                                                                           |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `supabase/migrations/20261011090000_funda_ai_foundation.sql` | Tables, policies, gate, usage/audit and admin RPCs, `copilot` seed (disabled)                     |
-| `supabase/migrations/20261012090000_funda_ai_hardening.sql`  | Locks, reservations, start/settle/recover, budgets, admin fixes, retention, cron schedules        |
-| `supabase/functions/funda-ai/index.ts`                       | Edge Function wiring (env, clients, deadline)                                                     |
-| `supabase/functions/_shared/ai/gateway.ts`                   | Request handling, safety, loop, deadline, settlement                                              |
-| `…/ai/evidence.ts`                                           | Field-level evidence, figure extraction, confidence rules                                         |
-| `…/ai/provider.ts`, `…/ai/anthropic.ts`                      | Provider-neutral interface; Claude adapter (official SDK `@anthropic-ai/sdk@0.128.0`)             |
-| `…/ai/routing.ts`, `…/ai/prompts.ts`                         | Model routes and pricing; versioned prompts and output schemas                                    |
-| `…/ai/safety.ts`                                             | Screening, ID redaction, untrusted-data wrapper, safeguarding and medical notices                 |
-| `…/ai/tools.ts`, `…/ai/data.ts`, `…/ai/schema.ts`            | Tool registry, read-only user-scoped data, JSON-schema validator                                  |
-| `src/features/ai/`                                           | Launcher, panel, answer card, service, response parser                                            |
+## 3. Authentication and authorisation boundaries
 
-## 4. Database
+**The gateway never reads data as itself.** Every lookup uses a supabase-js client carrying the caller's JWT, so RLS decides. The role comes from the JWT and the school from `current_tenant_id()` (active profile, MFA-aware), never from request fields.
 
-Tables (RLS forced, `revoke all` from anon/authenticated, then narrow `select` grants):
+| Caller                         | Can                                                                               | Cannot                                                                       |
+| ------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Signed-in user (`authenticated`) | `ai_authorize_request`, `ai_my_features`, `ai_submit_feedback` (own), read own AI rows | start, complete or record requests; read other users' rows; read policy |
+| School leaders                 | read own school's AI settings; `ai_usage_summary` for own school                  | other schools                                                                |
+| Platform admin, **aal2**       | `ai_admin_update_feature`, `ai_admin_set_school` (audited); read all AI rows and usage | anything at aal1 (no AI rows, policy or platform usage)                  |
+| `service_role` (Edge Function) | `ai_start_request`, `ai_record_tool_call`, `ai_complete_request`, `ai_store_exchange`, `ai_recover_stale_requests`, `ai_purge_expired` | (the key never reaches the browser) |
+| `anon`                         | nothing                                                                           |                                                                              |
 
-- **`ai_features`**: per-feature flag and policy:
-  - roles, tools, prompt, model tier;
-  - `max_input_chars` (message) and `max_history_chars` (history; default 12,000);
-  - output tokens;
-  - rate limits per user per minute and day, and per school per day;
-  - **`school_monthly_token_budget`** (required, default 3,000,000) and **`user_monthly_token_budget`** (default 500,000);
-  - `request_token_reservation` (default 120,000);
-  - `medical_content_policy` (`block` by default);
-  - content storage and retention, audit retention, feedback retention (default 180 days), human-review flag.
+Additional rules:
 
-  No budget can be NULL or unlimited.
-- **`ai_school_settings`**: per-school switch, an **explicit** feature list (empty means none) and an optional budget override.
-- **`ai_requests`**: one row per request, allowed or blocked. It records:
-  - user, school, role, feature, status, block reason;
-  - message and history sizes;
-  - `started_at`, `reserved_tokens`, **`charged_tokens`** (what counts against budgets) and `usage_estimated`;
-  - model, prompt version, tokens, estimated cost, safety flags, error code, duration.
+- All `ai_*` SECURITY DEFINER functions pin `search_path = public`. Internal helpers (`ai_lock`, `ai_month_start`) are not executable by users.
+- RLS is forced on every AI table.
+- Stored conversations (off by default) are owner-only; platform admins cannot read them.
 
-  **No prompt or answer text.**
-- **`ai_tool_calls`**: tool name and outcome only.
-- **`ai_conversations` / `ai_messages`**: written only when `store_content = true` (default **false**). Owner-only.
-- **`ai_feedback`**: rating and an optional comment.
+## 4. Rate limits and budgets
 
-Policy gate and budget (audit H1):
+- **Rate limits:** per user per minute and per day, and per school per day. They are counted from `ai_requests` under the per-user and per-school advisory locks. Measured on the real stack: 50 parallel requests against a limit of 2 admit exactly 2, through the gateway and through direct RPC calls.
+- **Budgets (tokens per month):** none can be NULL or unlimited.
+  - per school: `school_monthly_token_budget` (default 3,000,000) or the school's own override;
+  - per user: `user_monthly_token_budget` (default 500,000).
+  - Months follow **Africa/Johannesburg** (`ai_month_start()`).
+- **Reservation:** each request reserves `request_token_reservation` tokens (default 120,000). A CHECK requires it to be at least `max_output_tokens`.
+  - Both budgets are checked including in-flight reservations. Measured: 50 parallel requests against a budget that fits 5 run exactly 5.
+  - Each model turn's output is capped by what is left of the reservation. The loop stops (`reservation_exhausted`) when less than min(1,024, max output) tokens are left.
+  - **Actual usage can still exceed the reservation by at most one turn's input tokens**, because input size is only known after a call. The budget can be overshot by that amount per in-flight request.
+- **Settlement:** completion charges actual tokens. When usage is unknown (deadline, abort, crash, or a failed attempt that may have been billed) the charge is at least the reservation, marked `usage_estimated`.
+  - Requests never started (for example, direct RPC calls that never reached the gateway) are charged nothing.
+  - The SDK does not retry. The gateway retries once and accounts for it.
+- **Blocked attempts** are recorded up to 20 per user per minute.
 
-- `ai_authorize_request(feature, message_chars, client_request_id, history_chars)` takes a **per-user advisory lock, then a per-school lock** (always in that order) before counting. Parallel requests therefore see each other: 50 parallel requests against a limit of 2 admit exactly 2, both through the gateway and through direct RPC calls.
-- It returns only `{allowed, reason?, request_id?}`; limits, tools and prompt ids are not disclosed (L1).
-- Blocked attempts are recorded, but at most 20 per user per minute (L1).
-- `ai_start_request(request_id)` (service role, single use, within 2 minutes) re-checks the school and user budgets **including in-flight reservations** under the same locks. It then reserves `request_token_reservation` tokens and returns the principal and policy. Measured: 50 parallel requests against a budget that fits 5 run exactly 5; the other 45 are refused `budget_exhausted`.
-- `ai_complete_request(…, usage_unknown)` replaces the reservation with actual tokens. When a provider call was cut off (deadline, abort, crash), the provider may have billed tokens we never saw, so the charge stays at least the reservation and is marked `usage_estimated`.
+## 5. Safeguarding and sensitive data
 
-Recovery and retention (H3, M5), scheduled with pg_cron (hosted Supabase has it; production runs pg_cron 1.6.4, checked read-only 2026-10-09):
+- **Normalisation:** all user-supplied text is NFKC-normalised with invisible format characters removed before screening, redaction and sending. Full-width digits, zero-width spaces and similar tricks do not pass the checks.
+- **Safeguarding:**
+  - Every turn is screened, including a copy with separators inside words removed ("sui-cidal").
+  - A safeguarding signal in **any** turn, user or assistant (assistant turns come from the client), ends the request with fixed guidance: the school's designated safeguarding lead (DSL), SAPS 10111, Childline 116. **No model call** is made.
+- **Medical:** blocked by default (`medical_content_policy`) on user turns, recorded as `policy_blocked`. The model's own replies ("I cannot diagnose") do not trigger it.
+- **ID numbers:** 13-digit South African ID numbers in any format (spaces, hyphens, dots, no separator, full-width) are replaced with `[ID number removed]`. Passport numbers, phone numbers and e-mail addresses are **not** redacted.
+- **Limits of pattern screening (measured):**
+  - 18/18 core disclosures caught; 0/18 false alarms on ordinary school language.
+  - **0/8 indirect disclosures caught** (`docs/FUNDA_AI_EVALUATION.md`).
+  - It misses indirect wording, other languages and new phrasings. **It is not child protection.** People are: the pilot is restricted to school leaders, and staff are told to follow the school's safeguarding procedure.
+- **What is stored:** `ai_requests` and logs hold no question or answer text. Stored conversations (off) would hold the redacted text.
 
-- `ai_recover_stale_requests()` runs every minute (`funda-ai-recover-stale`):
-  - a request started more than 5 minutes ago that never reported back becomes `failed` / `stale_request`, keeping its reservation charged (estimated);
-  - a request authorised but never started for 2 minutes (e.g. a direct RPC call) becomes `failed` / `never_started`, with nothing charged.
-- `ai_purge_expired()` runs daily at 02:20 UTC (`funda-ai-retention`). It deletes:
-  - expired conversations;
-  - feedback older than `feedback_retention_days`;
-  - request rows older than `audit_retention_days`, with their tool calls and feedback. Rows still open are never purged.
+## 6. Evidence and its limits
 
-Administration (M4): `ai_admin_update_feature` and `ai_admin_set_school` need a platform admin with an **aal2** session and are written to `audit_log`.
+Each evidence item cites `source_tool_call` and `source_field`. It is verified only if its value equals the value at that exact field.
 
-- `ai_admin_update_feature` rejects unknown fields and **null** values.
-- `ai_admin_set_school(school, enabled, features, budget, clear_budget)`:
-  - **keeps every setting that is not passed**, so disabling and re-enabling a school no longer wipes its feature list or budget;
-  - starts a new row with no features;
-  - rejects unknown features and non-positive budgets;
-  - `clear_budget` falls back to the (finite) feature budget.
+Every number shown to the user is checked against the verified figures. That covers the answer, limitations, follow-up questions, declined actions, evidence claims, and evidence periods (which may only describe time, e.g. "last 90 days").
 
-Other functions: `ai_my_features()` (launcher list), `ai_submit_feedback` (own requests), `ai_usage_summary`.
+| Figure                                                                         | Treatment                                                                     |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Digits, rand amounts, percentages, full-width digits                          | checked                                                                       |
+| Written numbers ("twenty-five", "two hundred", "fifty percent")               | checked                                                                       |
+| Dates, years in date context ("in 2026", "February 2026", "2025-2026"), labels ("Grade 10", "Term 3"), ordinals | ignored                       |
+| Numbers inside names that exist in the tool data ("Test 1", learner numbers)   | ignored                                                                       |
+| Bare numbers such as "2050" or "1987 learners"                                 | checked                                                                       |
+| Numbers that only repeat the user's question                                   | shown, listed as unchecked, confidence "low"                                  |
+| Any other unchecked number in the answer                                       | answer **withheld**                                                           |
+| Any other unchecked number in a note                                           | that note is removed                                                          |
+| Any other unchecked number in a claim or period                                | that evidence is rejected                                                     |
 
-## 5. Model provider
+- **Confidence:** "high" requires at least one verified figure and nothing rejected, unsupported or user-only.
+- **Not checked:** the meaning of sentences (a verified figure can be described wrongly), "one", fractions and vague quantities ("half", "most").
+- **Rounding:** rounded figures ("87%" for 86.7) are treated as unsupported, which withholds otherwise-correct answers. The prompt tells the model to copy figures exactly.
 
-One real adapter: Claude through the official Anthropic TypeScript SDK.
+## 7. Timeouts, accounting and recovery
 
-- **Model and effort:** the default route for every tier is `claude-opus-5-5`, with `output_config.effort` low, medium or high per tier.
-- **Structured output:** answers use `output_config.format` (JSON schema), validated again locally.
-- **Server-side refusal fallback is enabled** on the default routes (`fallbacks: "default"`). A refused request may be re-run on Anthropic's recommended fallback model. `ai_requests.model` records which model answered.
-- **Deadline (H3):** one deadline covers the whole request (`FUNDA_AI_DEADLINE_MS`, default 110,000, clamped to 5,000-140,000; hosted Edge Functions stop at 150 s on the Free plan).
-  - Each call's timeout is the smaller of the route timeout and the time left.
-  - The deadline's abort signal also stops the SDK's retries.
-  - No new model turn starts with less than 3 s left. A request that runs out returns **504 `ai_timeout`** and is settled with usage unknown.
+- **Request deadline:** `FUNDA_AI_DEADLINE_MS`, default 110,000, clamped to 5,000-140,000. Hosted functions stop at 150 s on the Free plan.
+  - The deadline's abort signal stops the provider call.
+  - No new turn starts with less than 3 s left.
+  - A timeout returns 504 `ai_timeout`, settled with usage unknown.
+- **Recovery sweep:** `ai_recover_stale_requests()` runs every minute.
+  - A request started more than 5 minutes ago that never reported back becomes `failed` / `stale_request`, with its reservation charged and `usage_estimated`.
+  - A request authorised more than 2 minutes ago and never started becomes `failed` / `never_started`, with nothing charged.
+  - Late completions cannot reopen a swept request.
+  - Registration is idempotent (`cron.schedule` by name; verified by re-running it).
 
-| Variable                                                         | Required  | Meaning                                                                               |
-| ---------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`                                              | to answer | Without it every request returns **503 `ai_provider_not_configured`**. No fake answers. |
-| `FUNDA_AI_MODEL_ROUTES`                                          | no        | JSON routes per tier; invalid JSON keeps the defaults and logs `funda_ai.config_error` |
-| `FUNDA_AI_PRICING`                                               | no        | Prices per model for cost estimates; none built in                                    |
-| `FUNDA_AI_DEADLINE_MS`                                           | no        | Request deadline (see above)                                                          |
-| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | yes       | Provided by the platform                                                              |
+## 8. Retention and scheduling
 
-Never set `ANTHROPIC_BASE_URL` in production; the SDK would send requests there.
+`ai_purge_expired()` runs daily at 02:20 UTC (`funda-ai-retention`). It deletes:
 
-## 6. Safety and prompt-injection defence
+- expired conversations;
+- feedback older than `feedback_retention_days` (default 180);
+- request rows older than `audit_retention_days` (default 365) with their tool calls and feedback.
 
-- **Every turn is screened (H2):** the new message **and every history turn** the client sends, user and assistant alike.
-  - A safeguarding signal (self-harm, abuse, violence) in any turn ends the request with fixed guidance: the designated safeguarding lead, SAPS 10111, Childline 116. **No model call** is made (tested with disclosures placed in user and assistant history turns).
-  - Patterns include common phrasings such as "her stepfather hits her", "beaten by his uncle", "bruises on her arms" and "scared to go home".
-  - **Pattern screening will still miss some disclosures** (indirect wording, other languages, misspellings) and will flag some harmless text. It is a backstop, not a classifier.
-- **ID numbers (M1):** 13-digit South African ID numbers (optionally spaced 6-4-3) in the message or history are replaced with `[ID number removed]` before anything is sent (`personal_identifier_redacted`). Passport numbers, phone numbers and e-mail addresses are **not** redacted.
-- **Medical content (M1):** blocked by default (`medical_content_policy = 'block'`). The request ends with a fixed notice and no model call, recorded as `policy_blocked`. The term list is limited (e.g. ADHD, autism, depression, HIV, TB, medication, diagnosis).
-- **SYSTEM** is the versioned prompt from code. Only four server-side variables are substituted, each flattened to one line and capped at 300 characters.
-- **USER** text is always a user turn.
-- **Client-supplied history** is the client's word: a user can write fake "assistant" turns. That can only mislead their own answer, because lookups are still limited by RLS.
-- **TOOL OUTPUT** is JSON-encoded inside `{ trust: "untrusted_data", data: … }`. Injection-looking text adds `injection_in_tool_data`.
-- **Audit flags:** injection, exfiltration and restricted-action patterns are flagged for audit only; they do not change access.
+It never deletes rows from the current budget month, or open requests.
 
-## 7. Evidence-first answers (M2)
+Both jobs run as the cron owner and need no JWT. Production has pg_cron 1.6.4 (read-only check, 2026-10-09). Retention periods are defaults awaiting a POPIA decision.
 
-Each evidence item must cite `source_tool_call` (the tool call id) **and** `source_field` (a path in that tool's output, e.g. `attendance_rate_percent` or `subjects[0].average_percent`). Prompt version 2 requires both.
+## 9. Configuration and secrets
 
-- **Field check.** An item is verified only if its value, normalised ("R 1 150,20", "1,480", "78%"), **equals the value at that exact field**. A number that appears elsewhere in the output does not count: "attendance rate 1%" citing `attendance_rate_percent` when that field holds 20 is rejected, even though `late: 1` exists.
-- **Rejection reasons:** `unknown_tool_call`, `invalid_field`, `unknown_field`, `value_mismatch`.
-- **Unsupported figures in the answer text.** Every number in the text must be a verified evidence value or a number the user wrote. Dates, years, ordinals and labels such as "Grade 10" and "Term 3" are ignored. Any other number causes the text to be **withheld**: the user sees a notice and the list of unchecked figures, and the request records `answer_withheld`.
-- **Confidence:**
-  - "high" needs at least one verified figure and nothing rejected or unsupported;
-  - lookups that returned data with nothing verified give "low";
-  - with no data looked up, at most "medium".
+| Variable                                                         | Required  | Meaning                                                                                                   |
+| ---------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                                              | to answer | Edge Function secret. Without it every request returns **503 `ai_provider_not_configured`**; no fake answers. |
+| `FUNDA_AI_MODEL_ROUTES`                                          | no        | JSON routes per tier (default `claude-opus-5-5`; effort low, medium or high; refusal fallback on)           |
+| `FUNDA_AI_PRICING`                                               | no        | prices per model for cost estimates; none built in                                                        |
+| `FUNDA_AI_DEADLINE_MS`                                           | no        | request deadline (above)                                                                                  |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | yes       | provided by the platform                                                                                  |
 
-This checks numbers, not wording. A sentence can still misdescribe a verified figure, and numbers written as words ("five") are not detected.
+- Never set `ANTHROPIC_BASE_URL` in production.
+- **Server-side refusal fallback** is enabled: a refused request may be re-run by Anthropic on its recommended fallback model. `ai_requests.model` records which model answered. Whether a refused-then-retried request is billed twice is not visible to the gateway.
 
-## 8. Follow-up questions (M3)
+## 10. Safe testing
 
-The message and the history have separate allowances: `max_input_chars` (4,000) for the message and `max_history_chars` (12,000) for the history.
+- Use the local stacks only:
+  - RLS suite: `supabase/rls-tests/run.sh`;
+  - real stack: `supabase/stack-tests/funda-ai.mjs`, with a **mock** model API via `ANTHROPIC_BASE_URL` and the synthetic fixtures.
+- Never point a test at production, never use real learner data, never commit keys.
+- Real-model evaluation is opt-in and guarded (`docs/FUNDA_AI_EVALUATION.md`).
 
-The UI sends at most three prior question/answer pairs, each trimmed to 1,500 characters (at most 9,000 in total), and never replays withheld answers or notices. A follow-up after a long answer is accepted; oversized history is refused with 413 `input_too_large`.
+## 11. Monitoring and incident escalation
 
-## 9. Observability
+**Watch:**
 
-One JSON log line per request (`funda_ai.request`): ids, feature, role, status, error code, model, prompt version, tokens, `usage_unknown`, duration and safety flags. Also `funda_ai.blocked`, `funda_ai.start_failed`, `funda_ai.route_fallback`, `funda_ai.audit_write_failed` and `funda_ai.config_error`.
+- `funda_ai.request` log lines: status, error code, `usage_unknown`, safety flags;
+- `ai_usage_summary`, daily: charged tokens, estimated-usage requests, policy and safety blocks;
+- `ai_feedback` rows rated "problem";
+- `ai_requests` stuck in `authorized` (should be zero after 5 minutes).
 
-Logs never contain question text, answers or data (tested). Usage per school and day: `ai_usage_summary`.
+**Kill switches, immediate:**
 
-## 10. Architected, not operational
+- `ai_admin_update_feature('copilot', '{"enabled": false}')`;
+- per school: `ai_admin_set_school(<school>, false)`;
+- remove `ANTHROPIC_API_KEY` to force 503.
 
-- **RAG / embeddings:** interface only. pgvector is not installed (available on the hosted project). Needs its own review of document permissions, ingestion, retention and retrieval isolation.
-- **Stored conversations:** the schema, RPCs and retention exist; `store_content` is off.
-- **Human approval:** `requires_human_approval` only labels answers; there is no approval workflow (there are no actions to approve).
-- **Admin UI:** changes go through the audited RPCs; there is no screen yet.
-- **Streaming:** not implemented.
+**Escalation:**
 
-## 11. Enabling it (after merge, after section 12)
+- a suspected data exposure goes to the platform owner, who switches the feature off and follows the POPIA breach procedure;
+- a safeguarding concern raised through Funda AI goes to the school's DSL; Funda AI never handles it;
+- a wrong or harmful answer is collected from feedback and reviewed before re-enabling.
 
-1. Merge so CI applies both migrations, deploys `funda-ai` with JWT verification on, and pg_cron registers the two jobs.
-2. Set `ANTHROPIC_API_KEY` as an Edge Function secret. Check the key without learner data.
-3. A platform administrator with an aal2 session:
-   - sets the pilot roles and budgets with `ai_admin_update_feature('copilot', …)`, then `{"enabled": true}`;
-   - then, per pilot school: `ai_admin_set_school(<school>, true, array['copilot'], <budget>)`.
+## 12. Architected, not operational
 
-## 12. Open decisions (human)
+Not yet built:
 
-- POPIA: lawful basis, the operator agreement and cross-border transfer to the model provider, and retention periods.
-- The teacher-scope policy (section 1).
-- Backups (the project is on the Free plan).
-- MFA enrolment for the administrators who will configure Funda AI.
-- An answer-quality evaluation on synthetic data before any real school.
+- RAG / embeddings (pgvector not installed; needs its own review);
+- stored conversations (off);
+- a human-approval workflow (label only);
+- an admin screen;
+- streaming responses;
+- class-scoped teacher tools;
+- server-side conversation history (the client still sends history).
 
 ## 13. Tests
 
-| Suite                                                         | Checks (2026-10-09)                                                                                                                       |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `supabase/rls-tests/tests/zzzz_funda_ai.test.sql`             | 65: gate reasons, limits, budget, grants, per-tool RLS for cross-school / parent / learner / safeguarding, audit privileges              |
-| `supabase/rls-tests/tests/zzzzz_funda_ai_hardening.test.sql`  | 40: locks taken, reservation and settlement, single-use start, budget including in-flight requests, sweep, retention, admin keep-existing, throttling |
-| `supabase/functions/_shared/ai/ai.test.ts` (Deno)             | 50: schema, safety (all turns, redaction, medical), routing, prompts, tools, gateway loop, deadline, field-level evidence, confidence       |
-| `supabase/stack-tests/funda-ai.mjs` (real GoTrue + PostgREST + Edge Function code, mock model API) | 68: the isolation checks plus 50-request races (rate limit and budget), history disclosures, redaction, medical, follow-ups, wrong-field evidence, deadline, killed function + sweep |
-| `src/features/ai/utils/aiResponse.test.ts` (vitest)           | 9                                                                                                                                         |
-| `e2e/funda-ai.spec.ts` (Playwright)                           | 7, including withheld answers, the policy notice and 320px + axe                                                                          |
+The latest run is recorded in `CLAUDE.md` ("Last green run") and in the PR description.
+
+| Suite                                                                                     | Covers                                                                                                     |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `supabase/rls-tests/tests/zzzz_funda_ai.test.sql`, `zzzzz_funda_ai_hardening.test.sql`     | gate, limits, reservations, sweep, retention, admin, aal2 reads, per-tool RLS isolation                    |
+| `supabase/functions/_shared/ai/ai.test.ts`, `eval/eval.test.ts` (Deno)                    | safety, normalisation, evidence, confidence, deadline, retries, reservation caps; deterministic evaluation |
+| `supabase/stack-tests/funda-ai.mjs` (real GoTrue + PostgREST + function code, mock model) | isolation, 50-request races, history disclosures, redaction, medical, deadline, killed function + sweep    |
+| `src/features/ai/utils/aiResponse.test.ts`, `e2e/funda-ai.spec.ts`                        | UI parsing, history trimming, rendering, 320px + axe                                                       |

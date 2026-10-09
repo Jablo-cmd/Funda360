@@ -480,6 +480,20 @@ async function main() {
       dlRow.json?.[0]?.status === 'failed' && dlRow.json?.[0]?.error_code === 'deadline_exceeded' && dlRow.json?.[0]?.usage_estimated === true &&
         dlRow.json?.[0]?.charged_tokens === dlRow.json?.[0]?.reserved_tokens, dlRow.text);
 
+    // Review #3: ID numbers in full-width digits or with hyphens are redacted too.
+    mock.queue = [final()];
+    const before4 = mock.requests.length;
+    r = await callFunction(principalA.token, { feature: 'copilot', message: 'Find ８００１０１５００９０８７ and 800101-5009-087' });
+    const sent4 = JSON.stringify(mock.requests.slice(before4));
+    check('review #3: full-width and hyphenated ID numbers are redacted before the provider call',
+      r.status === 200 && !/800101|８００１０１/.test(sent4) && (sent4.match(/\[ID number removed\]/g) ?? []).length === 2, sent4.slice(0, 300));
+
+    // Review #1: an invented figure hidden behind "mark" is caught and the answer withheld.
+    const t6 = toolUse('get_learner_assessment_summary', { learner_id: L(1, 6), ...YEAR });
+    mock.queue = [t6, final([], 'The average mark 58% shows steady progress.')];
+    r = await callFunction(principalA.token, { feature: 'copilot', message: 'How is S1L6 doing?' });
+    check('review #1: "average mark 58%" with no evidence is withheld', r.json?.answer_withheld === true && r.json?.unsupported_figures?.includes('58%'), r.text);
+
     // L1: direct blocked calls are not recorded without limit.
     const flooder = await createUser('ai-flood', 'teacher', R1);
     for (let i = 0; i < 30; i += 1) {
@@ -492,7 +506,7 @@ async function main() {
     const reqs = await service(`/ai_requests?select=*&user_id=eq.${principalA.id}`);
     const calls = await service(`/ai_tool_calls?select=tool,status,request_id&order=created_at`);
     check('usage is recorded per request (tokens, model, prompt version)',
-      reqs.json?.some((x) => x.status === 'succeeded' && x.input_tokens === 240 && x.model === 'claude-opus-5-5' && x.prompt_version === 2), reqs.text.slice(0, 400));
+      reqs.json?.some((x) => x.status === 'succeeded' && x.input_tokens === 240 && x.model === 'claude-opus-5-5' && x.prompt_version === 3), reqs.text.slice(0, 400));
     check('tool calls are recorded with their outcome',
       calls.json?.some((c) => c.tool === 'get_reporting_summary' && c.status === 'denied') &&
         calls.json?.some((c) => c.tool === 'get_learner_fee_summary' && c.status === 'ok'), calls.text.slice(0, 400));

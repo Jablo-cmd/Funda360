@@ -8,7 +8,7 @@ It is built on the Government Reporting layer (`docs/GOVERNMENT_REPORTING.md`) a
 
 | Piece | Where |
 | --- | --- |
-| Dataset | `get_provincial_report(province_id, filters)` in `20261010090000_provincial_dashboard_and_government_api.sql`. It calls `get_government_report()` for the province and adds the district comparison, the intervention trend and the extra data-quality checks. |
+| Dataset | `get_provincial_report(province_id, filters)` in `20261009092000_provincial_dashboard_and_government_api.sql`. It calls `get_government_report()` for the province and adds the district comparison, the intervention trend and the extra data-quality checks. |
 | Provinces the caller may open | `get_provincial_scope()` |
 | Export audit | `record_provincial_report_export(province_id, report, format, filters)` |
 | Page | `src/features/government/pages/ProvincialDashboardPage.tsx`; helpers in `utils/provincial.ts` |

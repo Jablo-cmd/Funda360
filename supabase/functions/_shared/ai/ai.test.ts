@@ -2,7 +2,7 @@ import { assert, assertEquals, assertFalse, assertMatch } from '@std/assert';
 import type { DataError, QuerySpec, ReadOnlyData } from './data.ts';
 import Anthropic from 'npm:@anthropic-ai/sdk@0.128.0';
 import { mapAnthropicError } from './anthropic.ts';
-import { decideConfidence, extractFigures, resolveField, unsupportedFigures } from './evidence.ts';
+import { checkClaims, checkFigures, decideConfidence, extractFigures, resolveField, unsupportedFigures } from './evidence.ts';
 import {
   type Authorization,
   type Completion,
@@ -110,6 +110,7 @@ const started = (overrides: Partial<Policy> = {}): StartResult => ({
     max_input_chars: 4000,
     max_history_chars: 12000,
     max_output_tokens: 16000,
+    request_token_reservation: 120000,
     medical_content_policy: 'block',
     store_content: false,
     content_retention_days: 30,
@@ -243,8 +244,9 @@ Deno.test('routing: cost is estimated only when a price is configured', () => {
 
 Deno.test('prompts: one active versioned prompt; variables are sanitised and undeclared ones removed', () => {
   const p = getActivePrompt('school_copilot')!;
-  assertEquals(p.version, 2);
-  assert(listPrompts().some((x) => x.id === 'school_copilot' && x.version === 1 && !x.active));
+  assertEquals(p.version, 3);
+  assert([1, 2].every((v) => listPrompts().some((x) => x.id === 'school_copilot' && x.version === v && !x.active)));
+  assertMatch(p.system, /Write quantities in digits/);
   assertMatch(p.system, /source_field/);
   assertEquals((p.outputSchema.properties!.evidence.items!.required ?? []).includes('source_field'), true);
   assertEquals(getActivePrompt('missing'), null);
@@ -572,14 +574,18 @@ Deno.test('gateway: loop limit, invalid output, refusal and truncation fail clos
 
 Deno.test('gateway: provider errors map to status codes and fall back to the next route', async () => {
   for (const [kind, status] of [['timeout', 504], ['rate_limited', 503], ['authentication', 503], ['bad_request', 502]] as const) {
-    const h = harness({ provider: new ScriptedProvider([new ProviderError(kind, 'm', kind === 'timeout' || kind === 'rate_limited')]) });
+    const retryable = kind === 'timeout' || kind === 'rate_limited';
+    // A retryable error is retried once by the gateway, so it must fail twice to surface.
+    const errors = Array.from({ length: retryable ? 2 : 1 }, () => new ProviderError(kind, 'm', retryable));
+    const h = harness({ provider: new ScriptedProvider(errors) });
     assertEquals((await handleFundaAi(post({ feature: 'copilot', message: 'x' }), h.deps)).status, status);
   }
-  const provider = new ScriptedProvider([new ProviderError('unavailable', 'm', true), finalTurn(answer())]);
+  // Same-route retry first, then the next route.
+  const provider = new ScriptedProvider([new ProviderError('unavailable', 'm', true), new ProviderError('unavailable', 'm', true), finalTurn(answer())]);
   const h = harness({ provider });
   h.deps.routes = { ...DEFAULT_ROUTES, standard: [DEFAULT_ROUTES.standard[0], { ...DEFAULT_ROUTES.standard[0], model: 'backup-model' }] };
   assertEquals((await handleFundaAi(post({ feature: 'copilot', message: 'x' }), h.deps)).status, 200);
-  assertEquals(provider.requests.map((r) => r.model), ['claude-opus-5-5', 'backup-model']);
+  assertEquals(provider.requests.map((r) => r.model), ['claude-opus-5-5', 'claude-opus-5-5', 'backup-model']);
 });
 
 Deno.test('gateway: content is stored only when the policy allows it', async () => {
@@ -761,4 +767,144 @@ Deno.test('gateway (M2): lookups with data but no cited evidence never show high
   assertEquals(body.confidence, 'low');
   assertEquals(body.answer_withheld, false);
   assert(body.limitations.some((l: string) => /could be checked/.test(l)));
+});
+
+// ---------------------------------------------------------------------------
+// Pre-merge audit (2026-10-09): evidence gaps
+
+Deno.test('evidence: written-out numbers are figures; "one", labels and ordinals are not', () => {
+  const values = (t: string) => extractFigures(t).map((f) => f.value).sort();
+  assertEquals(values('Twenty-five learners owe two hundred rand; fifty percent attended.'), ['200', '25', '50']);
+  assertEquals(values('One of the learners in Term three, Grade ten, came first.'), []);
+});
+
+Deno.test('evidence: a number that only repeats the user\'s question is reported, never treated as verified', () => {
+  const ev = verifyEvidence([{ claim: 'rate', value: '20%', period: 'p', source_tool_call: 't', source_field: 'r' }], new Map([['t', { r: 20 }]]));
+  assertEquals(checkFigures('Yes, attendance is 95%.', 'Is attendance 95%?', ev), { unsupported: [], userOnly: ['95%'] });
+  assertEquals(decideConfidence({ model: 'high', evidence: ev, toolsReturnedData: true, unsupported: 0, userOnly: 1 }), 'low');
+});
+
+Deno.test('evidence: rounded or reworded figures do not verify', () => {
+  const ev = verifyEvidence([{ claim: 'rate', value: '86.7%', period: 'p', source_tool_call: 't', source_field: 'r' }], new Map([['t', { r: 86.7 }]]));
+  assertEquals(ev[0].verified, true);
+  assertEquals(checkFigures('Attendance was about 87%.', '', ev).unsupported, ['87%']);
+  assertEquals(checkFigures('Attendance was eighty-seven percent.', '', ev).unsupported, ['eighty-seven percent']);
+});
+
+Deno.test('evidence: a claim carrying an unverified number is rejected', () => {
+  const ev = verifyEvidence(
+    [{ claim: 'Attendance rose from 70%', value: '80%', period: 'p', source_tool_call: 't', source_field: 'r' }],
+    new Map([['t', { r: 80 }]]),
+  );
+  const checked = checkClaims(ev, '');
+  assertEquals(checked[0].verified, false);
+  assertEquals(checked[0].reason, 'unsupported_claim');
+});
+
+Deno.test('gateway: unchecked numbers in notes are dropped; user-echoed figures cap confidence', async () => {
+  const data = new FakeData({ attendance_records: [{ status: 'present' }, { status: 'absent' }] });
+  const provider = new ScriptedProvider([
+    toolTurn([{ id: 'c1', name: 'get_learner_attendance_summary', input: { learner_id: LEARNER } }]),
+    finalTurn(answer({
+      answer: 'Attendance is 50%, not the 95% you mentioned.',
+      confidence: 'high',
+      evidence: [{ claim: 'Attendance rate', value: '50%', period: 'p', source_tool_call: 'c1', source_field: 'attendance_rate_percent' }],
+      limitations: ['Only 2 records exist.', 'About 40 records are missing.'],
+      follow_up_questions: ['Compare with the 75% school average?'],
+      declined_actions: [],
+    })),
+  ]);
+  const body = await (await handleFundaAi(post({ feature: 'copilot', message: 'Is attendance 95%?' }), harness({ provider, data }).deps)).json();
+  assertEquals(body.answer_withheld, false);
+  assertEquals(body.unchecked_user_figures, ['95%']);
+  assertEquals(body.confidence, 'low');
+  assertFalse(body.limitations.includes('Only 2 records exist.')); // 2 is in the output but was not cited as evidence
+  assertFalse(body.limitations.some((l: string) => l.includes('About 40')));
+  assertEquals(body.follow_up_questions, []);
+  assert(body.limitations.some((l: string) => /were removed/.test(l)));
+  assert(body.limitations.some((l: string) => /come from your question/.test(l)));
+});
+
+Deno.test('evidence: "Month YYYY" is a date, not a day plus a stray number (eval finding)', () => {
+  assertEquals(extractFigures('Attendance was 20% in February 2026.').map((f) => f.value), ['20']);
+  assertEquals(extractFigures('On February 2, 2026 and Feb 14 2026 nothing changed.').map((f) => f.value), []);
+});
+
+// ---------------------------------------------------------------------------
+// Pre-merge review fixes (2026-10-09)
+
+Deno.test('evidence: figures hidden by month-like words, bare years, labels or full-width digits are caught (review #1)', () => {
+  const values = (t: string) => extractFigures(t).map((f) => f.value);
+  assertEquals(values('average mark 58%'), ['58']);
+  assertEquals(values('scored 12 marks, a decline of 3'), ['12', '3']);
+  assertEquals(values('Outstanding: R 2050 for 1987 learners'), ['2050', '1987']);
+  assertEquals(values('test 87%, class 30 learners'), ['87', '30']);
+  assertEquals(values('８５%'), ['85']);
+  assertEquals(values('in 2026, February 2026, 2 February 2026, 2026/27, 2025-2026, Grade 10, Term 3'), []);
+  assertEquals(values('R 500 of 2000 paid'), ['500', '2000']);
+  // A number inside a name from the tool data is a name, not a figure.
+  assertEquals(extractFigures('Test 1 results were 40%', ['Test 1']).map((f) => f.value), ['40']);
+});
+
+Deno.test('evidence: an evidence period may only describe time (review #2)', () => {
+  const ev = (period: string) =>
+    checkClaims(verifyEvidence([{ claim: 'Attendance rate', value: '80%', period, source_tool_call: 't', source_field: 'r' }], new Map([['t', { r: 80 }]])), '')[0];
+  assertEquals(ev('last 90 days').verified, true);
+  assertEquals(ev('February 2026').verified, true);
+  assertEquals(ev('down from 92%').verified, false);
+});
+
+Deno.test('safety: normalisation defeats character tricks for IDs and screening (review #3)', () => {
+  for (const t of ['800101-5009-087', 'ID8001015009087', '800101  5009  087', '８００１０１５００９０８７', '8001\u200b015009087']) {
+    assertEquals(redactIdentifiers(t).count, 1, t);
+  }
+  assertEquals(redactIdentifiers('R 1 500 000 owed; ref 12345678901234').count, 0);
+  assertEquals(screenUserInput('su\u200bicide').escalate, 'self_harm');
+  assertEquals(screenUserInput('he is sui-cidal').escalate, 'self_harm');
+  assertEquals(screenUserInput('selfmoord').escalate, 'self_harm');
+  assertEquals(screenUserInput('her mother hits my learner').escalate, 'abuse');
+  assert(screenUserInput('ＡＤＨＤ meds').flags.includes('medical_topic'));
+});
+
+Deno.test('safety: assistant turns escalate safeguarding but do not trigger the medical block (review #7)', () => {
+  assertEquals(screenConversation(['and last term?'], ['I cannot diagnose conditions.']).flags, []);
+  assertEquals(screenConversation(['and last term?'], ['He said he wants to kill himself']).escalate, 'self_harm');
+});
+
+Deno.test('gateway: the provider receives normalised, redacted text (review #3)', async () => {
+  const provider = new ScriptedProvider([finalTurn(answer())]);
+  await handleFundaAi(post({ feature: 'copilot', message: 'Find ８００１０１５００９０８７ and 800101-5009-087' }), harness({ provider }).deps);
+  const sent = JSON.stringify(provider.requests[0].messages);
+  assertFalse(/\d{6}/.test(sent.replace(/\\u[0-9a-f]{4}/g, '')), sent);
+});
+
+Deno.test('gateway: output is capped by the remaining reservation and the loop stops when it runs out (review #4)', async () => {
+  const big = { inputTokens: 600, outputTokens: 300, cacheReadTokens: 0 };
+  const turn = (id: string): GenerateResult => ({ ...toolTurn([{ id, name: 'find_learners', input: { query: 'ab' } }]), usage: big });
+  const provider = new ScriptedProvider([turn('c1'), turn('c2'), finalTurn(answer())]);
+  const h = harness({ provider, start: started({ request_token_reservation: 2_500, max_output_tokens: 16_000 }) });
+  const res = await handleFundaAi(post({ feature: 'copilot', message: 'x' }), h.deps);
+  assertEquals(provider.requests[0].maxOutputTokens, 2_500);
+  assertEquals(provider.requests[1].maxOutputTokens, 1_600);
+  assertEquals(provider.requests.length, 2); // 700 left < 1,024: no third call
+  assertEquals(res.status, 502);
+  assertEquals(h.completions[0].errorCode, 'reservation_exhausted');
+});
+
+Deno.test('gateway: one same-route retry for transient errors, recorded as possibly billed (review #4)', async () => {
+  const provider = new ScriptedProvider([new ProviderError('unavailable', 'm', true), finalTurn(answer())]);
+  const h = harness({ provider });
+  const res = await handleFundaAi(post({ feature: 'copilot', message: 'x' }), h.deps);
+  assertEquals(res.status, 200);
+  assertEquals(provider.requests.length, 2);
+  assertEquals(h.completions[0].usageUnknown, true);
+  assert(h.log.some((e) => e.event === 'funda_ai.provider_retry'));
+});
+
+Deno.test('gateway: a feature whose reservation is below 1,024 tokens can still run (real-stack finding)', async () => {
+  const provider = new ScriptedProvider([finalTurn(answer())]);
+  const h = harness({ provider, start: started({ request_token_reservation: 1_000, max_output_tokens: 1_000 }) });
+  const res = await handleFundaAi(post({ feature: 'copilot', message: 'x' }), h.deps);
+  assertEquals(res.status, 200);
+  assertEquals(provider.requests[0].maxOutputTokens, 1_000);
 });
