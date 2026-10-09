@@ -87,6 +87,7 @@ Deno.serve((req) =>
         p_safety_flags: c.safetyFlags,
         p_error_code: c.errorCode,
         p_usage_unknown: c.usageUnknown,
+        p_unseen_tokens: c.unseenTokens,
       });
     },
     async storeExchange(requestId, conversationId, userText, assistantText, structured) {

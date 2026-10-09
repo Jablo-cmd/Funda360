@@ -1,6 +1,6 @@
 # Funda AI
 
-Status (2026-10-09): code complete on branch `claude/funda360-audit-0foiq8` (PR #9, **open, not merged**). Hardened against two reviews on 2026-10-09 and tested locally and on a real local Supabase stack.
+Status (2026-10-09): code complete on branch `claude/funda360-audit-0foiq8` (PR #9, **open, not merged**). It was hardened against three reviews on 2026-10-09, the last being the staging remediation (`20261009096000`), and tested locally and on a real local Supabase stack. No staging environment exists yet (`docs/STAGING.md`).
 
 - **Not deployed and not verified in production.** Production has no AI tables and no `funda-ai` function, and no model provider key is configured.
 - Every feature is off by default.
@@ -65,8 +65,8 @@ browser (user JWT) ── supabase.functions.invoke('funda-ai')        JWT verif
 | Caller                         | Can                                                                               | Cannot                                                                       |
 | ------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Signed-in user (`authenticated`) | `ai_authorize_request`, `ai_my_features`, `ai_submit_feedback` (own), read own AI rows | start, complete or record requests; read other users' rows; read policy |
-| School leaders                 | read own school's AI settings; `ai_usage_summary` for own school                  | other schools                                                                |
-| Platform admin, **aal2**       | `ai_admin_update_feature`, `ai_admin_set_school` (audited); read all AI rows and usage | anything at aal1 (no AI rows, policy or platform usage)                  |
+| School leaders                 | read own school's AI settings; `ai_usage_summary` for own school                  | other schools (a platform admin is never treated as a school leader here)    |
+| Platform admin, **aal2**       | `ai_admin_update_feature`, `ai_admin_set_school` (audited); read all AI rows, usage and AI audit history | anything at aal1 (no AI rows, policy, platform usage or `ai_%` audit rows) |
 | `service_role` (Edge Function) | `ai_start_request`, `ai_record_tool_call`, `ai_complete_request`, `ai_store_exchange`, `ai_recover_stale_requests`, `ai_purge_expired` | (the key never reaches the browser) |
 | `anon`                         | nothing                                                                           |                                                                              |
 
@@ -79,54 +79,84 @@ Additional rules:
 ## 4. Rate limits and budgets
 
 - **Rate limits:** per user per minute and per day, and per school per day. They are counted from `ai_requests` under the per-user and per-school advisory locks. Measured on the real stack: 50 parallel requests against a limit of 2 admit exactly 2, through the gateway and through direct RPC calls.
+  - **Pending cap** (`20261009096000`): at most 2 authorised-but-unstarted requests per user (`too_many_pending`).
+  - Requests that never reached the gateway (`never_started`) do not count towards the **school's** daily quota. So a few users calling the policy RPC directly cannot use up AI for the whole school; they still count towards the caller's own limits.
 - **Budgets (tokens per month):** none can be NULL or unlimited.
   - per school: `school_monthly_token_budget` (default 3,000,000) or the school's own override;
   - per user: `user_monthly_token_budget` (default 500,000).
   - Months follow **Africa/Johannesburg** (`ai_month_start()`).
-- **Reservation:** each request reserves `request_token_reservation` tokens (default 120,000). A CHECK requires it to be at least `max_output_tokens`.
-  - Both budgets are checked including in-flight reservations. Measured: 50 parallel requests against a budget that fits 5 run exactly 5.
-  - Each model turn's output is capped by what is left of the reservation. The loop stops (`reservation_exhausted`) when less than min(1,024, max output) tokens are left.
-  - **Actual usage can still exceed the reservation by at most one turn's input tokens**, because input size is only known after a call. The budget can be overshot by that amount per in-flight request.
-- **Settlement:** completion charges actual tokens. When usage is unknown (deadline, abort, crash, or a failed attempt that may have been billed) the charge is at least the reservation, marked `usage_estimated`.
-  - Requests never started (for example, direct RPC calls that never reached the gateway) are charged nothing.
-  - The SDK does not retry. The gateway retries once and accounts for it.
+- **Reservation:** each request reserves `request_token_reservation` tokens (default 120,000). A CHECK requires it to be at least `max_output_tokens`. Both budgets are checked including in-flight reservations. Measured: 50 parallel requests against a budget that fits 5 start exactly 5.
+- **Inside a request:** before each model call the gateway **estimates that call's input** (prompt, tool schemas, output schema and conversation at 2 characters per token, and never less than the previous call's reported input plus output plus what was added since). It counts that estimate against the reservation and caps the call's output by what is left. The loop stops with `reservation_exhausted` when less than min(1,024, max output) tokens would be left. A reservation smaller than the prompt is refused before any model call.
+- **Settlement** (`ai_complete_request`): only a **started** request can be settled, so its reservation was taken. The charge is the reported tokens **plus** `p_unseen_tokens`: the gateway's estimate (estimated input plus maximum output) for each failed attempt that may have been billed without reporting usage, such as a timeout or provider error before a retry. When the final call's usage is unknown, the charge is at least the reservation. Estimated charges are marked `usage_estimated`.
+- **Refusal fallback:** with the provider's server-side fallback, top-level `usage` covers only the attempt that answered. The adapter sums `usage.iterations` (every attempt, the refused one included) when present.
+- **How far a request can exceed its reservation** (not a hard ceiling):
+  - Only through estimation error. 2 characters per token over-estimates English (about 4) and JSON. Text that tokenises below 2 characters per token is under-estimated: some non-Latin scripts, unusual Unicode, identifier-heavy tool results.
+  - Plausible worst case for one request: the first call's user text (at most 16,000 characters: message plus history) under-estimated by about half, so about 8,000 tokens. Then roughly a sixth of the tool-result characters added later (at most 8 tool calls).
+  - In total about 10-15% of a 120,000-token reservation, so **about 135,000 tokens charged at most**, plus unseen attempts, which are charged as estimates.
+  - Across requests, the budget can be overshot by at most that per-request error times the number in flight. In-flight requests are limited per user by the pending cap and the per-minute limit, and per school by the daily limit.
 - **Blocked attempts** are recorded up to 20 per user per minute.
 
 ## 5. Safeguarding and sensitive data
 
-- **Normalisation:** all user-supplied text is NFKC-normalised with invisible format characters removed before screening, redaction and sending. Full-width digits, zero-width spaces and similar tricks do not pass the checks.
-- **Safeguarding:**
-  - Every turn is screened, including a copy with separators inside words removed ("sui-cidal").
-  - A safeguarding signal in **any** turn, user or assistant (assistant turns come from the client), ends the request with fixed guidance: the school's designated safeguarding lead (DSL), SAPS 10111, Childline 116. **No model call** is made.
+- **Normalisation:** all user-supplied text is NFKC-normalised with invisible format characters removed before screening, redaction and sending.
+- **Screening views** (`safety.ts`, all derived from the same text; a match in any of them counts):
+  - lower case, with look-alike Cyrillic and Greek letters folded, accents removed and whitespace (including line breaks) collapsed;
+  - leetspeak undone inside words ("su1c1de", "r@ped");
+  - spaced-out and punctuated letters joined ("s u i c i d e", "S.U.I.C.I.D.E");
+  - a letters-only copy for a short list of unambiguous fragments.
+- **Cross-turn:** the user turns are also screened **joined together**, so a disclosure split across messages ("he says he wants to" / "die") is caught. Assistant turns are screened for safeguarding only.
+- **Coverage:** English direct disclosures (self-harm, sexual and physical abuse, neglect, grooming and exploitation, threats and weapons). There is a first set for Afrikaans, isiZulu, isiXhosa, Sesotho, Setswana, Sepedi, Xitsonga and Tshivenda; **these lines have not been reviewed by native speakers.**
+- A safeguarding signal in any turn ends the request with fixed guidance: the school's designated safeguarding lead (DSL), SAPS 10111, Childline 116. **No model call** is made.
+- **Measured, independently** (`docs/FUNDA_AI_EVALUATION.md` section 2). Two blind corpora were written by a separate agent that never saw the patterns. Each was run once before any change made in response:
+
+  | First run on unseen text     | Blind corpus 1 | Blind corpus 2 |
+  | ---------------------------- | -------------- | -------------- |
+  | Direct disclosures caught    | 28/40          | 21/45          |
+  | Adversarial variants caught  | 22/25          | 18/25          |
+  | Multilingual caught          | 12/25          | 16/30          |
+  | Split across turns caught    | 6/10           | 8/12           |
+  | Indirect caught              | 2/15           | 1/15           |
+  | Benign false positives       | 0/50           | 1/60           |
+
+  On unseen phrasing, **about half of direct disclosures and most indirect ones were missed.** The patterns were extended after each run (both corpora now pass in CI as regression sets), but that does not make the next unseen phrasing safe.
+- **Conclusion: pattern screening is a backstop, not abuse detection.** Child protection rests on people:
+  - the pilot is limited to school leaders;
+  - each pilot school has a designated safeguarding lead;
+  - staff are told Funda AI is not a reporting channel.
+
+  A model-based classifier is a separate, unapproved proposal (section 12).
+- **Educational content** (Life Orientation lessons, literature) about suicide or abuse can be blocked: the conservative failure.
 - **Medical:** blocked by default (`medical_content_policy`) on user turns, recorded as `policy_blocked`. The model's own replies ("I cannot diagnose") do not trigger it.
 - **ID numbers:** 13-digit South African ID numbers in any format (spaces, hyphens, dots, no separator, full-width) are replaced with `[ID number removed]`. Passport numbers, phone numbers and e-mail addresses are **not** redacted.
-- **Limits of pattern screening (measured):**
-  - 18/18 core disclosures caught; 0/18 false alarms on ordinary school language.
-  - **0/8 indirect disclosures caught** (`docs/FUNDA_AI_EVALUATION.md`).
-  - It misses indirect wording, other languages and new phrasings. **It is not child protection.** People are: the pilot is restricted to school leaders, and staff are told to follow the school's safeguarding procedure.
 - **What is stored:** `ai_requests` and logs hold no question or answer text. Stored conversations (off) would hold the redacted text.
 
 ## 6. Evidence and its limits
 
-Each evidence item cites `source_tool_call` and `source_field`. It is verified only if its value equals the value at that exact field.
+This is **number checking, not fact-checking** (header of `evidence.ts`).
 
-Every number shown to the user is checked against the verified figures. That covers the answer, limitations, follow-up questions, declined actions, evidence claims, and evidence periods (which may only describe time, e.g. "last 90 days").
+Each evidence item cites `source_tool_call` and `source_field`. It is verified only if its value equals the value at that exact field, and its claim names what the field measures. A rejected item's claim and value are **not shown or stored**.
 
-| Figure                                                                         | Treatment                                                                     |
-| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| Digits, rand amounts, percentages, full-width digits                          | checked                                                                       |
-| Written numbers ("twenty-five", "two hundred", "fifty percent")               | checked                                                                       |
-| Dates, years in date context ("in 2026", "February 2026", "2025-2026"), labels ("Grade 10", "Term 3"), ordinals | ignored                       |
-| Numbers inside names that exist in the tool data ("Test 1", learner numbers)   | ignored                                                                       |
-| Bare numbers such as "2050" or "1987 learners"                                 | checked                                                                       |
-| Numbers that only repeat the user's question                                   | shown, listed as unchecked, confidence "low"                                  |
-| Any other unchecked number in the answer                                       | answer **withheld**                                                           |
-| Any other unchecked number in a note                                           | that note is removed                                                          |
-| Any other unchecked number in a claim or period                                | that evidence is rejected                                                     |
+Numbers in the answer, limitations, follow-up questions, declined actions, evidence claims and evidence periods:
 
-- **Confidence:** "high" requires at least one verified figure and nothing rejected, unsupported or user-only.
-- **Not checked:** the meaning of sentences (a verified figure can be described wrongly), "one", fractions and vague quantities ("half", "most").
-- **Rounding:** rounded figures ("87%" for 86.7) are treated as unsupported, which withholds otherwise-correct answers. The prompt tells the model to copy figures exactly.
+| Kind                                                                                | Rule                                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Figures: digits in any script, rand amounts, percentages, ordinals, number words ("forty-two", "a hundred", "a dozen", "half") | Must equal a verified evidence value **and** be bound to it: the sentence names the field's metric, the list row it came from (e.g. the subject), no other learner, and no period outside the cited output's period |
+| References: dates, "Month YYYY", years in context, "Grade 10", "Term 2"             | Must appear in the retrieved data (a date or period in a tool output, a label in a returned name) or in the user's question. "17 may fail" and "grade 45%" are figures, not references              |
+| Names in "X was/is/has/scored..." not found in the data or the question             | Treated as unsupported (a statement about someone Funda AI did not look up)                                                                                                                          |
+| Numbers inside names that exist in the tool data ("Test 1", learner numbers)        | Ignored                                                                                                                                                                                              |
+| Numbers that only repeat the user's question                                        | Shown, listed as unchecked, confidence "low" (also in notes). Never accepted inside an evidence claim                                                                                               |
+| Anything else unsupported                                                           | Answer **withheld**; a note is removed; an evidence item is rejected                                                                                                                                  |
+
+- **Confidence:** "high" requires at least one verified figure and nothing rejected, unsupported, user-only or dropped. Predictions and judgements ("will likely fail", "at risk") cap it at "medium".
+- **Fail-safe by design:**
+  - rounding ("87%" for 86.7), converting (0.85 → 85%) and summing figures withhold the answer;
+  - so do dates the tool did not return.
+  - Prompt v4 tells the model to copy figures and dates exactly, and to name the metric, row and learner beside each figure.
+- **Not checked:**
+  - non-numeric statements without a name pattern ("is struggling");
+  - wording and reasoning;
+  - Roman numerals, "twice", "most", "a few".
+- **Tests:** `eval/evidence_adversarial.test.ts` (14 cases through the real gateway: wrong meaning, wrong row, wrong learner, wrong period, conflicting periods, ranges, rounding, scripts and words, smuggled labels and ordinals, unknown people, borrowed user figures, wrong tool or field).
 
 ## 7. Timeouts, accounting and recovery
 
@@ -204,7 +234,13 @@ Not yet built:
 - an admin screen;
 - streaming responses;
 - class-scoped teacher tools;
-- server-side conversation history (the client still sends history).
+- server-side conversation history (the client still sends history);
+- a **model-based safeguarding classifier**. This is a proposal only, and it needs:
+  - its own privacy review (it would send text to a provider);
+  - an evaluation against an independent corpus written by a designated safeguarding lead (DSL) and native speakers, with false-negative and false-positive rates reported separately;
+  - human review of every escalation.
+
+  Until it exists, safeguarding relies on people (section 5).
 
 ## 13. Tests
 
@@ -212,7 +248,7 @@ The latest run is recorded in `CLAUDE.md` ("Last green run") and in the PR descr
 
 | Suite                                                                                     | Covers                                                                                                     |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `supabase/rls-tests/tests/zzzz_funda_ai.test.sql`, `zzzzz_funda_ai_hardening.test.sql`     | gate, limits, reservations, sweep, retention, admin, aal2 reads, per-tool RLS isolation                    |
-| `supabase/functions/_shared/ai/ai.test.ts`, `eval/eval.test.ts` (Deno)                    | safety, normalisation, evidence, confidence, deadline, retries, reservation caps; deterministic evaluation |
+| `supabase/rls-tests/tests/zzzz_funda_ai.test.sql`, `zzzzz_funda_ai_hardening.test.sql`, `zzzzzz_funda_ai_remediation.test.sql` | gate, limits, pending cap, school quota, reservations, settlement of started requests only, unseen-token charges, sweep, retention, admin, aal2 reads (AI tables, settings, audit history), per-tool RLS isolation |
+| `supabase/functions/_shared/ai/ai.test.ts`, `eval/eval.test.ts`, `eval/evidence_adversarial.test.ts` (Deno) | safety, normalisation, evidence, confidence, deadline, retries, input estimate and reservation, iteration usage; safeguarding corpus thresholds and blind regression floors; adversarial evidence through the gateway |
 | `supabase/stack-tests/funda-ai.mjs` (real GoTrue + PostgREST + function code, mock model) | isolation, 50-request races, history disclosures, redaction, medical, deadline, killed function + sweep    |
 | `src/features/ai/utils/aiResponse.test.ts`, `e2e/funda-ai.spec.ts`                        | UI parsing, history trimming, rendering, 320px + axe                                                       |

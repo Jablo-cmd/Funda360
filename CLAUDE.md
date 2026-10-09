@@ -99,11 +99,38 @@ Items 1-12 are merged to `main` (PRs #7 and #8):
     - Evaluation: `_shared/ai/eval/` (deterministic, in CI), `supabase/stack-tests/funda-ai-eval.mjs` (real provider, opt-in, synthetic only, never run). Pattern screening **caught 0 of 8** indirect safeguarding disclosures (`docs/FUNDA_AI_EVALUATION.md`).
     - Release gates: `docs/FUNDA_AI_PILOT_READINESS.md`. Verdict NOT READY.
 
-Last green run (2026-10-09, pre-merge audit, commit bc9899d tree):
+20. Funda AI staging remediation (2026-10-09, same branch; nothing deployed):
+    - `20261009096000_funda_ai_staging_remediation`:
+      - pending cap: at most 2 unstarted requests per user (`too_many_pending`);
+      - `never_started` requests do not count towards the school's daily quota;
+      - `ai_complete_request` settles only started requests and charges `p_unseen_tokens`;
+      - `ai_school_settings` school branch excludes platform admins;
+      - `audit_log` hides `ai_%` rows from aal1 platform admins. The existing policy is wrapped, not rewritten.
+    - Gateway accounting: each call's input is estimated (2 chars/token) and counted against the reservation before sending. Failed, possibly billed attempts are charged as estimates. The Anthropic adapter sums `usage.iterations` (refusal fallback). This is not a hard ceiling: about +10-15% worst case (`docs/FUNDA_AI.md` section 4).
+    - Safeguarding:
+      - screening views (folded, leet, joined letters, letters-only fragments) and cross-turn screening;
+      - English plus first-pass af/zu/xh/st/tn/nso/ts/ve patterns (not native-reviewed).
+      - Corpus `eval/safeguarding_corpus.ts` (dev / holdout / blind1 / blind2, pre-registered thresholds). **Independent first runs on blind corpora: direct 28/40 and 21/45. Pattern screening is not abuse detection.**
+    - Evidence:
+      - references (dates, labels) must be in the retrieved data;
+      - figures are bound to the cited field's metric, row, learner and period;
+      - unknown people withhold;
+      - rejected claims are hidden;
+      - Arabic-Indic digits and more number words are detected; predictions cap confidence;
+      - prompt v4. Tests: `eval/evidence_adversarial.test.ts`.
+    - Staging: manual-only `.github/workflows/staging.yml` (refuses the production ref) and `docs/STAGING.md`. No staging project exists yet.
+    - Eval runner refuses if port 8000 is busy or any profile or Auth user is not `.test`.
+    - Gates: `docs/FUNDA_AI_PILOT_READINESS.md` (18 gates, three stages).
+
+Last green run (2026-10-09, staging remediation, before commit):
 
 - typecheck, lint and build pass;
-- 335 unit tests, RLS 1073/1073, real-stack 47/47 (reporting) + 34/34 (API) + 70/70 (Funda AI) on fresh stacks with all 83 migrations, Deno 102/102 (includes the deterministic evaluation);
-- Playwright 375/375 (0 retries).
+- 335 unit tests;
+- RLS 1090/1090;
+- real stack (fresh stacks, all 84 migrations): reporting 47/47, API 34/34, Funda AI 70/70;
+- Deno 137/137 (includes the safeguarding corpus and the adversarial evidence tests);
+- Playwright 375/375 (0 retries);
+- upgrade test (093000 holding data, then 094000-096000) passes.
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 
@@ -137,3 +164,4 @@ All code-side criteria are met. Merging to `main` applies new migrations (`migra
 11. **Government reporting set-up.** A platform administrator creates the areas, links each real school to its district or circuit and creates/grants officials under Education Areas (`/district/areas`). Nothing is seeded; the current schools are demo data and must not be onboarded as government schools.
 12. **Government API.** Decide a retention period for `government_api_requests` (POPIA) before issuing production tokens; issue tokens only to named integration owners under `/district/integrations`.
 13. **Funda AI.** After merge: set the `ANTHROPIC_API_KEY` Edge Function secret (check it without learner data). Decide POPIA lawful basis, operator agreement and cross-border transfer, retention and budgets, and the teacher-scope policy (recommended: pilot with school_owner/principal only, `docs/FUNDA_AI.md` section 1). Then a platform admin (aal2) enables `copilot` and pilot schools via `ai_admin_update_feature` / `ai_admin_set_school(school, true, array['copilot'], budget)`. Run an answer-quality evaluation on synthetic data before any real school. Confirm the `funda-ai-recover-stale` and `funda-ai-retention` pg_cron jobs exist after the migration. Every gate is tracked in `docs/FUNDA_AI_PILOT_READINESS.md`.
+14. **Staging.** Create a separate synthetic-data Supabase project and the `staging` GitHub environment secrets, then run `staging.yml` (`docs/STAGING.md`). Decide on branch protection for `main`: a merge deploys to production.

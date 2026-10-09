@@ -18,6 +18,7 @@
 
 import crypto from 'node:crypto';
 import http from 'node:http';
+import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -61,11 +62,32 @@ async function request(url, { method = 'GET', token, body, apikey = ANON } = {})
 }
 const service = (path, opts = {}) => request(`${REST}${path}`, { ...opts, token: SERVICE, apikey: SERVICE });
 
-// Synthetic data only: every profile must be a test account.
-const profiles = await service('/profiles?select=email');
-if (!Array.isArray(profiles.json)) refuse('could not read profiles from the local stack.');
-const real = profiles.json.filter((p) => !String(p.email ?? '').endsWith('.test'));
-if (real.length > 0) refuse(`the database holds ${real.length} non-test profiles; load only the synthetic fixtures.`);
+// Synthetic data only: every profile and every Auth user must be a test
+// account. Counted on the server (no paging limit can hide a row).
+const nonTest = await fetch(`${REST}/profiles?select=id&or=(email.is.null,email.not.like.*.test)`, {
+  headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, Prefer: 'count=exact', Range: '0-0' },
+});
+const total = Number((nonTest.headers.get('content-range') ?? '').split('/')[1]);
+if (!nonTest.ok || !Number.isFinite(total)) refuse('could not count profiles on the local stack.');
+if (total > 0) refuse(`the database holds ${total} non-test profiles; load only the synthetic fixtures.`);
+for (let page = 1; ; page += 1) {
+  const users = await request(`${AUTH}/admin/users?page=${page}&per_page=500`, { token: SERVICE, apikey: SERVICE });
+  const list = users.json?.users;
+  if (!Array.isArray(list)) refuse('could not list Auth users on the local stack.');
+  const realUsers = list.filter((u) => !String(u.email ?? '').endsWith('.test'));
+  if (realUsers.length > 0) refuse(`Auth holds ${realUsers.length} non-test users; load only the synthetic fixtures.`);
+  if (list.length < 500) break;
+}
+
+// The function is served on port 8000 (Deno.serve's default). If something
+// else already listens there, the run would grade that server and send it
+// the test users' tokens: refuse instead.
+const portFree = await new Promise((resolve) => {
+  const probe = net.createServer();
+  probe.once('error', () => resolve(false));
+  probe.listen(8000, '127.0.0.1', () => probe.close(() => resolve(true)));
+});
+if (!portFree) refuse('port 8000 is already in use; stop whatever listens there and run again.');
 
 async function createUser(label, role) {
   const email = `${label}.${RUN}@eval.test`;
@@ -105,13 +127,20 @@ const fn = spawn(DENO, ['run', '--allow-net', '--allow-env', '--allow-read', '--
   env: { ...env, SUPABASE_URL: proxy ? 'http://127.0.0.1:54999' : REST.replace(/\/rest\/v1\/?$/, ''), SUPABASE_ANON_KEY: ANON, SUPABASE_SERVICE_ROLE_KEY: SERVICE },
   stdio: ['ignore', 'ignore', 'ignore'],
 });
-for (let i = 0; i < 120; i += 1) {
+let ready = false;
+for (let i = 0; i < 120 && fn.exitCode === null; i += 1) {
   try {
     await fetch(FN, { method: 'OPTIONS' });
+    ready = true;
     break;
   } catch {
     await new Promise((r) => setTimeout(r, 500));
   }
+}
+if (!ready || fn.exitCode !== null) {
+  fn.kill();
+  proxy?.close();
+  refuse('the local funda-ai function did not start.');
 }
 
 const tokens = { principal: await createUser('eval-principal', 'principal'), teacher: await createUser('eval-teacher', 'teacher') };

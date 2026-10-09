@@ -137,23 +137,52 @@ export function createAnthropicProvider(apiKey: string, options: { maxRetries?: 
         if (block.type === 'text') content.push({ type: 'text', text: block.text });
         else if (block.type === 'tool_use') content.push({ type: 'tool_call', id: block.id, name: block.name, input: block.input });
       }
-      const usage = response.usage as unknown as Record<string, number | null | undefined>;
       return {
         provider: 'anthropic',
         model: response.model,
         content,
         raw: response.content,
         stopReason: stopReasonOf(response.stop_reason),
-        usage: {
-          inputTokens: (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0),
-          outputTokens: usage.output_tokens ?? 0,
-          cacheReadTokens: usage.cache_read_input_tokens ?? 0,
-        },
+        usage: usageOf(response.usage),
       };
     },
 
     embed(): Promise<number[][]> {
       return Promise.reject(new ProviderError('not_supported', 'This provider has no embeddings API; configure an embeddings provider.'));
     },
+  };
+}
+
+type UsageCounts = Record<string, unknown>;
+
+/**
+ * Tokens for the whole call. With a server-side refusal fallback, top-level
+ * `usage` covers only the attempt that produced the returned message;
+ * `usage.iterations` lists every attempt (the refused one included), so it is
+ * summed when present. Without it the top level is the only attempt.
+ */
+export function usageOf(raw: unknown): { inputTokens: number; outputTokens: number; cacheReadTokens: number } {
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+  const one = (u: UsageCounts) => ({
+    inputTokens: n(u.input_tokens) + n(u.cache_creation_input_tokens) + n(u.cache_read_input_tokens),
+    outputTokens: n(u.output_tokens),
+    cacheReadTokens: n(u.cache_read_input_tokens),
+  });
+  const usage = (raw ?? {}) as UsageCounts;
+  const iterations = Array.isArray(usage.iterations) ? (usage.iterations as UsageCounts[]).filter((i) => i && typeof i === 'object') : [];
+  if (iterations.length === 0) return one(usage);
+  const total = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
+  for (const it of iterations) {
+    const u = one(it);
+    total.inputTokens += u.inputTokens;
+    total.outputTokens += u.outputTokens;
+    total.cacheReadTokens += u.cacheReadTokens;
+  }
+  // Never report less than the top level (in case iterations omit a field).
+  const top = one(usage);
+  return {
+    inputTokens: Math.max(total.inputTokens, top.inputTokens),
+    outputTokens: Math.max(total.outputTokens, top.outputTokens),
+    cacheReadTokens: Math.max(total.cacheReadTokens, top.cacheReadTokens),
   };
 }

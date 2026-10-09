@@ -3,7 +3,7 @@
 // The model-quality part needs a real provider and is opt-in:
 // docs/FUNDA_AI_EVALUATION.md.
 
-import { assert, assertEquals, assertFalse } from '@std/assert';
+import { assert, assertFalse } from '@std/assert';
 import type { QuerySpec, ReadOnlyData } from '../data.ts';
 import { type GatewayDeps, handleFundaAi } from '../gateway.ts';
 import { type AiProvider, type GenerateRequest, type GenerateResult, ProviderError } from '../provider.ts';
@@ -12,6 +12,64 @@ import { redactIdentifiers, screenUserInput } from '../safety.ts';
 import { ToolRegistry, TOOLS } from '../tools.ts';
 import { BENIGN_LOOKALIKES, ID_NUMBERS, MEDICAL, REFERENCE_CASES, SAFEGUARDING_CORE, SAFEGUARDING_INDIRECT, THRESHOLDS } from './cases.ts';
 import { gradeResponse } from './grader.ts';
+import {
+  BLIND_REGRESSION_FLOOR,
+  SAFEGUARDING_CORPUS,
+  SAFEGUARDING_THRESHOLDS,
+  type SafeguardingCase,
+} from './safeguarding_corpus.ts';
+import { screenConversation } from '../safety.ts';
+
+const escalates = (c: SafeguardingCase) => screenConversation(c.turns).escalate !== null;
+function slice(split: SafeguardingCase['split'], kind: SafeguardingCase['kind']) {
+  const cases = SAFEGUARDING_CORPUS.filter((c) => c.split === split && c.kind === kind);
+  assert(cases.length > 0, `no ${split}/${kind} cases: the corpus is not what this test expects`);
+  const caught = cases.filter(escalates);
+  return { cases, caught, missed: cases.filter((c) => !escalates(c)).map((c) => c.id) };
+}
+
+for (const split of ['dev', 'holdout'] as const) {
+  const thresholds = split === 'dev' ? SAFEGUARDING_THRESHOLDS.devRecall : SAFEGUARDING_THRESHOLDS.holdoutRecall;
+  for (const kind of ['direct', 'adversarial', 'multilingual', 'split'] as const) {
+    Deno.test(`eval: safeguarding ${split}/${kind} recall meets the pre-registered threshold`, () => {
+      const { cases, caught, missed } = slice(split, kind);
+      assert(caught.length / cases.length >= thresholds[kind], `${split}/${kind}: missed ${missed.join(', ')}`);
+    });
+  }
+}
+
+for (const split of ['blind1', 'blind2'] as const) {
+  for (const kind of ['direct', 'adversarial', 'multilingual', 'split'] as const) {
+    Deno.test(`eval: safeguarding ${split}/${kind} does not regress (blind sets are reported, see BLIND_FIRST_RUN)`, () => {
+      const { caught, missed } = slice(split, kind);
+      assert(caught.length >= BLIND_REGRESSION_FLOOR[split][kind], `${split}/${kind}: missed ${missed.join(', ')}`);
+    });
+  }
+}
+
+Deno.test('eval: safeguarding false positives stay within the pre-registered rate (all benign cases)', () => {
+  const benign = SAFEGUARDING_CORPUS.filter((c) => c.kind === 'benign');
+  assert(benign.length >= 100, 'benign corpus unexpectedly small');
+  const alarms = benign.filter(escalates).map((c) => c.id);
+  assert(alarms.length / benign.length <= SAFEGUARDING_THRESHOLDS.benignMaxFalsePositiveRate, `false positives: ${alarms.join(', ')}`);
+  console.log(`safeguarding false positives: ${alarms.length}/${benign.length} (${alarms.join(', ')})`);
+});
+
+Deno.test('eval: indirect and educational cases are measured and reported', () => {
+  for (const kind of ['indirect', 'educational'] as const) {
+    const cases = SAFEGUARDING_CORPUS.filter((c) => c.kind === kind);
+    assert(cases.length > 0);
+    console.log(`${kind}: escalated ${cases.filter(escalates).length}/${cases.length} (reported, no threshold)`);
+  }
+});
+
+Deno.test('eval: removing cross-turn screening would miss split disclosures (control)', () => {
+  // The same split cases, each turn screened alone: some must be missed, or
+  // the split tests above would not be exercising cross-turn screening.
+  const split = SAFEGUARDING_CORPUS.filter((c) => c.kind === 'split');
+  const perTurnOnly = split.filter((c) => c.turns.some((t) => screenConversation([t]).escalate !== null));
+  assert(perTurnOnly.length < split.length, 'every split case is caught turn by turn: the split set does not test joining');
+});
 
 Deno.test('eval: safeguarding core set is caught in full', () => {
   const missed = SAFEGUARDING_CORE.filter((c) => !screenUserInput(c.text).escalate).map((c) => c.text);
@@ -20,6 +78,7 @@ Deno.test('eval: safeguarding core set is caught in full', () => {
 });
 
 Deno.test('eval: benign lookalikes stay within the false-alarm budget', () => {
+  assert(BENIGN_LOOKALIKES.length > 0);
   const alarms = BENIGN_LOOKALIKES.filter((c) => screenUserInput(c.text).escalate).map((c) => c.text);
   assert(alarms.length <= THRESHOLDS.benignMaxFalseAlarms, `false alarms: ${alarms.join(' | ')}`);
 });
@@ -27,8 +86,8 @@ Deno.test('eval: benign lookalikes stay within the false-alarm budget', () => {
 Deno.test('eval: indirect disclosures are measured and reported (known gap of pattern screening)', () => {
   const missed = SAFEGUARDING_INDIRECT.filter((c) => !screenUserInput(c.text).escalate).map((c) => c.text);
   // Reported, not asserted: see docs/FUNDA_AI_EVALUATION.md. Pattern screening is a backstop.
+  assert(SAFEGUARDING_INDIRECT.length > 0);
   console.log(`indirect disclosures missed by pattern screening: ${missed.length}/${SAFEGUARDING_INDIRECT.length}`);
-  assertEquals(typeof missed.length, 'number');
 });
 
 Deno.test('eval: medical content is detected in full', () => {
@@ -37,6 +96,7 @@ Deno.test('eval: medical content is detected in full', () => {
 });
 
 Deno.test('eval: SA ID numbers are always redacted', () => {
+  assert(ID_NUMBERS.length > 0);
   for (const text of ID_NUMBERS) {
     const out = redactIdentifiers(text).text;
     assertFalse(/\d{6}\s?\d{4}\s?\d{3}/.test(out), out);
@@ -143,5 +203,8 @@ Deno.test('eval: hallucinated or misattributed figures fail the grader', async (
     const { c, status, body } = await run([toolTurn, finalTurn(answer, value, field)]);
     const g = gradeResponse(c, status, body);
     assertFalse(g.pass, `${answer} should fail`);
+    // The gateway itself must have caught it (not only the grader's expected-figure check).
+    assert(body.answer_withheld, `${answer}: the gateway showed it`);
+    assert(g.failures.some((f) => f.startsWith('answer withheld')), g.failures.join('; '));
   }
 });

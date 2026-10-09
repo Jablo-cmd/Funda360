@@ -138,14 +138,30 @@ const SCHOOL_COPILOT_V2: PromptDefinition = {
 const SCHOOL_COPILOT_V3: PromptDefinition = {
   ...SCHOOL_COPILOT_V2,
   version: 3,
-  active: true,
+  active: false,
   system: SCHOOL_COPILOT_V2.system.replace(
     `Do not round, convert or combine figures.`,
     `Do not round, convert or combine figures. Write quantities in digits, never in words. The same check applies to limitations, follow-up questions and declined actions: do not put numbers there unless they are evidence values.`,
   ),
 };
 
-const REGISTRY: PromptDefinition[] = [SCHOOL_COPILOT_V1, SCHOOL_COPILOT_V2, SCHOOL_COPILOT_V3];
+/**
+ * v4: the answer must say what each figure measures, for whom and when, in
+ * words the checker can match to the cited field (see evidence.ts).
+ */
+const SCHOOL_COPILOT_V4: PromptDefinition = {
+  ...SCHOOL_COPILOT_V3,
+  version: 4,
+  active: true,
+  system: SCHOOL_COPILOT_V3.system.replace(
+    `Write quantities in digits, never in words.`,
+    `Write quantities in digits, never in words, and do not use ordinals ("3rd") or rankings unless a tool returned them.
+- In the sentence that uses a figure, name what it measures with the words of its field (attendance, average, owes/outstanding, paid, absent), name the row it comes from when the field is inside a list (the subject or assessment title), and name the learner it belongs to. Never apply a figure to a different learner, subject, metric or period.
+- Write dates exactly as they appear in the tool output (for example 2026-02-01) and describe periods only with the dates the tool returned. Do not mention grades, terms or weeks unless the user or a tool output named them.`,
+  ),
+};
+
+const REGISTRY: PromptDefinition[] = [SCHOOL_COPILOT_V1, SCHOOL_COPILOT_V2, SCHOOL_COPILOT_V3, SCHOOL_COPILOT_V4];
 
 export function listPrompts(): PromptDefinition[] {
   return [...REGISTRY];

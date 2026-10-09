@@ -406,7 +406,7 @@ async function main() {
     check('L1: the policy gate returns no policy or limits to the caller',
       directRes.every((x) => x.json && !('policy' in x.json) && !('principal' in x.json)), JSON.stringify(directRes[0].json));
 
-    // H1: budget reservation under concurrency. School R4: budget 5,000, reservation 1,000.
+    // H1: budget reservation under concurrency. School R4: budget 100,000, reservation 20,000.
     const budgetUsers = await Promise.all([1, 2, 3, 4, 5].map((n) => createUser(`ai-budget-${n}`, 'principal', R4)));
     mock.queue = [];
     mock.delayMs = 3000; // keep the first requests in flight while the rest arrive
@@ -414,13 +414,16 @@ async function main() {
       callFunction(budgetUsers[i % 5].token, { feature: 'stack_budget_test', message: 'hi' })));
     mock.delayMs = 0;
     const ran = budgetRes.filter((x) => x.status !== 429).length;
-    const refused = budgetRes.filter((x) => x.status === 429 && x.json?.error === 'budget_exhausted').length;
+    // Refused for the budget, or (since 20261009096000) because the same user already has 2 unstarted requests.
+    const refused = budgetRes.filter((x) => x.status === 429 && ['budget_exhausted', 'too_many_pending'].includes(x.json?.error)).length;
+    const refusedBudget = budgetRes.filter((x) => x.status === 429 && x.json?.error === 'budget_exhausted').length;
     const startedRows = await service(`/ai_requests?select=id&school_id=eq.${R4}&started_at=not.is.null`);
-    check('H1: 50 parallel requests against a 5-request budget -> exactly 5 run, 45 refused budget_exhausted',
-      ran === 5 && refused === 45 && startedRows.json?.length === 5, `ran ${ran}, refused ${refused}, started ${startedRows.json?.length}`);
+    check('H1: 50 parallel requests against a 5-request budget -> exactly 5 run, 45 refused (budget or pending cap)',
+      ran === 5 && refused === 45 && refusedBudget > 0 && startedRows.json?.length === 5,
+      `ran ${ran}, refused ${refused} (budget ${refusedBudget}), started ${startedRows.json?.length}`);
     const settled = await service(`/ai_requests?select=charged_tokens,reserved_tokens,status&school_id=eq.${R4}&started_at=not.is.null`);
     check('H1: settled requests are charged actual usage, not the reservation',
-      settled.json?.every((x) => x.reserved_tokens === 1000 && x.charged_tokens === 150), JSON.stringify(settled.json));
+      settled.json?.every((x) => x.reserved_tokens === 20000 && x.charged_tokens === 150), JSON.stringify(settled.json));
 
     // H2: disclosures in history never reach the model, in either role.
     for (const [label, history] of [
@@ -506,7 +509,7 @@ async function main() {
     const reqs = await service(`/ai_requests?select=*&user_id=eq.${principalA.id}`);
     const calls = await service(`/ai_tool_calls?select=tool,status,request_id&order=created_at`);
     check('usage is recorded per request (tokens, model, prompt version)',
-      reqs.json?.some((x) => x.status === 'succeeded' && x.input_tokens === 240 && x.model === 'claude-opus-5-5' && x.prompt_version === 3), reqs.text.slice(0, 400));
+      reqs.json?.some((x) => x.status === 'succeeded' && x.input_tokens === 240 && x.model === 'claude-opus-5-5' && x.prompt_version === 4), reqs.text.slice(0, 400));
     check('tool calls are recorded with their outcome',
       calls.json?.some((c) => c.tool === 'get_reporting_summary' && c.status === 'denied') &&
         calls.json?.some((c) => c.tool === 'get_learner_fee_summary' && c.status === 'ok'), calls.text.slice(0, 400));

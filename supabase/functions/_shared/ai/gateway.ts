@@ -28,12 +28,13 @@ import type { ReadOnlyData } from './data.ts';
 import {
   type CheckedEvidence,
   checkClaims,
-  checkFigures,
+  checkText,
   type Confidence,
   knownStringsIn,
   decideConfidence,
   type EvidenceItem,
   verifyEvidence,
+  REJECTED_CLAIM,
 } from './evidence.ts';
 import { getActivePrompt, renderSystemPrompt } from './prompts.ts';
 import { type AiMessage, type AiProvider, ProviderError, type Usage } from './provider.ts';
@@ -61,6 +62,40 @@ export const MIN_CALL_MS = 3_000;
 export const MIN_TURN_TOKENS = 1_024;
 /** The gateway retries a retryable provider error this many times (the SDK itself does not retry). */
 export const PROVIDER_RETRIES = 1;
+/**
+ * Characters per token assumed when estimating input. English is about 4;
+ * 2 over-estimates English and JSON and is close for most other languages,
+ * so the estimate errs towards stopping early. Text that tokenises below
+ * 2 characters per token (some scripts) can still be under-estimated.
+ */
+export const CHARS_PER_TOKEN_ESTIMATE = 2;
+
+interface LastCall {
+  messageCount: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/**
+ * Estimated input tokens of the next model call: the whole prompt by
+ * characters, and never less than the previous call's reported input and
+ * output plus what has been added since.
+ */
+export function estimateInputTokens(
+  system: string,
+  messages: AiMessage[],
+  tools: { name: string; description: string; inputSchema: unknown }[],
+  last: LastCall | null,
+  /** Other text sent with every call (the output schema). */
+  extraChars = 0,
+): number {
+  const size = (m: AiMessage[]) => JSON.stringify(m.map((x) => ({ role: x.role, content: x.content }))).length;
+  const toolChars = JSON.stringify(tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))).length;
+  const byChars = Math.ceil((system.length + toolChars + extraChars + size(messages)) / CHARS_PER_TOKEN_ESTIMATE);
+  if (!last) return byChars;
+  const added = Math.ceil(size(messages.slice(last.messageCount)) / CHARS_PER_TOKEN_ESTIMATE);
+  return Math.max(byChars, last.inputTokens + last.outputTokens + added);
+}
 /** Free plan: 150 s worker wall clock; leave room to settle and reply. */
 export const DEFAULT_DEADLINE_MS = 110_000;
 
@@ -109,6 +144,12 @@ export interface Completion {
   errorCode: string | null;
   /** A provider call was cut off: the provider may have billed tokens we never saw. */
   usageUnknown: boolean;
+  /**
+   * Estimated tokens of failed attempts whose usage was not reported
+   * (retried or abandoned calls that may still be billed). Charged on top of
+   * the reported usage.
+   */
+  unseenTokens: number;
 }
 
 export interface GatewayDeps {
@@ -186,6 +227,7 @@ const REASON_STATUS: Record<string, number> = {
   school_not_enabled: 403,
   input_too_large: 413,
   rate_limited: 429,
+  too_many_pending: 429,
   budget_exhausted: 429,
 };
 
@@ -287,6 +329,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
   let usage: Usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
   let served: { provider: string; model: string } | null = null;
   let usageUnknown = false;
+  let unseenTokens = 0;
   const prompt = getActivePrompt(policy.prompt_id);
   const deadline = new AbortController();
   const timer = setTimeout(() => deadline.abort(), Math.max(0, deadlineAt - Date.now()));
@@ -306,6 +349,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       safetyFlags: [...flags],
       errorCode,
       usageUnknown,
+      unseenTokens,
     };
     try {
       await deps.completeRequest(requestId, completion);
@@ -327,6 +371,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       input_tokens: completion.inputTokens,
       output_tokens: completion.outputTokens,
       usage_unknown: usageUnknown,
+      unseen_tokens: unseenTokens,
       duration_ms: completion.durationMs,
       safety_flags: completion.safetyFlags,
     });
@@ -335,7 +380,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
   try {
     // 3. Safety: every turn, before anything leaves Funda360.
     const screen = screenConversation(
-      [body.message, ...history.filter((h) => h.role === 'user').map((h) => h.text)],
+      [...history.filter((h) => h.role === 'user').map((h) => h.text), body.message],
       history.filter((h) => h.role === 'assistant').map((h) => h.text),
     );
     screen.flags.forEach((f) => flags.add(f));
@@ -392,17 +437,23 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
 
     // 5. Model <-> tool loop, under one deadline and within the reservation.
     let retriesLeft = PROVIDER_RETRIES;
+    let lastCall: LastCall | null = null;
+    const schemaChars = JSON.stringify(prompt.outputSchema ?? null).length;
     for (let turn = 0; turn < MAX_MODEL_TURNS; turn++) {
       const remaining = deadlineAt - Date.now();
       if (remaining < MIN_CALL_MS || deadline.signal.aborted) return await deadlineExceeded();
-      // The next call's input is at least everything sent so far; never let
-      // output push the request past what was reserved for it.
-      const tokensLeft = policy.request_token_reservation - (usage.inputTokens + usage.outputTokens);
+      // Count this call's input (estimated) against the reservation BEFORE
+      // sending it, then cap its output by what is left, so the reported
+      // usage of one request stays within its reservation up to the
+      // estimation error (see estimateInputTokens).
+      const estimatedInput = estimateInputTokens(system, messages, tools, lastCall, schemaChars);
+      const tokensLeft = policy.request_token_reservation - (usage.inputTokens + usage.outputTokens + unseenTokens) - estimatedInput;
       // (A feature with a small output cap may run turns smaller than MIN_TURN_TOKENS.)
       if (tokensLeft < Math.min(MIN_TURN_TOKENS, policy.max_output_tokens)) {
         await finish('failed', 'reservation_exhausted');
         return reply({ error: 'ai_incomplete', request_id: requestId }, 502);
       }
+      const maxOutputTokens = Math.min(policy.max_output_tokens, tokensLeft);
       const route = routes[routeIndex];
       let result;
       try {
@@ -412,7 +463,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
           messages,
           tools: tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
           outputSchema: prompt.outputSchema,
-          maxOutputTokens: Math.min(policy.max_output_tokens, tokensLeft),
+          maxOutputTokens,
           effort: route.effort,
           refusalFallback: route.refusalFallback,
           timeoutMs: Math.min(route.timeoutMs, remaining),
@@ -420,7 +471,11 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         });
       } catch (error) {
         const pe = error instanceof ProviderError ? error : new ProviderError('unknown', 'provider call failed');
-        if (USAGE_UNKNOWN_KINDS.has(pe.kind)) usageUnknown = true;
+        if (USAGE_UNKNOWN_KINDS.has(pe.kind)) {
+          // The attempt may have been billed in full; we never saw its usage.
+          usageUnknown = true;
+          unseenTokens += estimatedInput + maxOutputTokens;
+        }
         if (deadline.signal.aborted) return await deadlineExceeded();
         // One retry of the same call for transient errors (the SDK does not
         // retry, so every attempt is visible here and billed attempts are
@@ -444,6 +499,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       }
 
       served = { provider: result.provider, model: result.model };
+      lastCall = { messageCount: messages.length, inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens };
       usage = {
         inputTokens: usage.inputTokens + result.usage.inputTokens,
         outputTokens: usage.outputTokens + result.usage.outputTokens,
@@ -507,15 +563,18 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       }
 
       const known = knownStringsIn(toolOutputs.values());
-      const evidence: CheckedEvidence[] = checkClaims(verifyEvidence(answer.evidence, toolOutputs), message, known);
-      const figures = checkFigures(answer.answer, message, evidence, known);
+      const evidence: CheckedEvidence[] = checkClaims(verifyEvidence(answer.evidence, toolOutputs), message, known, toolOutputs);
+      const context = { evidence, outputs: toolOutputs, userText: message, knownStrings: known };
+      const figures = checkText(answer.answer, context);
       const unsupported = [...figures.unsupported];
+      const userOnly = [...figures.userOnly];
       const withheld = unsupported.length > 0;
-      // Notes shown under the answer get the same check; items with unchecked numbers are dropped.
+      // Notes shown under the answer get the same check; items that fail are dropped.
       let droppedNotes = 0;
       const keepChecked = (items: string[]) =>
         items.filter((item) => {
-          const c = checkFigures(item, message, evidence, known);
+          const c = checkText(item, context);
+          userOnly.push(...c.userOnly);
           if (c.unsupported.length === 0) return true;
           droppedNotes += 1;
           unsupported.push(...c.unsupported);
@@ -530,11 +589,13 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         evidence,
         toolsReturnedData,
         unsupported: unsupported.length,
-        userOnly: figures.userOnly.length,
+        userOnly: userOnly.length,
+        droppedNotes,
+        answer: answer.answer,
       });
       const limitations = [...modelLimitations];
-      if (figures.userOnly.length > 0) {
-        limitations.push(`These figures come from your question and were not checked against Funda360 data: ${figures.userOnly.join(', ')}.`);
+      if (userOnly.length > 0) {
+        limitations.push(`These figures come from your question and were not checked against Funda360 data: ${[...new Set(userOnly)].join(', ')}.`);
       }
       if (droppedNotes > 0) {
         limitations.push('Some notes contained figures that could not be checked and were removed.');
@@ -546,6 +607,8 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         limitations.push('No figure in this answer could be checked against your Funda360 data.');
       }
       if (unsupported.length > 0) flags.add('unsupported_figures');
+      // A rejected item's own text may carry the invented figure: it is not shown or stored.
+      const shownEvidence = evidence.map((e) => (e.verified ? e : { ...e, claim: REJECTED_CLAIM, value: '' }));
       const answerText = withheld ? WITHHELD_ANSWER : answer.answer;
       const response = {
         kind: 'answer',
@@ -554,8 +617,8 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
         answer: answerText,
         answer_withheld: withheld,
         unsupported_figures: [...new Set(unsupported)].slice(0, 10),
-        unchecked_user_figures: figures.userOnly,
-        evidence,
+        unchecked_user_figures: [...new Set(userOnly)].slice(0, 10),
+        evidence: shownEvidence,
         limitations,
         confidence,
         follow_up_questions: followUps,
@@ -570,7 +633,7 @@ export async function handleFundaAi(req: Request, deps: GatewayDeps): Promise<Re
       if (policy.store_content) {
         try {
           response.conversation_id = await deps.storeExchange(requestId, body.conversation_id ?? null, message, answerText, {
-            evidence,
+            evidence: shownEvidence,
             limitations,
             confidence,
             answer_withheld: withheld,

@@ -196,6 +196,8 @@ begin
   for i in 1..4 loop
     v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
     v_reasons := v_reasons || coalesce(v ->> 'reason', 'ok') || ' ';
+    -- As the gateway would (an unstarted request counts as pending: at most 2, see 20261009096000).
+    update public.ai_requests set started_at = now() where id = (v ->> 'request_id')::uuid and status = 'authorized';
   end loop;
   call test_util.record('ai: the per-user rate limit is enforced in the database', v_reasons = 'ok ok ok rate_limited ', v_reasons);
 
@@ -258,6 +260,8 @@ begin
     format('select to_jsonb(public.ai_store_exchange(%L, null, ''q'', ''a'', null))', v_req));
   call test_util.record('ai: users cannot write conversation content directly', v ->> 'error' like 'permission denied%', v::text);
 
+  -- The gateway starts a request (taking its reservation) before it can be settled (20261009096000).
+  perform test_util.ai_service(format('select public.ai_start_request(%L)', v_req));
   perform test_util.ai_service(format('select to_jsonb(public.ai_record_tool_call(%L, ''get_learner_attendance_summary'', ''ok'', 12, 2))', v_req));
   perform test_util.ai_service(format(
     'select to_jsonb(public.ai_complete_request(%L, ''succeeded'', ''anthropic'', ''claude-opus-5-5'', ''school_copilot'', 1, 1200, 300, null, 2500, array[''prompt_injection_suspected''], null))', v_req));

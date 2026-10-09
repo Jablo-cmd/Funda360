@@ -17,6 +17,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   input_too_large: 'That question is too long. Shorten it and try again.',
   payload_too_large: 'That question is too long. Shorten it and try again.',
   rate_limited: 'You have asked a lot of questions in a short time. Wait a minute and try again.',
+  too_many_pending: 'Your earlier questions are still being answered. Wait a moment and try again.',
   budget_exhausted: "The Funda AI allowance for this month (yours or your school's) has been used.",
   ai_provider_not_configured:
     'Funda AI has not been connected to an AI provider yet. Your administrator can set this up.',

@@ -1,11 +1,12 @@
 import { assert, assertEquals, assertFalse, assertMatch } from '@std/assert';
 import type { DataError, QuerySpec, ReadOnlyData } from './data.ts';
 import Anthropic from 'npm:@anthropic-ai/sdk@0.128.0';
-import { mapAnthropicError } from './anthropic.ts';
+import { mapAnthropicError, usageOf } from './anthropic.ts';
 import { checkClaims, checkFigures, decideConfidence, extractFigures, resolveField, unsupportedFigures } from './evidence.ts';
 import {
   type Authorization,
   type Completion,
+  estimateInputTokens,
   type GatewayDeps,
   handleFundaAi,
   normaliseFigure,
@@ -244,8 +245,9 @@ Deno.test('routing: cost is estimated only when a price is configured', () => {
 
 Deno.test('prompts: one active versioned prompt; variables are sanitised and undeclared ones removed', () => {
   const p = getActivePrompt('school_copilot')!;
-  assertEquals(p.version, 3);
-  assert([1, 2].every((v) => listPrompts().some((x) => x.id === 'school_copilot' && x.version === v && !x.active)));
+  assertEquals(p.version, 4);
+  assertMatch(p.system, /Write dates exactly as they appear in the tool output/);
+  assert([1, 2, 3].every((v) => listPrompts().some((x) => x.id === 'school_copilot' && x.version === v && !x.active)));
   assertMatch(p.system, /Write quantities in digits/);
   assertMatch(p.system, /source_field/);
   assertEquals((p.outputSchema.properties!.evidence.items!.required ?? []).includes('source_field'), true);
@@ -384,9 +386,10 @@ Deno.test('evidence: field paths resolve only own properties and array indexes',
   assertEquals(resolveField({ a: 1 }, 'a[b]').valid, false);
 });
 
-Deno.test('evidence: figures in text ignore dates, years, labels and ordinals', () => {
+Deno.test('evidence: dates, years and labels are references, not figures; ordinals are figures', () => {
   const values = (t: string) => extractFigures(t).map((f) => f.value);
-  assertEquals(values('Grade 10 in Term 3 had 86.7% attendance on 2026-02-02 (2 February 2026), the 3rd week.'), ['86.7']);
+  assertEquals(values('Grade 10 in Term 3 had 86.7% attendance on 2026-02-02 (2 February 2026).'), ['86.7']);
+  assertEquals(values('She was ranked 3rd.'), ['3']);
   assertEquals(values('R 1 150,20 owed and 1,480 learners'), ['1150.2', '1480']);
   assertEquals(values('No figures here.'), []);
 });
@@ -878,17 +881,36 @@ Deno.test('gateway: the provider receives normalised, redacted text (review #3)'
   assertFalse(/\d{6}/.test(sent.replace(/\\u[0-9a-f]{4}/g, '')), sent);
 });
 
-Deno.test('gateway: output is capped by the remaining reservation and the loop stops when it runs out (review #4)', async () => {
-  const big = { inputTokens: 600, outputTokens: 300, cacheReadTokens: 0 };
+Deno.test('gateway: estimated input and output of every call fit in the reservation; the loop stops when they do not', async () => {
+  const big = { inputTokens: 3_000, outputTokens: 1_500, cacheReadTokens: 0 };
   const turn = (id: string): GenerateResult => ({ ...toolTurn([{ id, name: 'find_learners', input: { query: 'ab' } }]), usage: big });
-  const provider = new ScriptedProvider([turn('c1'), turn('c2'), finalTurn(answer())]);
-  const h = harness({ provider, start: started({ request_token_reservation: 2_500, max_output_tokens: 16_000 }) });
+  const provider = new ScriptedProvider([turn('c1'), turn('c2'), turn('c3'), turn('c4'), finalTurn(answer())]);
+  const R = 16_000;
+  const h = harness({ provider, start: started({ request_token_reservation: R, max_output_tokens: 16_000 }) });
   const res = await handleFundaAi(post({ feature: 'copilot', message: 'x' }), h.deps);
-  assertEquals(provider.requests[0].maxOutputTokens, 2_500);
-  assertEquals(provider.requests[1].maxOutputTokens, 1_600);
-  assertEquals(provider.requests.length, 2); // 700 left < 1,024: no third call
+  assert(provider.requests.length >= 1);
+  provider.requests.forEach((r, i) => {
+    const seenBefore = i * (big.inputTokens + big.outputTokens);
+    const byChars = estimateInputTokens(r.system, r.messages, r.tools, null, JSON.stringify(r.outputSchema ?? null).length);
+    assert(byChars > 0);
+    // Invariant: nothing is sent that could push reported usage past the reservation.
+    assert(seenBefore + byChars + r.maxOutputTokens <= R, `call ${i}: ${seenBefore} + ${byChars} + ${r.maxOutputTokens} > ${R}`);
+  });
+  assertEquals(provider.requests[0].maxOutputTokens, R - estimateInputTokens(provider.requests[0].system, provider.requests[0].messages, provider.requests[0].tools, null, JSON.stringify(provider.requests[0].outputSchema ?? null).length));
+  assert(provider.requests.length < 5, 'the loop must stop before the reservation is spent');
   assertEquals(res.status, 502);
   assertEquals(h.completions[0].errorCode, 'reservation_exhausted');
+});
+
+Deno.test('gateway: a failed attempt that may have been billed is charged as an estimate', async () => {
+  const provider = new ScriptedProvider([new ProviderError('timeout', 'm', true), finalTurn(answer())]);
+  const h = harness({ provider });
+  const res = await handleFundaAi(post({ feature: 'copilot', message: 'x' }), h.deps);
+  assertEquals(res.status, 200);
+  const first = provider.requests[0];
+  const est = estimateInputTokens(first.system, first.messages, first.tools, null, JSON.stringify(first.outputSchema ?? null).length);
+  assertEquals(h.completions[0].unseenTokens, est + first.maxOutputTokens);
+  assertEquals(h.completions[0].usageUnknown, true);
 });
 
 Deno.test('gateway: one same-route retry for transient errors, recorded as possibly billed (review #4)', async () => {
@@ -901,10 +923,29 @@ Deno.test('gateway: one same-route retry for transient errors, recorded as possi
   assert(h.log.some((e) => e.event === 'funda_ai.provider_retry'));
 });
 
-Deno.test('gateway: a feature whose reservation is below 1,024 tokens can still run (real-stack finding)', async () => {
+Deno.test('gateway: a reservation smaller than the prompt itself is refused before any model call', async () => {
   const provider = new ScriptedProvider([finalTurn(answer())]);
   const h = harness({ provider, start: started({ request_token_reservation: 1_000, max_output_tokens: 1_000 }) });
   const res = await handleFundaAi(post({ feature: 'copilot', message: 'x' }), h.deps);
-  assertEquals(res.status, 200);
-  assertEquals(provider.requests[0].maxOutputTokens, 1_000);
+  assertEquals(res.status, 502);
+  assertEquals(provider.requests.length, 0);
+  assertEquals(h.completions[0].errorCode, 'reservation_exhausted');
+});
+
+Deno.test('anthropic: usage with a server-side refusal fallback counts every attempt (usage.iterations)', () => {
+  // No fallback: the top level is the only attempt.
+  assertEquals(usageOf({ input_tokens: 100, output_tokens: 20, cache_read_input_tokens: 50 }), { inputTokens: 150, outputTokens: 20, cacheReadTokens: 50 });
+  // Fallback: the refused attempt is only in iterations; top level covers the served one.
+  assertEquals(
+    usageOf({
+      input_tokens: 300,
+      output_tokens: 40,
+      iterations: [
+        { type: 'message', input_tokens: 300, output_tokens: 10 },
+        { type: 'fallback_message', input_tokens: 300, output_tokens: 40 },
+      ],
+    }),
+    { inputTokens: 600, outputTokens: 50, cacheReadTokens: 0 },
+  );
+  assertEquals(usageOf(undefined), { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 });
 });

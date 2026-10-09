@@ -28,7 +28,7 @@ begin
   v := test_util.gr_call('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     'select public.ai_authorize_request(''copilot'', 10) || jsonb_build_object(''locks'', (select count(*) from pg_locks where locktype = ''advisory'' and pid = pg_backend_pid()))');
   v_locks := (v ->> 'locks')::int;
-  call test_util.record('ai hardening: the gate takes per-user and per-school advisory locks (H1)', v_locks >= 2, v::text);
+  call test_util.record('ai hardening: the gate holds at least two advisory locks (H1; serialisation itself is proven on the real stack)', v_locks >= 2, v::text);
 
   -- H1: the reservation happens at start and is single use.
   v_a := (v ->> 'request_id')::uuid;
@@ -69,6 +69,10 @@ begin
   call test_util.record('ai hardening: unknown usage keeps the reservation charged and is marked estimated',
     v_row.charged_tokens = 1000 and v_row.usage_estimated, row_to_json(v_row)::text);
 
+  -- A fresh, started request (v_b above expired unstarted; only started requests are settled, 20261009096000).
+  v := test_util.ai_authorize('11111111-1111-1111-1111-111111111111', 'teacher', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  v_b := (v ->> 'request_id')::uuid;
+  perform test_util.ai_service(format('select public.ai_start_request(%L)', v_b));
   perform test_util.ai_service(format(
     'select to_jsonb(public.ai_complete_request(%L, ''policy_blocked'', null, null, ''school_copilot'', 2, null, null, null, 5, array[''medical_topic''], ''medical_content_blocked''))', v_b));
   select count(*) into v_n from public.ai_requests where id = v_b and status = 'policy_blocked';
@@ -337,19 +341,16 @@ begin
 
   -- #5 retention never deletes rows from the current budget month.
   alter table public.ai_features drop constraint ai_features_audit_retention_days_check;
-  update public.ai_features set audit_retention_days = 1 where key = 'copilot';
+  -- Retention 0 days: every row is past retention, so only the month guard can keep one.
+  update public.ai_features set audit_retention_days = 0 where key = 'copilot';
   delete from public.ai_requests;
-  if now() - public.ai_month_start() > interval '1 day 1 hour' then
-    insert into public.ai_requests (user_id, school_id, role, feature, status, created_at, charged_tokens)
-    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'teacher', 'copilot', 'succeeded',
-            public.ai_month_start() + interval '1 minute', 900)
-    returning id into v_row;
-    perform test_util.ai_service('select public.ai_purge_expired()');
-    select count(*) into v_n from public.ai_requests where id = v_row;
-    call test_util.record('ai pre-merge: retention keeps this month''s rows so budgets stay correct (#5)', v_n = 1, v_n::text);
-  else
-    call test_util.record('ai pre-merge: retention keeps this month''s rows (#5) (first day of month: not measurable today)', true, 'skipped by date');
-  end if;
+  insert into public.ai_requests (user_id, school_id, role, feature, status, created_at, charged_tokens)
+  values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'teacher', 'copilot', 'succeeded',
+          public.ai_month_start(), 900)
+  returning id into v_row;
+  perform test_util.ai_service('select public.ai_purge_expired()');
+  select count(*) into v_n from public.ai_requests where id = v_row;
+  call test_util.record('ai pre-merge: retention keeps this month''s rows so budgets stay correct (#5)', v_n = 1, v_n::text);
   insert into public.ai_requests (user_id, school_id, role, feature, status, created_at)
   values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'teacher', 'copilot', 'succeeded',
           public.ai_month_start() - interval '2 days')
