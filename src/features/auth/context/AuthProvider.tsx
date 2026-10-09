@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // state instead of running its own separate, later-resolving fetch.
   const [mfaChallengePending, setMfaChallengePending] = useState<boolean | null>(null);
   const [hasMfaEnabled, setHasMfaEnabled] = useState<boolean | null>(null);
+  const [assuranceLevel, setAssuranceLevel] = useState<'aal1' | 'aal2' | null>(null);
   const navigate = useNavigate();
 
   const applySession = useCallback((session: Session | null) => {
@@ -45,16 +46,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .then(({ currentLevel, nextLevel }) => {
           setHasMfaEnabled(nextLevel === 'aal2');
           setMfaChallengePending(nextLevel === 'aal2' && currentLevel !== nextLevel);
+          setAssuranceLevel(currentLevel === 'aal2' ? 'aal2' : 'aal1');
         })
         .catch(() => {
           setHasMfaEnabled(false);
           setMfaChallengePending(false);
+          setAssuranceLevel('aal1');
         });
     } else {
       setUser(null);
       setStatus('unauthenticated');
       setMfaChallengePending(null);
       setHasMfaEnabled(null);
+      setAssuranceLevel(null);
     }
   }, []);
 
@@ -148,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { currentLevel, nextLevel } = await mfaService.getAssuranceLevel();
     setHasMfaEnabled(nextLevel === 'aal2');
     setMfaChallengePending(nextLevel === 'aal2' && currentLevel !== nextLevel);
+    setAssuranceLevel(currentLevel === 'aal2' ? 'aal2' : 'aal1');
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -156,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       mfaChallengePending,
       hasMfaEnabled,
+      assuranceLevel,
       signIn,
       signOut,
       requestPasswordReset,
@@ -169,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       mfaChallengePending,
       hasMfaEnabled,
+      assuranceLevel,
       signIn,
       signOut,
       requestPasswordReset,

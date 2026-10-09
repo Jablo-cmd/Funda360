@@ -45,4 +45,7 @@ export type Permission =
   | 'operations.view'
   | 'operations.manage'
   | 'compliance.view'
-  | 'compliance.manage';
+  | 'compliance.manage'
+  | 'government.view'
+  | 'government.export'
+  | 'government.manage';

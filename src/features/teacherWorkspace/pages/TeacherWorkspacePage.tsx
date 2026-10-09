@@ -73,7 +73,7 @@ export function TeacherWorkspacePage() {
           <Link
             key={a.to}
             to={a.to}
-            className="focus-ring rounded-md border border-border-strong bg-surface-raised px-3 py-2 text-sm font-medium text-content-primary hover:bg-surface-sunken"
+            className="focus-ring inline-flex min-h-11 items-center rounded-md border border-border-strong bg-surface-raised px-3 py-2 text-sm font-medium text-content-primary no-underline hover:bg-surface-sunken lg:min-h-0"
           >
             {a.label}
           </Link>

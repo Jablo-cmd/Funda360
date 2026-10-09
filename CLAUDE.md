@@ -2,6 +2,8 @@
 
 Multi-tenant South African school-management SaaS. React 18 + TypeScript + Vite + Tailwind frontend (GitHub Pages, `app.funda360.aurisnexus.co.za`), Supabase backend (Postgres + RLS, Auth, Storage, Edge Functions). Hosted project: `rzkybmkzhpwovpvrjkxk` ("Funda360", eu-central-1).
 
+**Reporting rule (from the owner):** after completing a task, always give the report inside a single fenced code block (a copy block) so it can be copied in one go.
+
 **Resume here after a context reset:** read this file, then `git log --oneline -15`, then the "Status" section below.
 
 ## Commands
@@ -35,12 +37,13 @@ Prettier is **not** enforced: about 430 legacy files are unformatted. Format onl
 - New `SECURITY DEFINER` functions: pin `set search_path = public`, `revoke execute … from public, anon`, and grant to `authenticated` only when the client calls them. `alter default privileges in schema public revoke … from public` does **not** work (per-schema defaults cannot remove global ones). Revoke per function.
 - A migration version must be unique: CI fails on duplicates.
 - `src/lib/database.types.ts` is **hand-maintained**. Add new tables and RPCs there.
+- Government reporting: never filter for security in the frontend; every reporting RPC must go through `reporting_resolve_schools()` / `reporting_school_ids()`. Officials have no tenant, so tenant-keyed RLS gives them nothing directly.
 - RLS test style: `do $$ … call test_util.record(name, passed, detail) … $$`. **No subqueries inside CALL arguments** (compute into variables first). Impersonate with `set_config('request.jwt.claims', test_util.jwt_claims(uid, role, tenant), true)` + `set local role authenticated`.
 - `supabase/seed.sql` generates a random password per run and aborts on databases with non-demo users. Never reintroduce a fixed password: the repo is **public**.
 
-## Status (2026-09-30)
+## Status (2026-10-08)
 
-Done and pushed on branch `ccr-3b8a9155-845trs` (not yet merged to `main`):
+Items 1-12 are merged to `main` (PRs #7 and #8):
 
 1. Audit (`/tmp` scratchpad report). Critical fixes: seed password removed, duplicate migration renamed to `20260919090001`, `20260930090000_revoke_public_worker_execute`, CI `migrate` job + duplicate-version check.
 2. Production: all 703 accounts that used the published demo password were rotated to random passwords and their sessions revoked (2026-09-30).
@@ -58,11 +61,76 @@ Done and pushed on branch `ccr-3b8a9155-845trs` (not yet merged to `main`):
 
 12. UI follow-up (2026-09-30): `AttendanceTrendChart` draws at its container's real pixel width (11px axis text at every width; it used to shrink to ~5px on phones) with y-axis labels, hover titles and a legend; `SchoolsTable` renders cards on phones (the switch action is no longer behind a sideways swipe) and a `TableScrollContainer` table from `sm`; dark-mode contrast: dark `--danger-600` is now the lighter text colour (6.3:1 on `--danger-50`, was 4.28:1) and solid red fills with white text use the new `danger-700` token; any `text-brand-600` is drawn as brand-300 in dark mode (base-layer rule), the logo wordmark has a dark variant, and `/trust` always renders light. Dark mode: 180 axe scans over all routes, 0 violations.
 
-Last green run (2026-09-30):
+13. Audit 2026-10-08 (branch `claude/funda360-audit-0foiq8`): production checked read-only. All 76 migrations were applied (CI `migrate` works); 125/125 public tables have RLS forced; every RPC and table the frontend calls exists. Fixes: `20261008090000_anon_execute_and_duplicate_cron_cleanup` (no anon EXECUTE on any SECURITY DEFINER function, no caller EXECUTE on trigger functions, unschedules the duplicate `funda360-*` cron jobs that would fail daily without a JWT); CI `functions` job deploys all Edge Functions after `migrate`; deploy passes optional `vars.VITE_ERROR_REPORT_URL`; homework marking uses the shared `Modal`; 44px touch targets on invoice filters, message/timetable/operations tabs and teacher quick actions; the responsive guard now covers 10 guardian/learner routes. `admissions-public` (version 8, with the P1-6 guards) was deployed to production on 2026-10-08; the other three functions were still the 2026-09-09 build at that time.
+
+14. Government reporting and District Dashboard (2026-10-08, same branch). `20261009090000_education_official_role` (new `education_official` role, no school tenant) and `20261009091000_government_reporting` (`education_areas` province/district/circuit hierarchy, created by platform admins only (no seeding from the demo schools' free text); `schools.education_area_id`, changeable by platform admins only; `education_official_assignments` with a separate learner-detail grant; `get_reporting_scope`, `get_government_report`, `get_school_report`, `get_class_learner_report`, `record_government_report_export` and audited admin RPCs). Scope is computed in the database (`reporting_school_ids()`): platform admins all schools, officials their areas, school owner/principal their own school. UI: `/district`, `/district/schools/:id`, `/district/schools/:id/classes/:id`, `/reports/government`, `/district/areas` (`src/features/government/`). Design and formulas: `docs/GOVERNMENT_REPORTING.md`. Performance (scratch DB, 20 schools / 6,000 learners / 240k attendance rows): full district report 0.7-0.9 s, school drill-down 30 ms. `reporting_learner_stats` must keep its LATERAL lookups; a CTE-join version took 54 s.
+
+15. Privileged MFA hardening (2026-10-08, same branch): government reporting requires an `aal2` session for `education_official` and platform administrators (`session_is_aal2()`, `reporting_require_mfa()`, `reporting_platform_admin()`, all in `20261009091000`); `is_platform_admin()` elsewhere is unchanged. Frontend guard `RequirePrivilegedMfa`. Real-stack test `supabase/stack-tests/government-reporting.mjs` (GoTrue + PostgREST, real TOTP) 47/47. Load test unchanged by MFA (A/B in one session: 0.61-0.82 s with, 0.62-0.76 s without). Production checked read-only: schema fingerprint identical to the tested pre-PR schema; new migrations not applied yet.
+
+16. Provincial Dashboard + Government Data & Integration API (2026-10-08, same branch). `20261009092000_provincial_dashboard_and_government_api`: school-level official assignments; `get_provincial_report` / `get_provincial_scope` / `record_provincial_report_export` (province-level access only: platform admin, official assigned to the province, or API client scoped to it); API clients (SHA-256 token hash, scope, permissions, learner grant, expiry, rate limit), append-only `government_api_requests`, `government_import_jobs` (validate -> preview -> admin commit) and `gov_api_request()` (service role only). Scope functions were extended with an `api` caller kind that only exists inside `gov_api_request()` (service-role JWT + transaction-local setting). Edge Function `government-api` (HTTP adapter). UI: `/province`, `/district/integrations`, school-level grants on `/district/areas`. Docs: `docs/PROVINCIAL_DASHBOARD.md`, `docs/GOVERNMENT_API.md`, `docs/api/government-api-v1.openapi.yaml`. New tables need `revoke all ... from anon, authenticated` first: Supabase default privileges grant everything, so column grants alone do nothing.
+
+17. Funda AI Phase 1 foundation (2026-10-08, same branch). `20261009093000_funda_ai_foundation` (feature flags and policy, per-school switch, `ai_requests` usage/audit without content, `ai_tool_calls`, opt-in conversations, feedback; `ai_authorize_request()` policy gate run as the user; DB-counted rate limits and token budgets). Edge Function `funda-ai` (JWT verified): every tool reads through PostgREST with the caller's JWT, so RLS decides scope; service role only for the audit RPCs. Claude adapter via the official SDK (`claude-opus-5-5`, explicit effort, JSON-schema output, server-side refusal fallback enabled). Five read-only tools, code-only versioned prompt (`school_copilot` v1). Correction (audit 2026-10-09): as built, only the newest message was safeguarding-screened (history was not) and evidence matched a value anywhere in the cited output; both fixed in item 18. UI: header launcher (shown only when enabled) + panel in `src/features/ai/`. Without `ANTHROPIC_API_KEY` the gateway answers 503 `ai_provider_not_configured`. Docs: `docs/FUNDA_AI.md`. Real-stack test `supabase/stack-tests/funda-ai.mjs` (mock model API via `ANTHROPIC_BASE_URL`, after `fixtures.sql` + `funda-ai-fixtures.sql`) 50/50. No real model has been called; answer quality is unevaluated.
+
+18. Funda AI pre-pilot hardening (2026-10-09, same branch; fixes the 2026-10-09 audit). `20261009094000_funda_ai_hardening`:
+    - per-user then per-school advisory locks in `ai_authorize_request` (which now returns only allowed/reason/request_id);
+    - budget reserved by `ai_start_request` (service role) and settled by `ai_complete_request` (the reservation is kept when usage is unknown);
+    - `ai_recover_stale_requests` (pg_cron every minute) and `ai_purge_expired` (daily; also expires feedback);
+    - separate message/history allowances; budgets never NULL (school 3M, user 500k);
+    - `ai_admin_set_school` keeps unpassed settings; explicit school feature lists (empty = none);
+    - blocked-attempt logging capped at 20 per user per minute.
+
+    Gateway:
+    - every history turn screened (a safeguarding signal in any turn means no model call);
+    - SA ID numbers redacted; medical content blocked by default (`policy_blocked`);
+    - one request deadline (`FUNDA_AI_DEADLINE_MS`, default 110 s) with an abort signal;
+    - evidence must cite tool call AND field path (prompt v2); unverified numbers in the answer text withhold it; confidence capped by verified evidence.
+
+    Real stack: 50 parallel requests vs a limit of 2 admit exactly 2 (was 11 of 20 before); 50 vs a 5-request budget run exactly 5; pg_cron was seen closing a stale request. Teacher-scope recommendation (pilot with owner/principal only) in `docs/FUNDA_AI.md` section 1; no permission changed.
+
+19. Funda AI pre-merge audit (2026-10-09, same branch):
+    - Migration renames: the three future-dated migrations (`20261010…`, `20261011…`, `20261012…`) were renamed to `20261009092000` / `093000` / `094000`, because `supabase db push` refuses local versions dated before the newest one already applied. None had been applied anywhere.
+    - `20261009095000_funda_ai_pre_merge_fixes`: the budget month is the South African calendar month (`ai_month_start()`); CHECK that the reservation covers `max_output_tokens`; `ai_start_request` returns the reservation; the purge never deletes current-month rows; `ai_usage_summary` and platform-admin reads of the AI tables need `aal2`.
+    - Gateway:
+      - per-turn output is capped by the remaining reservation, and the loop stops with `reservation_exhausted`;
+      - the SDK does not retry, and the gateway retries once itself, recording usage as unknown;
+      - text is normalised (NFKC, invisible characters removed) before screening and redaction;
+      - the evidence check covers number words, claims, periods and notes (prompt v3);
+      - figures the user wrote themselves cap confidence at low.
+    - Evaluation: `_shared/ai/eval/` (deterministic, in CI), `supabase/stack-tests/funda-ai-eval.mjs` (real provider, opt-in, synthetic only, never run). Pattern screening **caught 0 of 8** indirect safeguarding disclosures (`docs/FUNDA_AI_EVALUATION.md`).
+    - Release gates: `docs/FUNDA_AI_PILOT_READINESS.md`. Verdict NOT READY.
+
+20. Funda AI staging remediation (2026-10-09, same branch; nothing deployed):
+    - `20261009096000_funda_ai_staging_remediation`:
+      - pending cap: at most 2 unstarted requests per user (`too_many_pending`);
+      - `never_started` requests do not count towards the school's daily quota;
+      - `ai_complete_request` settles only started requests and charges `p_unseen_tokens`;
+      - `ai_school_settings` school branch excludes platform admins;
+      - `audit_log` hides `ai_%` rows from aal1 platform admins. The existing policy is wrapped, not rewritten.
+    - Gateway accounting: each call's input is estimated (2 chars/token) and counted against the reservation before sending. Failed, possibly billed attempts are charged as estimates. The Anthropic adapter sums `usage.iterations` (refusal fallback). This is not a hard ceiling: about +10-15% worst case (`docs/FUNDA_AI.md` section 4).
+    - Safeguarding:
+      - screening views (folded, leet, joined letters, letters-only fragments) and cross-turn screening;
+      - English plus first-pass af/zu/xh/st/tn/nso/ts/ve patterns (not native-reviewed).
+      - Corpus `eval/safeguarding_corpus.ts` (dev / holdout / blind1 / blind2, pre-registered thresholds). **Independent first runs on blind corpora: direct 28/40 and 21/45. Pattern screening is not abuse detection.**
+    - Evidence:
+      - references (dates, labels) must be in the retrieved data;
+      - figures are bound to the cited field's metric, row, learner and period;
+      - unknown people withhold;
+      - rejected claims are hidden;
+      - Arabic-Indic digits and more number words are detected; predictions cap confidence;
+      - prompt v4. Tests: `eval/evidence_adversarial.test.ts`.
+    - Staging: manual-only `.github/workflows/staging.yml` (refuses the production ref) and `docs/STAGING.md`. No staging project exists yet.
+    - Eval runner refuses if port 8000 is busy or any profile or Auth user is not `.test`.
+    - Gates: `docs/FUNDA_AI_PILOT_READINESS.md` (18 gates, three stages).
+
+Last green run (2026-10-09, staging remediation, before commit):
 
 - typecheck, lint and build pass;
-- 282 unit tests, RLS 759/759, Deno check/lint/test 20/20;
-- Playwright 275/275 (0 retries).
+- 335 unit tests;
+- RLS 1090/1090;
+- real stack (fresh stacks, all 84 migrations): reporting 47/47, API 34/34, Funda AI 70/70;
+- Deno 137/137 (includes the safeguarding corpus and the adversarial evidence tests);
+- Playwright 375/375 (0 retries);
+- upgrade test (093000 holding data, then 094000-096000) passes.
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 
@@ -79,18 +147,21 @@ Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 - [x] P2 school owners can provision finance_manager / vice_principal / class_teacher / subject_teacher logins
 - [x] P2 unguessable admission references (existing references unchanged; resume still needs date of birth)
 
-All code-side criteria are met. What remains is applying the migrations to production (below).
+All code-side criteria are met. Merging to `main` applies new migrations (`migrate` job) and deploys Edge Functions (`functions` job, added 2026-10-08).
 
 ## Requires a human (cannot be done from the sandbox)
 
-1. **Apply pending migrations to production.** The auto-mode classifier blocked applying them from the agent session. Either:
-   - add GitHub `github-pages` environment secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` and `SUPABASE_PROJECT_REF=rzkybmkzhpwovpvrjkxk`, then merge to `main` (the CI `migrate` job runs `supabase db push`); or
-   - explicitly approve applying them in a session.
-
-   Production currently lacks: `20260919090001`, `20260929090000`, `20260929100000`, `20260929120000`, `20260929170000`, `20260930090000`, `20260930100000`, `20260930110000`, `20260930120000`, `20260930121000` and anything newer.
-
+1. **Merge this branch to `main`** so CI applies `20261008090000` and deploys `payments-initiate`, `payments-webhook` and `notifications-dispatch` (production ran their 2026-09-09 build at the 2026-10-08 audit).
 2. **Password resets.** Anyone who relied on a demo account must be re-issued a password by the platform owner.
 3. **Confirm the super-admin sessions.** Sessions from 41.116.x (Android) and 102.33.32.62 (Windows) were revoked; the owner should confirm those were theirs.
-4. Enable leaked-password protection in Supabase Auth settings (dashboard only).
-5. Migrations may be written (approved 2026-09-30). Applying them to production still needs item 1.
-6. **Email and login (2026-10-07):** production Site URL was `http://localhost:3000` and Auth used Supabase's built-in test mailer. Follow `docs/EMAIL_AND_LOGIN_SETUP.md` (Site URL, redirect URLs, HostAfrica SMTP, token-hash recovery template, email rate limit). The app accepts `?token_hash=…&type=…` links (`src/features/auth/utils/emailLink.ts`) so reset and guardian-activation links work on any device.
+4. Enable leaked-password protection in Supabase Auth settings (dashboard only). Still off at the 2026-10-08 audit.
+5. **Email and login (2026-10-07):** production Site URL was `http://localhost:3000` and Auth used Supabase's built-in test mailer. Follow `docs/EMAIL_AND_LOGIN_SETUP.md` (Site URL, redirect URLs, HostAfrica SMTP, token-hash recovery template, email rate limit). The app accepts `?token_hash=…&type=…` links (`src/features/auth/utils/emailLink.ts`) so reset and guardian-activation links work on any device. At the 2026-10-08 audit no email had been sent since, so the fix is unproven.
+6. **Backups.** The Supabase organisation is on the Free plan. Upgrade (Pro or above) and rehearse one restore before real schools use it.
+7. **Demo data.** Production holds the demo tenants (702 `*.funda360.dev` accounts, 375 learners). Decide whether to delete them or move real schools to a clean project. Never delete without a backup.
+8. **MFA.** No production account has a verified factor (platform owner and super-admin included). Enrol those accounts; the app only shows a banner.
+9. **Error monitoring.** Set the GitHub variable `VITE_ERROR_REPORT_URL` (Sentry store endpoint or a log drain) in the `github-pages` environment.
+10. **MFA for government reporting.** Confirm TOTP is enabled in hosted Auth (dashboard), then the platform owner and super-admin enrol an authenticator; until then they get `mfa_required` on `/district`, `/reports/government` and `/district/areas`.
+11. **Government reporting set-up.** A platform administrator creates the areas, links each real school to its district or circuit and creates/grants officials under Education Areas (`/district/areas`). Nothing is seeded; the current schools are demo data and must not be onboarded as government schools.
+12. **Government API.** Decide a retention period for `government_api_requests` (POPIA) before issuing production tokens; issue tokens only to named integration owners under `/district/integrations`.
+13. **Funda AI.** After merge: set the `ANTHROPIC_API_KEY` Edge Function secret (check it without learner data). Decide POPIA lawful basis, operator agreement and cross-border transfer, retention and budgets, and the teacher-scope policy (recommended: pilot with school_owner/principal only, `docs/FUNDA_AI.md` section 1). Then a platform admin (aal2) enables `copilot` and pilot schools via `ai_admin_update_feature` / `ai_admin_set_school(school, true, array['copilot'], budget)`. Run an answer-quality evaluation on synthetic data before any real school. Confirm the `funda-ai-recover-stale` and `funda-ai-retention` pg_cron jobs exist after the migration. Every gate is tracked in `docs/FUNDA_AI_PILOT_READINESS.md`.
+14. **Staging.** Create a separate synthetic-data Supabase project and the `staging` GitHub environment secrets, then run `staging.yml` (`docs/STAGING.md`). Decide on branch protection for `main`: a merge deploys to production.
