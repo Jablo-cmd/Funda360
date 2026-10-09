@@ -99,11 +99,11 @@ Items 1-12 are merged to `main` (PRs #7 and #8):
     - Evaluation: `_shared/ai/eval/` (deterministic, in CI), `supabase/stack-tests/funda-ai-eval.mjs` (real provider, opt-in, synthetic only, never run). Pattern screening **caught 0 of 8** indirect safeguarding disclosures (`docs/FUNDA_AI_EVALUATION.md`).
     - Release gates: `docs/FUNDA_AI_PILOT_READINESS.md`. Verdict NOT READY.
 
-Last green run (2026-10-09):
+Last green run (2026-10-09, pre-merge audit, commit bc9899d tree):
 
 - typecheck, lint and build pass;
-- 330 unit tests, RLS 1018/1018, real-stack 47/47 (reporting) + 34/34 (API) + 50/50 (Funda AI), Deno 62/62;
-- Playwright 373/373 (0 retries; includes 5 Funda AI tests).
+- 335 unit tests, RLS 1073/1073, real-stack 47/47 (reporting) + 34/34 (API) + 70/70 (Funda AI) on fresh stacks with all 83 migrations, Deno 102/102 (includes the deterministic evaluation);
+- Playwright 375/375 (0 retries).
 
 Local Deno: `npm install deno@2` in a scratch dir (CI uses denoland/setup-deno).
 
