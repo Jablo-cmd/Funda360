@@ -21,21 +21,22 @@ DUR = 60.0
 HERE = Path(__file__).resolve().parent
 
 # (scene start in seconds, text sent to TTS, caption chunks as shown on screen)
+# Script: Funda360_voiceover_script.txt (owner-supplied, 2026-10-17), word for word.
+# Each line starts shortly after the previous one ends; the script's nominal
+# timestamps (0/8/20/40/51 s) do not fit the lines at a natural pace.
 LINES = [
-    (0.6, 'Every school day brings new opportunities to learn, grow, and achieve.',
-     ['Every school day brings new opportunities to learn, grow, and achieve.']),
-    (7.6, 'Behind every successful school is a team managing many moving parts.',
-     ['Behind every successful school is a team managing many moving parts.']),
-    (15.4, 'Funda three-sixty brings essential school management activities together, in one connected platform.',
-     ['Funda360 brings essential school management activities together,', 'in one connected platform.']),
-    (22.8, 'From learner information and attendance, to finances and reporting, teams can manage important information and everyday processes, in one place.',
-     ['From learner information and attendance,', 'to finances and reporting,', 'teams can manage important information and everyday processes, in one place.']),
-    (35.6, 'With clearer information and more organised workflows, school teams can spend less time managing complexity, and more time supporting learners.',
-     ['With clearer information and more organised workflows,', 'school teams can spend less time managing complexity,', 'and more time supporting learners.']),
-    (48.5, 'Better visibility. More informed decisions. A stronger foundation for better outcomes.',
-     ['Better visibility.', 'More informed decisions.', 'A stronger foundation for better outcomes.']),
-    (55.5, 'Funda three-sixty. Smarter schools. Better outcomes.',
-     ['Funda360. Smarter Schools. Better Outcomes.']),
+    (0.4, 'Running a school is about more than teaching. There are learners to manage, attendance to track, results to record, and parents to keep informed.',
+     ['Running a school is about more than teaching.', 'There are learners to manage, attendance to track,', 'results to record, and parents to keep informed.']),
+    (9.4, 'Meet Foonda three-sixty, a smart school management platform designed to bring everything together in one place.',
+     ['Meet Funda360, a smart school management platform', 'designed to bring everything together in one place.']),
+    (16.9, 'From learner records and attendance to assessments, academic reports, school finances, and communication, Foonda three-sixty helps schools organise their daily work more easily. Teachers can focus on teaching. School leaders can make better-informed decisions. And schools can keep important information connected.',
+     ['From learner records and attendance to assessments,', 'academic reports, school finances, and communication,',
+      'Funda360 helps schools organise their daily work more easily.', 'Teachers can focus on teaching.',
+      'School leaders can make better-informed decisions.', 'And schools can keep important information connected.']),
+    (37.3, "Whether it's an individual school, a school group, or a larger education programme, Foonda three-sixty is designed to support organised, connected school management.",
+     ["Whether it's an individual school, a school group,", 'or a larger education programme,', 'Funda360 is designed to support organised,', 'connected school management.']),
+    (48.4, 'Foonda three-sixty. Built to help schools work smarter and support better outcomes for learners. Foonda three-sixty. Smarter schools. Better outcomes.',
+     ['Funda360.', 'Built to help schools work smarter and support better outcomes for learners.', 'Funda360 — Smarter Schools. Better Outcomes.']),
 ]
 
 
@@ -91,11 +92,13 @@ def main(model_dir: str, out_dir: str) -> None:
         s0, s1 = speech_bounds(samples, sr)
         gaps = pauses(samples, sr)
         # Chunk boundaries: the pause nearest each proportional split point.
-        total_chars = sum(len(c) for c in chunks)
+        # Lengths as spoken: the narrator says "Foonda three-sixty" (FOON-da, as in "food") for "Funda360".
+        spoken = [len(c.replace('Funda360', 'Foonda three-sixty')) for c in chunks]
+        total_chars = sum(spoken)
         bounds = [s0]
         acc = 0
-        for c in chunks[:-1]:
-            acc += len(c)
+        for n in spoken[:-1]:
+            acc += n
             target = s0 + (s1 - s0) * acc / total_chars
             cand = [g for g in gaps if g > bounds[-1] + 0.3]
             bounds.append(min(cand, key=lambda g: abs(g - target)) if cand else target)

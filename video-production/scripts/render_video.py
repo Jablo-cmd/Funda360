@@ -393,7 +393,7 @@ class Captions:
 
     def draw(self, frame, t):
         for c in self.items:
-            if c['scene'] == 7:  # the end card shows the same words on screen
+            if 'Smarter Schools. Better Outcomes.' in c['text']:  # the end card shows the same words
                 continue
             if c['start'] <= t <= c['end']:
                 a = min(prog(t, c['start'], c['start'] + 0.12), 1 - prog(t, c['end'] - 0.12, c['end']))
@@ -608,49 +608,69 @@ def scene5(f, A, t):
         paste_scaled(f, crop, 1420, 520 + drift, 0.96 + 0.03 * prog(t, t0, t1), a * a_all)
 
 
-OUTCOMES = [(48.4, 'Better visibility.'), (49.45, 'More informed decisions.'), (51.3, 'A stronger foundation'), (51.55, 'for better outcomes.')]
+# Shown as the narrator names each kind of school (times from the narration's pauses).
+OUTCOMES = [(37.7, 'Individual schools.'), (39.1, 'School groups.'), (40.2, 'Education programmes.'), (44.0, 'Organised. Connected.')]
 
 
 def scene6(f, A, t):
-    """00:48-00:55 Better outcomes."""
+    """00:37-00:48 Every kind of school."""
     f.alpha_composite(A.bg_navy)
     # Abstract rising line (no figures, no axes).
     d = ImageDraw.Draw(f)
-    p = ease_io(prog(t, 48.2, 54.0))
+    p = ease_io(prog(t, 37.3, 46.5))
     pts = [(x, 880 - 0.36 * (x - 900) - 30 * math.sin(x / 120.0)) for x in range(900, 1780, 10)]
     n = max(2, int(len(pts) * p))
     d.line(pts[:n], fill=TEAL + (150,), width=5, joint='curve')
     if n > 2:
         x, y = pts[n - 1]
         d.ellipse((x - 9, y - 9, x + 9, y + 9), fill=TEAL_L + (230,))
-    out = 1 - prog(t, 54.6, 55.2)
+    out = 1 - prog(t, 47.9, 48.6)
     for i, (t0, txt) in enumerate(OUTCOMES):
         a = ease_out(prog(t, t0, t0 + 0.5)) * out
-        big = i < 2
+        big = i < 3
         img = text_img(txt, 'displaybold' if big else 'display', 84 if big else 64, WHITE if big else TEAL_L)
-        y = [250, 380, 540, 620][i]
+        y = [230, 350, 470, 630][i]
         paste(f, img, 160 + (1 - ease_out(prog(t, t0, t0 + 0.5))) * 30, y, a)
 
 
 def scene7(f, A, t):
-    """00:55-01:00 Brand close."""
+    """00:48-01:00 Brand close; the tagline appears as it is spoken."""
     f.alpha_composite(A.bg_navy)
-    a = ease_out(prog(t, 55.1, 55.9))
-    s = 0.82 + 0.18 * ease_out(prog(t, 55.1, 56.0))
+    a = ease_out(prog(t, 48.4, 49.2))
+    s = 0.82 + 0.18 * ease_out(prog(t, 48.4, 49.3))
     paste(f, A.end_glow, W // 2 - 450, 420 - 450, a)
     mark = logo_mark(150)
     paste_scaled(f, mark, W / 2, 400, s, a)
     wm = wordmark(110)
-    paste_scaled(f, wm, W / 2, 560, 1.0, ease_out(prog(t, 55.6, 56.3)))
+    paste_scaled(f, wm, W / 2, 560, 1.0, ease_out(prog(t, 48.9, 49.6)))
     l1 = text_img('Smarter Schools.', 'display', 56, WHITE)
     l2 = text_img('Better Outcomes.', 'display', 56, TEAL_L)
-    paste(f, l1, W / 2 - l1.width / 2, 680 + (1 - ease_out(prog(t, 56.2, 56.8))) * 20, ease_out(prog(t, 56.2, 56.8)))
-    paste(f, l2, W / 2 - l2.width / 2, 752 + (1 - ease_out(prog(t, 56.6, 57.2))) * 20, ease_out(prog(t, 56.6, 57.2)))
+    paste(f, l1, W / 2 - l1.width / 2, 680 + (1 - ease_out(prog(t, 55.4, 56.0))) * 20, ease_out(prog(t, 55.4, 56.0)))
+    paste(f, l2, W / 2 - l2.width / 2, 752 + (1 - ease_out(prog(t, 56.5, 57.1))) * 20, ease_out(prog(t, 56.5, 57.1)))
 
 
-SCENES = [(0, 7.3, scene1), (6.7, 15.0, scene2), (15.0, 22.0, scene3), (22.0, 35.2, scene4), (34.9, 48.2, scene5), (48.0, 55.2, scene6), (55.0, 60.0, scene7)]
+# (start, end, scene, warp). Scenes 1-5 were animated on the first cut's timeline;
+# warp = (new_a, new_b, old_a, old_b) maps film time onto that timeline, so each
+# scene keeps its animation and follows the current narration
+# (Funda360_voiceover_script.txt).
+SCENES = [
+    (0, 4.9, scene1, (0, 4.9, 0, 7.3)),           # "Running a school is about more than teaching."
+    (4.3, 9.0, scene2, (4.3, 9.0, 6.7, 15.0)),    # learners, attendance, results, parents
+    (9.0, 16.6, scene3, (9.0, 16.6, 15.0, 22.0)), # "Meet Funda360"
+    (16.6, 28.4, scene4, (16.6, 28.4, 22.0, 35.2)),  # records, attendance, finances, reports
+    (28.1, 37.3, scene5, (28.1, 37.3, 34.9, 48.2)),  # teachers and school leaders
+    (37.0, 48.6, scene6, None),                   # individual schools, groups, programmes
+    (48.3, 60.0, scene7, None),                   # brand close
+]
 # Crossfades where two scenes overlap.
-XFADE = {(0, 1): (6.7, 7.3), (3, 4): (34.9, 35.2), (4, 5): (48.0, 48.2), (5, 6): (55.0, 55.2)}
+XFADE = {(0, 1): (4.3, 4.9), (3, 4): (28.1, 28.4), (4, 5): (37.0, 37.3), (5, 6): (48.3, 48.6)}
+
+
+def scene_time(t, warp):
+    if warp is None:
+        return t
+    na, nb, oa, ob = warp
+    return oa + (t - na) * (ob - oa) / (nb - na)
 
 ASSETS = None
 
@@ -658,10 +678,10 @@ ASSETS = None
 def render_frame(n, A, caps):
     t = n / FPS
     frame = None
-    active = [i for i, (a, b, _) in enumerate(SCENES) if a <= t < b or (i == len(SCENES) - 1 and t >= a)]
+    active = [i for i, (a, b, _, _) in enumerate(SCENES) if a <= t < b or (i == len(SCENES) - 1 and t >= a)]
     for i in active:
         layer = Image.new('RGBA', (W, H), NAVY + (255,))
-        SCENES[i][2](layer, A, t)
+        SCENES[i][2](layer, A, scene_time(t, SCENES[i][3]))
         if frame is None:
             frame = layer
         else:

@@ -1,56 +1,72 @@
 1
-00:00:00,590 --> 00:00:04,690
-Every school day brings new opportunities to learn, grow, and achieve.
+00:00:00,390 --> 00:00:02,730
+Running a school is about more than teaching.
 
 2
-00:00:07,580 --> 00:00:12,060
-Behind every successful school is a team managing many moving parts.
+00:00:02,770 --> 00:00:05,800
+There are learners to manage, attendance to track,
 
 3
-00:00:15,410 --> 00:00:19,690
-Funda360 brings essential school management activities together,
+00:00:05,840 --> 00:00:09,040
+results to record, and parents to keep informed.
 
 4
-00:00:19,730 --> 00:00:21,860
-in one connected platform.
+00:00:09,390 --> 00:00:13,205
+Meet Funda360, a smart school management platform
 
 5
-00:00:22,800 --> 00:00:24,870
-From learner information and attendance,
+00:00:13,245 --> 00:00:16,130
+designed to bring everything together in one place.
 
 6
-00:00:24,910 --> 00:00:26,760
-to finances and reporting,
+00:00:16,900 --> 00:00:19,570
+From learner records and attendance to assessments,
 
 7
-00:00:26,800 --> 00:00:31,940
-teams can manage important information and everyday processes, in one place.
+00:00:19,610 --> 00:00:23,480
+academic reports, school finances, and communication,
 
 8
-00:00:35,580 --> 00:00:38,715
-With clearer information and more organised workflows,
+00:00:23,520 --> 00:00:27,880
+Funda360 helps schools organise their daily work more easily.
 
 9
-00:00:38,755 --> 00:00:42,230
-school teams can spend less time managing complexity,
+00:00:27,920 --> 00:00:30,305
+Teachers can focus on teaching.
 
 10
-00:00:42,270 --> 00:00:44,470
-and more time supporting learners.
+00:00:30,345 --> 00:00:33,470
+School leaders can make better-informed decisions.
 
 11
-00:00:48,470 --> 00:00:49,505
-Better visibility.
+00:00:33,510 --> 00:00:36,790
+And schools can keep important information connected.
 
 12
-00:00:49,545 --> 00:00:51,355
-More informed decisions.
+00:00:37,310 --> 00:00:39,985
+Whether it's an individual school, a school group,
 
 13
-00:00:51,395 --> 00:00:54,220
-A stronger foundation for better outcomes.
+00:00:40,025 --> 00:00:42,255
+or a larger education programme,
 
 14
-00:00:55,510 --> 00:00:59,000
-Funda360. Smarter Schools. Better Outcomes.
+00:00:42,295 --> 00:00:45,865
+Funda360 is designed to support organised,
+
+15
+00:00:45,905 --> 00:00:47,640
+connected school management.
+
+16
+00:00:48,390 --> 00:00:49,620
+Funda360.
+
+17
+00:00:49,660 --> 00:00:53,890
+Built to help schools work smarter and support better outcomes for learners.
+
+18
+00:00:53,930 --> 00:00:57,910
+Funda360 — Smarter Schools. Better Outcomes.
 

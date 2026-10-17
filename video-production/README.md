@@ -9,7 +9,7 @@
 | `renders/funda360-promo-60s.mp4` | Final film: 1920×1080, 30 fps, H.264 (yuv420p, CRF 18) with AAC 192 kb/s 48 kHz audio. 60.0 s. English captions burned in. |
 | `renders/funda360-promo-60s.srt` | The same captions as a separate SRT file (for YouTube, LinkedIn or a player that adds its own captions). |
 | `captions/funda360-promo-60s.srt` | SRT source written by the narration step. |
-| `assets/narration/` | Narration per line (`line1.wav` … `line7.wav`), the placed 60 s track (`narration.wav`) and `timing.json` (line and caption timings). |
+| `assets/narration/` | Narration per line (`line1.wav` … `line5.wav`), the placed 60 s track (`narration.wav`) and `timing.json` (line and caption timings). |
 | `assets/music/funda360-theme.wav` | Original music bed. |
 | `assets/screens/` | Real Funda360 screens (fictional demo data) used in the film. |
 | `scripts/` | The pipeline (see below). |
@@ -19,15 +19,18 @@ The MP4 and WAV files are produced by the pipeline; see "Reproducing the export"
 
 ## What the film contains
 
-| Time | Scene | Picture | Narration |
-| --- | --- | --- | --- |
-| 00:00–00:07 | The school day | Line-art school drawn in at dawn, a rising sun glow, learners arriving shown as moving points of light, a "07:30" title | "Every school day brings new opportunities to learn, grow, and achieve." |
-| 00:07–00:15 | The challenge | Six separate task cards drift apart: attendance registers, fee statements, admissions forms, timetables, assessment marks, staff records | "Behind every successful school is a team managing many moving parts." |
-| 00:15–00:22 | Introducing Funda360 | The cards converge into the Funda360 mark and wordmark; the real dashboard rises into view | "Funda360 brings essential school management activities together, in one connected platform." |
-| 00:22–00:35 | One connected platform | Real screens with zooms and labels: Learner records, Daily attendance, Fees and collections, Attendance reporting, Admissions pipeline; then all of them around the dashboard ("All in one place") | "From learner information and attendance, to finances and reporting, teams can manage important information and everyday processes, in one place." |
-| 00:35–00:48 | Technology that empowers people | "Built for the people who run schools": school leaders, educators, administrators and finance teams, each with the matching real screen | "With clearer information and more organised workflows, school teams can spend less time managing complexity, and more time supporting learners." |
-| 00:48–00:55 | Better outcomes | The three statements over an abstract rising line (no figures) | "Better visibility. More informed decisions. A stronger foundation for better outcomes." |
-| 00:55–01:00 | Brand close | Funda360 mark (from `src/components/ui/Logo.tsx`), wordmark, "Smarter Schools. / Better Outcomes." | "Funda360. Smarter schools. Better outcomes." |
+Narration script: `Funda360_voiceover_script.txt` (supplied by the owner on 2026-10-17), used word for word.
+
+- **Timing.** The script's nominal timestamps (0/8/20/40/51 s) don't fit its lines at a natural pace: line 1 alone takes 8.5 s and the last line would run past 60 s. So each line starts just after the previous one ends; the order and wording are unchanged.
+- **Production note.** The script's production note asks for genuine Funda360 screenshots; the product screens below already are.
+
+| Time | Picture | Narration |
+| --- | --- | --- |
+| 00:00–00:09 | Line-art school drawn in at dawn ("07:30"), then six task cards: attendance registers, fee statements, admissions forms, timetables, assessment marks, staff records | "Running a school is about more than teaching. There are learners to manage, attendance to track, results to record, and parents to keep informed." |
+| 00:09–00:17 | The cards converge into the Funda360 mark and wordmark; the real dashboard rises into view | "Meet Funda360, a smart school management platform designed to bring everything together in one place." |
+| 00:17–00:37 | Real screens (Learner records, Daily attendance, Fees and collections, Attendance reporting, Admissions pipeline, "All in one place"), then "Built for the people who run schools": school leaders, educators, administrators and finance teams, each with the matching real screen | "From learner records and attendance to assessments, academic reports, school finances, and communication, Funda360 helps schools organise their daily work more easily. Teachers can focus on teaching. School leaders can make better-informed decisions. And schools can keep important information connected." |
+| 00:37–00:48 | "Individual schools. / School groups. / Education programmes. / Organised. Connected." over an abstract rising line (no figures) | "Whether it's an individual school, a school group, or a larger education programme, Funda360 is designed to support organised, connected school management." |
+| 00:48–01:00 | Funda360 mark (from `src/components/ui/Logo.tsx`) and wordmark; "Smarter Schools. / Better Outcomes." appears as it is spoken | "Funda360. Built to help schools work smarter and support better outcomes for learners. Funda360 — Smarter Schools. Better Outcomes." |
 
 ### Truthfulness
 
@@ -43,8 +46,8 @@ The MP4 and WAV files are produced by the pipeline; see "Reproducing the export"
 
 | Element | Source | Licence / status |
 | --- | --- | --- |
-| Narration | **Kokoro v1.0** neural text-to-speech, female voice `af_heart` (US English), speed 1.0, synthesised locally (`scripts/build_narration.py`). The script says "Funda three-sixty" for correct pronunciation; captions show "Funda360". | Kokoro-82M weights: Apache-2.0. `kokoro-onnx` 0.6.1: MIT. ONNX weights from the kokoro-onnx GitHub release `model-files-v1.0`. **AI-generated voice, not a human voice artist.** |
-| Music | **Original composition**, synthesised in code (`scripts/compose_music.py`): D major, 96 BPM, piano, pad, plucked pulse, soft kick and a closing bell, with a resolution at 0:55. | No third-party recordings or samples. Owned by whoever owns this repository's code. |
+| Narration | **Kokoro v1.0** neural text-to-speech, female voice `af_heart` (US English), speed 1.0, synthesised locally (`scripts/build_narration.py`). The script says "Foonda three-sixty" so the voice says FOON-da (as in "food"), the owner's pronunciation; captions show "Funda360". | Kokoro-82M weights: Apache-2.0. `kokoro-onnx` 0.6.1: MIT. ONNX weights from the kokoro-onnx GitHub release `model-files-v1.0`. **AI-generated voice, not a human voice artist.** |
+| Music | **Original composition**, synthesised in code (`scripts/compose_music.py`): D major, 96 BPM, piano, pad, plucked pulse, soft kick and a closing bell. The pulse enters at 0:05, the lift at 0:10 ("Meet Funda360"), the build at 0:37.5 and the resolution at 0:55, on the tagline. | No third-party recordings or samples. Owned by whoever owns this repository's code. |
 | Motion graphics | Drawn in code (`scripts/render_video.py`): line art, icons, cards, the logo from the app's own SVG, and typography. | Repository code. |
 | Typeface | Inter (the app's font). | SIL Open Font License 1.1. |
 | Product screens | Funda360 production build, fictional data (`capture/screens.capture.ts`). | Own product. |

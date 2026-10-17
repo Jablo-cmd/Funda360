@@ -4,11 +4,11 @@ Everything is synthesised here from sine partials, filtered noise and a
 plucked-string model, so there is no third-party recording or sample and no
 licence to clear. 96 BPM (one 4/4 bar = 2.5 s), D major, I-V-vi-IV.
 
-  0-7.5 s    piano + pad (the school day)
-  7.5-15 s   adds a muted 8th-note pulse (moving parts)
-  15-48 s    lift: arpeggio, soft kick, fuller pad (the platform, people)
-  48-55 s    build: brighter voicing (better outcomes)
-  55-60 s    resolution: sustained tonic with a bell, natural tail
+  0-5 s      piano + pad (running a school)
+  5-10 s     adds a muted 8th-note pulse (many things to manage)
+  10-37.5 s  lift: arpeggio, soft kick, fuller pad ("Meet Funda360", the platform)
+  37.5-55 s  build: brighter voicing (every kind of school, brand close)
+  55-60 s    resolution: sustained tonic with a bell, on the tagline
 
 Usage: python compose_music.py OUT.wav
 """
@@ -127,6 +127,10 @@ def reverb(x, seconds=2.2, wet=0.22):
     return (1 - wet) * x + wet * out
 
 
+# Section starts (s), on bar lines, matched to the narration.
+PULSE, LIFT, BUILD = 5.0, 10.0, 37.5
+
+
 def main(path: str) -> None:
     mix = np.zeros((N, 2))
     bars = int(DUR / BAR)  # 24
@@ -137,31 +141,31 @@ def main(path: str) -> None:
         if final:
             break
         # Pad throughout, fuller after the lift.
-        pad_gain = 0.8 if t0 < 15 else 1.15
+        pad_gain = 0.8 if t0 < LIFT else 1.15
         place(mix, pad([midi_hz(m) for m in chord], BAR + 1.0), t0, pad_gain)
         # Piano: sparse broken chord in the intro, gentle quarter notes later.
-        if t0 < 15:
+        if t0 < LIFT:
             for i, m in enumerate([chord[0], chord[2], chord[1], chord[3]]):
                 place(mix, piano(midi_hz(m), 2.2, 0.32), t0 + i * BEAT, 1.0, pan=-0.2 + 0.13 * i)
         else:
             for i in range(4):
-                m = chord[[0, 2, 1, 2][i]] + (12 if t0 >= 48 and i == 3 else 0)
+                m = chord[[0, 2, 1, 2][i]] + (12 if t0 >= BUILD and i == 3 else 0)
                 place(mix, piano(midi_hz(m), 1.6, 0.3), t0 + i * BEAT, 1.0, pan=-0.15 + 0.1 * i)
-        # Bass note on each bar from 7.5 s.
-        if t0 >= 7.5:
+        # Bass note on each bar from PULSE.
+        if t0 >= PULSE:
             place(mix, piano(midi_hz(bass), 2.4, 0.42), t0, 0.9)
-        # Muted 8th-note pulse from 7.5 s ("moving parts").
-        if t0 >= 7.5:
+        # Muted 8th-note pulse from PULSE ("moving parts").
+        if t0 >= PULSE:
             for i in range(8):
                 vel = 0.12 if i % 2 else 0.16
                 place(mix, pluck(midi_hz(chord[1] - 12), 0.3, vel), t0 + i * BEAT / 2, 1.0, pan=0.35)
-        # Lift from 15 s: arpeggio and soft kick on beats 1 and 3.
-        if t0 >= 15:
+        # Lift: arpeggio and soft kick on beats 1 and 3.
+        if t0 >= LIFT:
             arp = [chord[0], chord[1], chord[2], chord[3], chord[2], chord[1], chord[2], chord[3]]
             for i, m in enumerate(arp):
                 place(mix, piano(midi_hz(m + 12), 0.9, 0.11), t0 + i * BEAT / 2, 1.0, pan=0.4 - 0.1 * (i % 3))
             for i in (0, 2):
-                place(mix, kick(0.3 if t0 < 48 else 0.36), t0 + i * BEAT)
+                place(mix, kick(0.3 if t0 < BUILD else 0.36), t0 + i * BEAT)
     # Resolution at 55 s: D major, long sustain, bell.
     t_end = 55.0
     place(mix, pad([midi_hz(m) for m in [62, 66, 69, 74, 78]], 5.0, 0.16), t_end, 1.2)
