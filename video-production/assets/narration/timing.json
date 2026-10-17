@@ -1,0 +1,141 @@
+{
+ "voice": "af_heart",
+ "speed": 1.0,
+ "lines": [
+  {
+   "scene": 1,
+   "start": 0.6,
+   "speech_start": 0.64,
+   "speech_end": 4.44,
+   "duration": 3.904
+  },
+  {
+   "scene": 2,
+   "start": 7.6,
+   "speech_start": 7.63,
+   "speech_end": 11.81,
+   "duration": 4.267
+  },
+  {
+   "scene": 3,
+   "start": 15.4,
+   "speech_start": 15.46,
+   "speech_end": 21.61,
+   "duration": 6.293
+  },
+  {
+   "scene": 4,
+   "start": 22.8,
+   "speech_start": 22.85,
+   "speech_end": 31.69,
+   "duration": 8.939
+  },
+  {
+   "scene": 5,
+   "start": 35.6,
+   "speech_start": 35.63,
+   "speech_end": 44.22,
+   "duration": 8.683
+  },
+  {
+   "scene": 6,
+   "start": 48.5,
+   "speech_start": 48.52,
+   "speech_end": 53.97,
+   "duration": 5.525
+  },
+  {
+   "scene": 7,
+   "start": 55.5,
+   "speech_start": 55.56,
+   "speech_end": 58.75,
+   "duration": 3.307
+  }
+ ],
+ "captions": [
+  {
+   "start": 0.59,
+   "end": 4.69,
+   "text": "Every school day brings new opportunities to learn, grow, and achieve.",
+   "scene": 1
+  },
+  {
+   "start": 7.58,
+   "end": 12.06,
+   "text": "Behind every successful school is a team managing many moving parts.",
+   "scene": 2
+  },
+  {
+   "start": 15.41,
+   "end": 19.69,
+   "text": "Funda360 brings essential school management activities together,",
+   "scene": 3
+  },
+  {
+   "start": 19.73,
+   "end": 21.86,
+   "text": "in one connected platform.",
+   "scene": 3
+  },
+  {
+   "start": 22.8,
+   "end": 24.87,
+   "text": "From learner information and attendance,",
+   "scene": 4
+  },
+  {
+   "start": 24.91,
+   "end": 26.76,
+   "text": "to finances and reporting,",
+   "scene": 4
+  },
+  {
+   "start": 26.8,
+   "end": 31.94,
+   "text": "teams can manage important information and everyday processes, in one place.",
+   "scene": 4
+  },
+  {
+   "start": 35.58,
+   "end": 38.715,
+   "text": "With clearer information and more organised workflows,",
+   "scene": 5
+  },
+  {
+   "start": 38.755,
+   "end": 42.23,
+   "text": "school teams can spend less time managing complexity,",
+   "scene": 5
+  },
+  {
+   "start": 42.27,
+   "end": 44.47,
+   "text": "and more time supporting learners.",
+   "scene": 5
+  },
+  {
+   "start": 48.47,
+   "end": 49.505,
+   "text": "Better visibility.",
+   "scene": 6
+  },
+  {
+   "start": 49.545,
+   "end": 51.355,
+   "text": "More informed decisions.",
+   "scene": 6
+  },
+  {
+   "start": 51.395,
+   "end": 54.22,
+   "text": "A stronger foundation for better outcomes.",
+   "scene": 6
+  },
+  {
+   "start": 55.51,
+   "end": 59.0,
+   "text": "Funda360. Smarter Schools. Better Outcomes.",
+   "scene": 7
+  }
+ ]
+}
