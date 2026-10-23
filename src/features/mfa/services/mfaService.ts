@@ -1,9 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import type { Factor, AuthenticatorAssuranceLevels } from '@supabase/supabase-js';
+import { qrCodeToDataUri } from '../utils/qrCode';
 
 export interface EnrollmentResult {
   factorId: string;
-  /** `data:image/svg+xml;utf-8,<svg>` — ready to drop straight into an <img src>. */
+  /** `data:image/svg+xml;charset=utf-8,<percent-encoded svg>`, ready for an <img src>. */
   qrCodeDataUri: string;
   /** Shown alongside the QR code for a user who can't scan it (manual entry into their authenticator app). */
   secret: string;
@@ -29,7 +30,10 @@ async function listFactors(): Promise<Factor[]> {
 
 /** Starts TOTP enrollment. The returned factor is `unverified` until verifyEnrollment() succeeds — listFactors() won't count it as active MFA until then. */
 async function startEnrollment(): Promise<EnrollmentResult> {
-  const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', issuer: 'Funda360' });
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    issuer: 'Funda360',
+  });
   if (error) throw error;
   // enroll()'s return type is a { type: 'totp' } | { type: 'phone' } union
   // even though we only ever request 'totp' — narrow explicitly rather
@@ -40,16 +44,22 @@ async function startEnrollment(): Promise<EnrollmentResult> {
   }
   return {
     factorId: data.id,
-    qrCodeDataUri: `data:image/svg+xml;utf-8,${encodeURIComponent(data.totp.qr_code)}`,
+    qrCodeDataUri: qrCodeToDataUri(data.totp.qr_code),
     secret: data.totp.secret,
   };
 }
 
 /** Confirms enrollment with the 6-digit code from the user's authenticator app — promotes the session to aal2 on success. */
 async function verifyEnrollment(factorId: string, code: string): Promise<void> {
-  const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId });
+  const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
+    factorId,
+  });
   if (challengeError) throw challengeError;
-  const { error: verifyError } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code });
+  const { error: verifyError } = await supabase.auth.mfa.verify({
+    factorId,
+    challengeId: challenge.id,
+    code,
+  });
   if (verifyError) throw verifyError;
 }
 
@@ -81,7 +91,10 @@ async function challengeAndVerify(factorId: string, code: string): Promise<void>
   if (error) throw error;
 }
 
-async function getAssuranceLevel(): Promise<{ currentLevel: AuthenticatorAssuranceLevels | null; nextLevel: AuthenticatorAssuranceLevels | null }> {
+async function getAssuranceLevel(): Promise<{
+  currentLevel: AuthenticatorAssuranceLevels | null;
+  nextLevel: AuthenticatorAssuranceLevels | null;
+}> {
   const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (error) throw error;
   return { currentLevel: data.currentLevel, nextLevel: data.nextLevel };
