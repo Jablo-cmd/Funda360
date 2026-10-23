@@ -16,6 +16,13 @@ interface MockUserOverrides {
   role?: string;
   /** MFA factors on this session's user — see mfaService.listFactors(), which reads exactly this array (via getSession(), not a network call) to decide whether MfaRequiredBanner shows and whether MfaChallengePage has something to challenge. Omit for "no MFA enrolled" (the default for every other test). */
   factors?: MockFactor[];
+  /** Session assurance level. When set, the access token is an (unsigned) JWT carrying this `aal` claim, which is what supabase-js reads in getAuthenticatorAssuranceLevel(). Omit for the plain opaque mock token every other test uses. */
+  aal?: 'aal1' | 'aal2';
+}
+
+function fakeJwt(payload: Record<string, unknown>): string {
+  const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}.mock-signature`;
 }
 
 export function buildMockUser(overrides: MockUserOverrides = {}) {
@@ -46,8 +53,20 @@ export function buildMockUser(overrides: MockUserOverrides = {}) {
 }
 
 export function buildMockSession(overrides: MockUserOverrides = {}) {
+  const accessToken = overrides.aal
+    ? fakeJwt({
+        sub: MOCK_USER_ID,
+        role: 'authenticated',
+        aal: overrides.aal,
+        amr:
+          overrides.aal === 'aal2'
+            ? [{ method: 'totp', timestamp: 1 }]
+            : [{ method: 'password', timestamp: 1 }],
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      })
+    : 'mock-access-token';
   return {
-    access_token: 'mock-access-token',
+    access_token: accessToken,
     token_type: 'bearer',
     expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 3600,

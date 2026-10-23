@@ -22,6 +22,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [availableSchoolsLoading, setAvailableSchoolsLoading] = useState(false);
 
   const isPlatformLevel = rbacService.can(user?.role ?? null, 'tenant.switch');
+  // Education officials report across the schools in their area and are
+  // never attached to one school, so having no tenant is their normal state.
+  // They cannot switch tenants: the database decides their schools.
+  const isTenantlessRole = isPlatformLevel || user?.role === 'education_official';
 
   const loadTenant = useCallback(
     async (tenantId: string | null, isPlatformLevelAccess = false) => {
@@ -29,7 +33,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         // No tenant on the profile: platform-level roles legitimately have
         // none (they operate across tenants); anyone else needs one assigned.
         setTenant(null);
-        setStatus(isPlatformLevel ? 'ready' : 'missing');
+        setStatus(isTenantlessRole ? 'ready' : 'missing');
         setError(null);
         return;
       }
@@ -51,7 +55,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         setError(getDbErrorMessage(err, 'Failed to load tenant.'));
       }
     },
-    [isPlatformLevel],
+    [isTenantlessRole],
   );
 
   // ProfileProvider legitimately re-fetches the profile in the background from

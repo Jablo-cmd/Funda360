@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingBlock } from '@/components/ui/LoadingBlock';
+import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/toast/useToast';
 import { homeworkService } from '@/features/homework/services/homeworkService';
 import { useAssignmentDetail } from '@/features/homework/hooks/useAssignmentDetail';
@@ -157,7 +158,11 @@ export function HomeworkDetailPage() {
                     </td>
                     <td className="px-3 py-2 text-right">
                       {(s.status === 'submitted' || s.status === 'late' || s.status === 'returned' || s.status === 'reviewed') && (
-                        <button type="button" className="text-brand-600 underline" onClick={() => openMark(s)}>
+                        <button
+                          type="button"
+                          className="inline-flex min-h-11 items-center text-brand-600 underline lg:min-h-0"
+                          onClick={() => openMark(s)}
+                        >
                           {s.status === 'reviewed' ? 'Edit mark' : 'Mark'}
                         </button>
                       )}
@@ -170,51 +175,52 @@ export function HomeworkDetailPage() {
         </>
       )}
 
-      {marking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-card border border-border bg-surface-raised p-4">
-            <h2 className="text-lg font-semibold text-content-primary">Mark: {marking.learnerName}</h2>
-            {marking.submissionText && (
-              <p className="mt-2 whitespace-pre-wrap rounded-md bg-surface-sunken p-2 text-sm text-content-secondary">
-                {marking.submissionText}
-              </p>
+      <Modal
+        isOpen={marking !== null}
+        onClose={() => setMarking(null)}
+        title={`Mark: ${marking?.learnerName ?? ''}`}
+        footer={
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => void saveMark(true)} isLoading={busy}>
+              Mark as done
+            </Button>
+            {assignment.allowResubmission && (
+              <Button type="button" variant="secondary" onClick={() => void saveMark(false)} isLoading={busy}>
+                Return for redo
+              </Button>
             )}
-            <div className="mt-3 flex flex-col gap-3">
-              <label className="text-sm font-medium text-content-primary">
-                Points {assignment.maxPoints ? `(out of ${assignment.maxPoints})` : ''}
-                <input
-                  type="number"
-                  min={0}
-                  className="mt-1 h-11 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm"
-                  value={points}
-                  onChange={(e) => setPoints(e.target.value)}
-                />
-              </label>
-              <label className="text-sm font-medium text-content-primary">
-                Feedback
-                <textarea
-                  className="mt-1 min-h-[4rem] w-full rounded-md border border-border-strong bg-surface-raised p-2 text-sm"
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                />
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={() => void saveMark(true)} isLoading={busy}>
-                  Mark as done
-                </Button>
-                {assignment.allowResubmission && (
-                  <Button type="button" variant="secondary" onClick={() => void saveMark(false)} isLoading={busy}>
-                    Return for redo
-                  </Button>
-                )}
-                <Button type="button" variant="ghost" onClick={() => setMarking(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
+            <Button type="button" variant="ghost" onClick={() => setMarking(null)}>
+              Cancel
+            </Button>
           </div>
+        }
+      >
+        {marking?.submissionText && (
+          <p className="whitespace-pre-wrap rounded-md bg-surface-sunken p-2 text-sm text-content-secondary">
+            {marking.submissionText}
+          </p>
+        )}
+        <div className="mt-3 flex flex-col gap-3">
+          <label className="text-sm font-medium text-content-primary">
+            Points {assignment.maxPoints ? `(out of ${assignment.maxPoints})` : ''}
+            <input
+              type="number"
+              min={0}
+              className="mt-1 h-11 w-full rounded-md border border-border-strong bg-surface-raised px-3 text-sm"
+              value={points}
+              onChange={(e) => setPoints(e.target.value)}
+            />
+          </label>
+          <label className="text-sm font-medium text-content-primary">
+            Feedback
+            <textarea
+              className="mt-1 min-h-[4rem] w-full rounded-md border border-border-strong bg-surface-raised p-2 text-sm"
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+            />
+          </label>
         </div>
-      )}
+      </Modal>
     </PageContainer>
   );
 }

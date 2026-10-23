@@ -16,6 +16,7 @@ export type DashboardPersona =
   | 'finance'
   | 'hr'
   | 'admissions'
+  | 'district'
   | 'minimal';
 
 const PERSONA_BY_ROLE: Partial<Record<UserRole, DashboardPersona>> = {
@@ -36,6 +37,7 @@ const PERSONA_BY_ROLE: Partial<Record<UserRole, DashboardPersona>> = {
   hr_manager: 'hr',
   admissions_officer: 'admissions',
   receptionist: 'admissions',
+  education_official: 'district',
 };
 
 export function resolveDashboardPersona(role: UserRole | null | undefined): DashboardPersona {

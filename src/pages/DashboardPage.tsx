@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/authContext';
 import { resolveDashboardPersona } from '@/features/dashboard/resolveDashboardPersona';
 import { PrincipalDashboard } from '@/features/dashboard/personas/PrincipalDashboard';
@@ -16,6 +17,11 @@ import { TeacherWorkspacePage } from '@/features/teacherWorkspace/pages/TeacherW
 export function DashboardPage() {
   const { user } = useAuth();
   const persona = resolveDashboardPersona(user?.role ?? null);
+
+  // Education officials have no school; their home is the district view.
+  if (persona === 'district') {
+    return <Navigate to="/district" replace />;
+  }
 
   if (persona === 'platform') {
     return <PlatformDashboard />;

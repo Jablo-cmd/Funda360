@@ -62,7 +62,7 @@ jobs:
           deno-version: v2.x
       - name: Type-check Edge Functions
         working-directory: supabase/functions
-        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts _shared/providers/providers.test.ts _shared/providers/binding.test.ts _shared/admissions/guards.test.ts
+        run: deno check payments-initiate/index.ts payments-webhook/index.ts admissions-public/index.ts notifications-dispatch/index.ts government-api/index.ts _shared/providers/providers.test.ts _shared/providers/binding.test.ts _shared/admissions/guards.test.ts _shared/government/api.test.ts funda-ai/index.ts _shared/ai/ai.test.ts _shared/ai/eval/eval.test.ts _shared/ai/eval/evidence_adversarial.test.ts
       - name: Lint Edge Functions
         working-directory: supabase/functions
         run: deno lint
@@ -169,10 +169,46 @@ jobs:
             exit 1
           fi
 
+  functions:
+    # Edge Functions used to be deployed by hand and production ran a
+    # month-old build without the P1-5/P1-6 fixes (audit 2026-10-08). Deploy
+    # them on every push to main, after the migrations they depend on.
+    if: github.event_name == 'push'
+    name: Deploy Edge Functions to production
+    needs: [migrate]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy functions
+        # Only payments-initiate is called with a user's session. The other
+        # three authenticate their own callers: a webhook signature, the
+        # x-dispatch-secret header, or (public admissions) a resume token.
+        run: |
+          npx supabase functions deploy payments-initiate --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          npx supabase functions deploy payments-webhook --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy admissions-public --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy notifications-dispatch --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy government-api --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy funda-ai --project-ref "$SUPABASE_PROJECT_REF" --use-api
+
   deploy:
     if: github.event_name == 'push'
     name: Deploy to GitHub Pages
-    needs: [quality, edge-functions, rls-tests, e2e, migrate]
+    needs: [quality, edge-functions, rls-tests, e2e, migrate, functions]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -218,6 +254,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_APP_NAME: Funda360
+          # Optional: where client errors are reported (src/lib/errorReporting.ts).
+          # Unset means errors reach only the browser console.
+          VITE_ERROR_REPORT_URL: ${{ vars.VITE_ERROR_REPORT_URL }}
+          VITE_APP_VERSION: ${{ github.sha }}
         run: npm run build
 
       - name: Verify Pages entrypoint

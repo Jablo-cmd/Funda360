@@ -11,6 +11,9 @@ export interface PageTitleEntry {
  */
 const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/dashboard', { title: 'Dashboard', section: 'Overview' }],
+  ['/district/areas', { title: 'Education Areas', section: 'Government' }],
+  ['/district', { title: 'District Dashboard', section: 'Government' }],
+  ['/reports/government', { title: 'Government Reports', section: 'Government' }],
   ['/compliance', { title: 'Trust Center', section: 'Administration' }],
   ['/my-profile', { title: 'My Profile', section: 'Administration' }],
   ['/school/profile', { title: 'School Profile', section: 'Administration' }],

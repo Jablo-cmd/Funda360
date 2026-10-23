@@ -69,7 +69,7 @@ export function InvoicesRegisterPage() {
                 key={f.value}
                 type="button"
                 onClick={() => setStatusFilter(f.value)}
-                className={`focus-ring rounded-full px-3 py-1 text-xs font-semibold ${
+                className={`focus-ring min-h-11 rounded-full px-3 py-1 text-xs font-semibold lg:min-h-0 ${
                   statusFilter === f.value
                     ? 'bg-brand-600 text-white'
                     : 'bg-surface-raised text-content-secondary hover:bg-surface-sunken'

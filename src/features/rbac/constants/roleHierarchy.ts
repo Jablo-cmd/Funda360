@@ -31,6 +31,7 @@ export const ROLE_RANK: Record<UserRole, number> = {
   governance_officer: 60,
   procurement_officer: 60,
   auditor: 55,
+  education_official: 55,
   teacher: 50,
   class_teacher: 50,
   subject_teacher: 50,

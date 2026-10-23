@@ -55,7 +55,7 @@ export function TimetableFiltersBar({
             type="button"
             onClick={() => onViewModeChange(mode.key)}
             aria-current={viewMode === mode.key ? 'true' : undefined}
-            className={`focus-ring rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
+            className={`focus-ring min-h-11 rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors lg:min-h-0 ${
               viewMode === mode.key
                 ? 'bg-brand-600 text-white'
                 : 'text-content-secondary hover:bg-surface-sunken hover:text-content-primary'

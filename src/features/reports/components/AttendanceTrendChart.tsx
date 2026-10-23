@@ -5,6 +5,12 @@ export interface AttendanceTrendChartProps {
   data: AttendanceTrendRow[];
   /** A reference line at this rate (e.g. the same 80% "needs attention" threshold the learner table below already flags) — plotted only when at least one point exists, since an empty chart has nothing to give it context. */
   thresholdPercent?: number;
+  /** Names the series in the accessible label (default "Attendance rate"). */
+  seriesLabel?: string;
+  /** Shown when there is nothing to plot. */
+  emptyMessage?: string;
+  /** What one point is, for the legend (default "Day"). */
+  pointLabel?: string;
 }
 
 const DEFAULT_WIDTH = 640;
@@ -28,7 +34,13 @@ function formatShortDate(value: string): string {
  * skipped, not plotted as 0%) — see attendanceReportService's own
  * dailyRows comment for why gaps aren't zero-filled.
  */
-export function AttendanceTrendChart({ data, thresholdPercent }: AttendanceTrendChartProps) {
+export function AttendanceTrendChart({
+  data,
+  thresholdPercent,
+  seriesLabel = 'Attendance rate',
+  emptyMessage = 'No attendance recorded for this period yet.',
+  pointLabel = 'Day',
+}: AttendanceTrendChartProps) {
   // The SVG is drawn at the container's real pixel width instead of being a fixed 640px canvas scaled down by the viewBox: scaled down to a 320px phone the 10px axis labels would render at ~5px.
   const containerRef = useRef<HTMLDivElement>(null);
   const [chartWidth, setChartWidth] = useState(DEFAULT_WIDTH);
@@ -50,7 +62,7 @@ export function AttendanceTrendChart({ data, thresholdPercent }: AttendanceTrend
   if (points.length === 0) {
     return (
       <div className="flex h-[200px] items-center justify-center text-center text-sm text-content-tertiary">
-        No attendance recorded for this period yet.
+        {emptyMessage}
       </div>
     );
   }
@@ -88,7 +100,7 @@ export function AttendanceTrendChart({ data, thresholdPercent }: AttendanceTrend
         height={CHART_HEIGHT}
         viewBox={`0 0 ${chartWidth} ${CHART_HEIGHT}`}
         role="img"
-        aria-label={`Attendance rate trend from ${formatShortDate(points[0]!.date)} to ${formatShortDate(points[points.length - 1]!.date)}, ranging from ${minRate}% to ${maxRate}%`}
+        aria-label={`${seriesLabel} trend from ${formatShortDate(points[0]!.date)} to ${formatShortDate(points[points.length - 1]!.date)}, ranging from ${minRate}% to ${maxRate}%`}
         className="block max-w-full"
       >
         {[0, 25, 50, 75, 100].map((gridRate) => (
@@ -185,7 +197,7 @@ export function AttendanceTrendChart({ data, thresholdPercent }: AttendanceTrend
               aria-hidden="true"
               className="inline-block h-2.5 w-2.5 rounded-full bg-danger-600"
             />
-            Day below {thresholdPercent}%
+            {pointLabel} below {thresholdPercent}%
           </span>
         </p>
       )}

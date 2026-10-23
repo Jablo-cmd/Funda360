@@ -52,14 +52,14 @@ export function MessagesPage({ basePath = '/messages' }: MessagesPageProps) {
             <button
               type="button"
               onClick={() => setShowArchived(false)}
-              className={`focus-ring rounded-md px-3 py-1.5 font-medium ${!showArchived ? 'bg-surface-sunken text-content-primary' : 'text-content-tertiary'}`}
+              className={`focus-ring min-h-11 rounded-md px-3 py-1.5 font-medium lg:min-h-0 ${!showArchived ? 'bg-surface-sunken text-content-primary' : 'text-content-tertiary'}`}
             >
               Inbox
             </button>
             <button
               type="button"
               onClick={() => setShowArchived(true)}
-              className={`focus-ring rounded-md px-3 py-1.5 font-medium ${showArchived ? 'bg-surface-sunken text-content-primary' : 'text-content-tertiary'}`}
+              className={`focus-ring min-h-11 rounded-md px-3 py-1.5 font-medium lg:min-h-0 ${showArchived ? 'bg-surface-sunken text-content-primary' : 'text-content-tertiary'}`}
             >
               Archived
             </button>

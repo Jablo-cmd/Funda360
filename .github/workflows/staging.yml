@@ -1,0 +1,109 @@
+name: Staging deploy (manual)
+
+# Deploys a chosen ref to a SEPARATE staging Supabase project. It never runs
+# on its own: a person starts it from the Actions tab ("Run workflow").
+# Production is untouched: every secret comes from the "staging" GitHub
+# environment, and the run refuses the production project ref.
+# Set-up and rules: docs/STAGING.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy-to-staging" to confirm this targets the STAGING project'
+        required: true
+      load_fixtures:
+        description: 'Load the synthetic stack-test fixtures (empty staging database only)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    name: Deploy to staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.STAGING_SUPABASE_PROJECT_REF }}
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+      # The production project. A staging run must never target it.
+      PRODUCTION_PROJECT_REF: rzkybmkzhpwovpvrjkxk
+    steps:
+      - name: Refuse anything but an explicit staging run
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "deploy-to-staging" ]; then
+            echo "::error::Confirmation text did not match; nothing was deployed."
+            exit 1
+          fi
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing STAGING_$name in the staging environment; nothing was deployed."
+              exit 1
+            fi
+          done
+          if [ "$SUPABASE_PROJECT_REF" = "$PRODUCTION_PROJECT_REF" ]; then
+            echo "::error::STAGING_SUPABASE_PROJECT_REF is the production project. Refusing."
+            exit 1
+          fi
+          case "$STAGING_DB_URL" in
+            *"$PRODUCTION_PROJECT_REF"*)
+              echo "::error::STAGING_DB_URL points at the production project. Refusing."
+              exit 1
+              ;;
+          esac
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Link the staging project
+        run: npx supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply migrations
+        run: npx supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Load synthetic fixtures (optional, empty database only)
+        if: ${{ inputs.load_fixtures }}
+        run: |
+          if [ -z "$STAGING_DB_URL" ]; then
+            echo "::error::STAGING_DB_URL is not set; cannot load fixtures."
+            exit 1
+          fi
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+          # Refuse a database that already holds non-test accounts.
+          real=$(psql "$STAGING_DB_URL" -tAc "select count(*) from public.profiles where email is null or email not like '%.test'")
+          if [ "$real" != "0" ]; then
+            echo "::error::The staging database holds $real non-test profiles. Fixtures are for an empty, synthetic database only."
+            exit 1
+          fi
+          psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/stack-tests/fixtures.sql
+          psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/stack-tests/funda-ai-fixtures.sql
+
+      - name: Deploy Edge Functions
+        run: |
+          npx supabase functions deploy payments-initiate --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          npx supabase functions deploy payments-webhook --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy admissions-public --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy notifications-dispatch --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy government-api --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+          npx supabase functions deploy funda-ai --project-ref "$SUPABASE_PROJECT_REF" --use-api
+
+      - name: List applied migrations
+        run: npx supabase migration list --password "$SUPABASE_DB_PASSWORD"
