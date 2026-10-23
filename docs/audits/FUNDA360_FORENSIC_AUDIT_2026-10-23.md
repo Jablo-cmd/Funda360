@@ -273,3 +273,27 @@ Size: about 69,700 lines of TypeScript/TSX in `src` (649 files), 23,800 lines of
   - local re-runs of the RLS, Deno and Playwright suites (CI ran them green on the same commit);
   - fetching the live site (the sandbox proxy blocks it);
   - Supabase Auth dashboard settings other than what the advisors expose (SMTP, Site URL, TOTP enablement).
+
+## 9. Remediation log
+
+- **2026-10-23, same day: D-1 and D-3.**
+  - The owner replaced `SUPABASE_ACCESS_TOKEN` and the failed jobs were re-run.
+  - `migrate` passed; there was nothing to apply and no drift.
+  - `functions` deployed all six: payments-initiate, payments-webhook and notifications-dispatch v6; admissions-public v9; government-api and funda-ai v1, first deploy.
+  - The Pages deploy then failed because the `VITE_SUPABASE_ANON_KEY` secret was empty in `github-pages`; the owner was given the public anon key to restore it.
+- **2026-10-23: S-1, S-2 and S-3 fixed** on `claude/fervent-curie-8ohhee` (not yet merged or deployed).
+  - **S-1:** migration `20261023090000_payment_webhook_hardening` adds a CHECK that a Netcash gateway cannot be enabled, and `settle_payment_intent()` never settles a Netcash callback. In addition:
+    - `binding.ts` refuses Netcash (`provider_not_verifiable`);
+    - `payments-initiate` refuses to start a Netcash payment;
+    - Payment Settings no longer offers Netcash.
+  - **S-2:** de-duplication now uses a partial unique index over verified events only. Unverified callbacks are still logged.
+  - **S-3:** the client IP now comes from `cf-connecting-ip`, then `x-real-ip`, then the last `X-Forwarded-For` hop; it is never the first hop.
+    - New IP-independent limits: `resume` 5 per reference and 10 per email per hour; `start` 200 per school per hour.
+    - The limiter now records an attempt before counting, so a burst cannot slip through.
+    - `start`, `resume`, `upload-url` and `register-doc` fail closed (503).
+  - **Evidence:**
+    - RLS 1097/1097 (7 new). With the migration removed, 6 of the new tests fail: Netcash books a payment, and the genuine callback is `duplicate_ignored`.
+    - Deno 142/142 (6 new); `deno check` and `deno lint` clean.
+    - typecheck, lint and 335 unit tests pass.
+    - Playwright fees, admissions and parent-portal specs pass, 17/17.
+  - **Still to verify after deploy:** that hosted Edge Functions receive `cf-connecting-ip`. The function logs a warning naming the header it fell back to.

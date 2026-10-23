@@ -51,6 +51,25 @@ Deno.test('a disabled gateway cannot settle', () => {
   ]);
 });
 
+Deno.test('a Netcash callback never settles, even with a matching service key (S-1)', () => {
+  const problems = bindingProblems(
+    input({
+      provider: 'netcash',
+      intent: { school_id: 's1', provider: 'netcash', mode: 'live' },
+      config: {
+        school_id: 's1',
+        provider: 'netcash',
+        mode: 'live',
+        enabled: true,
+        merchant_config: { service_key: 'browser-visible-key' },
+      },
+      raw: { M1: 'browser-visible-key', p2: 'PI-1', TransactionAccepted: 'true' },
+      secrets: { NETCASH_PAYNOW_SERVICE_KEY: 'browser-visible-key' },
+    }),
+  );
+  assertEquals(problems, ['provider_not_verifiable']);
+});
+
 Deno.test('live PayFast requires a passphrase so its signature is a secret', () => {
   assertEquals(bindingProblems(input({ secrets: {} })), ['payfast_passphrase_required_in_live_mode']);
   assertEquals(

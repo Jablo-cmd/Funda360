@@ -68,6 +68,12 @@ export function bindingProblems(input: BindingInput): string[] {
     }
   }
 
+  // Netcash Pay Now's only callback check is that M1 equals the service key,
+  // and that key is in the payment form every payer's browser receives, so
+  // any payer could forge an accepted callback (audit 2026-10-23, S-1).
+  // Netcash cannot settle until callbacks are confirmed with Netcash itself.
+  if (input.provider === 'netcash') problems.push('provider_not_verifiable');
+
   // PayFast's ITN signature is only a secret when a passphrase is set; in
   // live mode an unset passphrase would make the signature forgeable.
   if (input.provider === 'payfast' && input.mode === 'live' && !input.secrets.PAYFAST_PASSPHRASE) {

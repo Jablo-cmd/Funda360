@@ -37,7 +37,9 @@ Admissions is implemented as an operational intake workflow. Advanced CRM, marke
 - **Per-IP rate limits for every action** (`_shared/admissions/guards.ts` → `RATE_LIMITS`). For example, `start` allows 10 per hour and `resume` 10 per 15 minutes.
   - Events are stored in `rate_limit_events` under a salted SHA-256 of the IP, never the raw address. Set the salt with `ADMISSIONS_RATE_LIMIT_SALT` (it falls back to a server secret).
   - Exceeding a limit returns HTTP 429, which the UI shows as a friendly message.
-  - If the limiter itself fails, it fails open and logs, so admissions stay available.
+  - The IP is the `cf-connecting-ip` header, which Cloudflare (in front of hosted Supabase) overwrites with the connecting address. The function never uses the first `X-Forwarded-For` hop, which the client chooses (audit 2026-10-23, S-3). If that header is missing it falls back to `x-real-ip`, then the last `X-Forwarded-For` hop, and logs a warning naming the source.
+  - If the limiter itself fails, `start`, `resume`, `upload-url` and `register-doc` are refused (503); `config`, `get` and `save` stay available.
+- **Limits that do not depend on the IP** (`KEYED_LIMITS`, audit 2026-10-23, S-3): `resume` allows 5 attempts per reference and 10 per email per hour, and `start` allows 200 new applications per school per hour. Changing IP address does not reset them.
 - **Per-email limit:** at most 5 new applications per applicant email per hour.
 - **Resume needs the learner's date of birth** as well as email and reference; reference numbers are sequential, so those two alone are guessable.
   - A mismatch looks exactly like "not found".

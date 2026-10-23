@@ -28,3 +28,29 @@ their own. A callback settles only when all of the following hold (see
 A refused callback is still recorded in `payment_webhook_events`, with
 `signature_valid = false` and the reasons under
 `payload._funda360_binding_problems`. It never books a payment.
+
+## Netcash disabled; verified-only de-duplication (audit 2026-10-23)
+
+**Netcash (S-1).** Netcash Pay Now's only callback check is that `M1` equals
+the school's service key, but that key is part of the payment form every
+payer's browser receives. Anyone who started a Netcash payment could forge an
+accepted callback for their own intent and have it booked without paying.
+Until callbacks are confirmed server-side with Netcash:
+
+- the database refuses to enable a Netcash gateway
+  (`payment_gateway_configs_netcash_not_enabled`, migration `20261023090000`);
+- `payments-initiate` refuses to start a Netcash payment;
+- `binding.ts` refuses every Netcash callback (`provider_not_verifiable`), and
+  `settle_payment_intent()` never settles one even if asked to;
+- Payment Settings no longer offers Netcash.
+
+**De-duplication (S-2).** `settle_payment_intent()` used to record every
+callback under the `(provider, provider_event_id)` unique constraint before
+checking its signature, so a forged callback carrying a genuine event's id
+(Ozow shows `TransactionId` to the payer's browser) turned the real callback
+into a "duplicate" and the payment never settled. Now only verified callbacks
+take part in de-duplication (partial unique index
+`payment_webhook_events_verified_event_key`). Unverified callbacks are still
+recorded, with `processing_error = 'signature_invalid'` (or
+`provider_not_verifiable` for Netcash), as an attack signal. Tests:
+`supabase/rls-tests/tests/zzzzzzz_payment_webhook_hardening.test.sql`.

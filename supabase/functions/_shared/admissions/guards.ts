@@ -16,25 +16,58 @@ export const RATE_LIMITS: Record<string, { max: number; windowMinutes: number }>
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 export const ALLOWED_DOCUMENT_MIME = new Set(['application/pdf', 'image/png', 'image/jpeg']);
 
-/** The client IP as seen by the Supabase edge (first X-Forwarded-For hop). */
-export function clientIp(headers: Headers): string {
-  const forwarded = headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0]!.trim();
-  return headers.get('x-real-ip') ?? headers.get('cf-connecting-ip') ?? 'unknown';
+/**
+ * Limits that do not depend on the client's IP (audit 2026-10-23, S-3), so
+ * rotating addresses or forged headers cannot get past them.
+ * `resume_reference`: guesses at one application reference (date of birth).
+ * `resume_email`: guesses against one applicant email.
+ * `start_school`: new applications for one school.
+ */
+export const KEYED_LIMITS: Record<string, { max: number; windowMinutes: number }> = {
+  resume_reference: { max: 5, windowMinutes: 60 },
+  resume_email: { max: 10, windowMinutes: 60 },
+  start_school: { max: 200, windowMinutes: 60 },
+};
+
+/** Actions whose limiter fails closed: they create data or test a secret. */
+export const FAIL_CLOSED_ACTIONS = new Set(['start', 'resume', 'upload-url', 'register-doc']);
+
+/**
+ * The client IP, from the header the platform sets rather than one the
+ * client can choose (audit 2026-10-23, S-3). Hosted Supabase sits behind
+ * Cloudflare, which overwrites `cf-connecting-ip` with the address that
+ * connected to it. Without it, the nearest proxy's view is used: `x-real-ip`,
+ * then the LAST `x-forwarded-for` hop (proxies append; the first hop is
+ * whatever the client sent). Returns the header used so it can be logged.
+ */
+export function clientIp(headers: Headers): { ip: string; source: string } {
+  const cf = headers.get('cf-connecting-ip')?.trim();
+  if (cf) return { ip: cf, source: 'cf-connecting-ip' };
+  const real = headers.get('x-real-ip')?.trim();
+  if (real) return { ip: real, source: 'x-real-ip' };
+  const hops = (headers.get('x-forwarded-for') ?? '').split(',').map((hop) => hop.trim()).filter(Boolean);
+  if (hops.length > 0) return { ip: hops[hops.length - 1]!, source: 'x-forwarded-for-last' };
+  return { ip: 'unknown', source: 'none' };
 }
 
 /**
- * A stable, non-reversible UUID for an IP, salted with a server secret, so
- * rate_limit_events never stores raw IP addresses (POPIA minimisation).
+ * A stable, non-reversible UUID for a value (an IP, an email, a reference),
+ * salted with a server secret, so rate_limit_events never stores the raw
+ * value (POPIA minimisation).
  */
-export async function ipActorId(ip: string, salt: string): Promise<string> {
+export async function hashedActorId(value: string, salt: string): Promise<string> {
   const digest = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${ip}`)),
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${value}`)),
   );
   const hex = Array.from(digest.slice(0, 16), (b) => b.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${
     hex.slice(20, 32)
   }`;
+}
+
+/** Normalises an application reference or email for keyed limits. */
+export function limitKey(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
 }
 
 /** A document may only be registered at a path inside its own application's folder. */

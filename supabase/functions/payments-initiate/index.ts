@@ -46,7 +46,11 @@ Deno.serve(async (req) => {
     .select('*')
     .eq('school_id', intent.school_id)
     .maybeSingle();
-  if (!config || !config.enabled) return json({ error: 'gateway_unavailable' }, 409);
+  // Netcash callbacks cannot be authenticated yet (audit 2026-10-23, S-1),
+  // so a Netcash payment could never settle; refuse to start one.
+  if (!config || !config.enabled || config.provider === 'netcash') {
+    return json({ error: 'gateway_unavailable' }, 409);
+  }
 
   const { data: learner } = await asService
     .from('learners')
