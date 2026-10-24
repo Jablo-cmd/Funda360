@@ -6,6 +6,7 @@ import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 import { AppFooter } from '@/components/layout/AppFooter';
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer';
 import { MfaRequiredBanner } from '@/features/mfa/components/MfaRequiredBanner';
+import { PlatformSchoolBanner } from '@/components/layout/PlatformSchoolBanner';
 import { CommandPalette } from '@/features/search/components/CommandPalette';
 import { usePermissions } from '@/hooks/usePermissions';
 
@@ -49,6 +50,7 @@ export function DashboardLayout() {
         </MobileNavDrawer>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+          <PlatformSchoolBanner />
           <MfaRequiredBanner />
           <ErrorBoundary context="staff-route" resetKey={pathname}>
             <Outlet />

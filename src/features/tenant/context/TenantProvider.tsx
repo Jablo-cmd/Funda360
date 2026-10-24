@@ -120,6 +120,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     [isPlatformLevel, loadTenant],
   );
 
+  // Platform roles return to the platform view (no school selected).
+  const leaveTenant = useCallback(() => {
+    if (!isPlatformLevel) return;
+    setTenant(null);
+    setStatus('ready');
+    setError(null);
+  }, [isPlatformLevel]);
+
   const createSchool = useCallback(
     async (input: CreateSchoolInput) => {
       if (!isPlatformLevel) {
@@ -158,6 +166,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       availableSchools,
       availableSchoolsLoading,
       switchTenant,
+      leaveTenant,
       createSchool,
       refetch,
     }),
@@ -168,6 +177,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       availableSchools,
       availableSchoolsLoading,
       switchTenant,
+      leaveTenant,
       createSchool,
       refetch,
     ],

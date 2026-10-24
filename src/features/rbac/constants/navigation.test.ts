@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NAV_MODEL, resolveNavForRole } from '@/features/rbac/constants/navigation';
+import { NAV_MODEL, isPlatformRole, resolveNavForRole } from '@/features/rbac/constants/navigation';
 import type { UserRole } from '@/features/auth/types/auth.types';
 
 function labels(role: UserRole | null): string[] {
@@ -143,5 +143,45 @@ describe('resolveNavForRole', () => {
         expect(item.path).toMatch(/^\//);
       }
     }
+  });
+
+  it('gives platform roles a platform menu, not a school menu, until they choose a school', () => {
+    for (const role of ['platform_owner', 'super_administrator', 'platform_administrator'] as const) {
+      expect(isPlatformRole(role)).toBe(true);
+      expect(labels(role).sort()).toEqual(
+        [
+          'Dashboard',
+          'Schools',
+          'Users & Roles',
+          'Support Access',
+          'Provincial Dashboard',
+          'District Dashboard',
+          'Government Reports',
+          'Education Areas',
+          'Integrations',
+          'Notification Preferences',
+          'My Profile',
+        ].sort(),
+      );
+    }
+  });
+
+  it('adds the school menu for a platform role inside a chosen school, without messaging', () => {
+    const l = resolveNavForRole('platform_owner', { schoolSelected: true }).flatMap((g) => g.items.map((i) => i.label));
+    expect(l).toEqual(
+      expect.arrayContaining(['Schools', 'Support Access', 'Learners', 'Attendance', 'Finance Overview', 'School Profile', 'Trust Center']),
+    );
+    expect(l).not.toContain('Messages');
+    expect(l).not.toContain('Announcements');
+    expect(l.filter((label) => label === 'Users & Roles')).toHaveLength(1);
+  });
+
+  it('leaves school roles unchanged by the platform menu', () => {
+    expect(isPlatformRole('principal')).toBe(false);
+    const l = labels('principal');
+    expect(l).toContain('Users & Roles');
+    expect(l).not.toContain('Schools');
+    expect(l).not.toContain('Support Access');
+    expect(resolveNavForRole('principal', { schoolSelected: true })).toEqual(resolveNavForRole('principal'));
   });
 });

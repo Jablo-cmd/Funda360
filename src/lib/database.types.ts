@@ -3131,6 +3131,93 @@ export type DataSubjectRequestRow = {
 /** Tables written only through SECURITY DEFINER RPCs — clients never insert/update them directly. */
 type RpcWrittenTable<Row> = { Row: Row; Insert: never; Update: never };
 
+// 20261024090000_platform_support_access — school-approved, time-limited
+// support access for one platform user (written only through the RPCs).
+export type PlatformSupportScope = 'safeguarding' | 'medical' | 'behaviour' | 'messages';
+export type PlatformSupportGrantStatus = 'pending' | 'approved' | 'declined' | 'revoked';
+
+export type PlatformSupportGrantRow = {
+  id: string;
+  school_id: string;
+  requested_by: string;
+  requested_by_name: string;
+  requested_by_email: string | null;
+  scopes: PlatformSupportScope[];
+  reason: string;
+  duration_hours: number;
+  status: PlatformSupportGrantStatus;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  starts_at: string | null;
+  expires_at: string | null;
+  revoked_by: string | null;
+  revoked_at: string | null;
+  created_at: string;
+};
+
+// 20261024091000_platform_overview — counts for the platform-owner dashboard.
+export type PlatformOverview = {
+  generated_at: string;
+  schools: {
+    total: number;
+    active: number;
+    pending: number;
+    suspended: number;
+    created_30d: number;
+    without_education_area: number;
+    list: Array<{
+      id: string;
+      name: string;
+      status: string;
+      created_at: string;
+      learners: number;
+      staff: number;
+      guardians: number;
+    }>;
+  };
+  learners: { active: number };
+  users: {
+    total: number;
+    staff: number;
+    guardians: number;
+    learners: number;
+    platform: number;
+    signed_in_7d: number;
+    signed_in_30d: number;
+    demo_accounts: number;
+  };
+  security: {
+    privileged_accounts: number;
+    privileged_with_mfa: number;
+    platform_accounts: number;
+    platform_with_mfa: number;
+    platform_demo_accounts: number;
+    support_pending: number;
+    support_active: number;
+  };
+  health: {
+    latest_migration: string | null;
+    scheduled_job_failures_24h: number | null;
+    notifications_pending: number;
+    notifications_failed_7d: number;
+    unverified_payment_callbacks_7d: number;
+    ai_requests_7d: number;
+  };
+  compliance: {
+    open_data_requests: number;
+    overdue_data_requests: number;
+    open_amendment_requests: number;
+    open_content_safety_events: number;
+  };
+  government: {
+    education_areas: number;
+    active_official_assignments: number;
+    active_api_clients: number;
+  };
+  recent_admin_actions: Array<{ at: string; action: string; school: string | null; by: string }>;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -3491,6 +3578,7 @@ export type Database = {
       content_safety_rules: RpcWrittenTable<ContentSafetyRuleRow>;
       content_safety_events: RpcWrittenTable<ContentSafetyEventRow>;
       data_subject_requests: RpcWrittenTable<DataSubjectRequestRow>;
+      platform_support_grants: RpcWrittenTable<PlatformSupportGrantRow>;
 
     };
     Views: Record<string, never>;
@@ -4151,6 +4239,22 @@ export type Database = {
           p_method?: ConsentMethod;
         };
         Returns: ParentalConsentRow;
+      };
+      get_platform_overview: {
+        Args: Record<string, never>;
+        Returns: PlatformOverview;
+      };
+      request_platform_support_access: {
+        Args: { p_school_id: string; p_scopes: PlatformSupportScope[]; p_reason: string; p_duration_hours: number };
+        Returns: PlatformSupportGrantRow;
+      };
+      decide_platform_support_access: {
+        Args: { p_grant_id: string; p_approve: boolean; p_note?: string | null };
+        Returns: PlatformSupportGrantRow;
+      };
+      revoke_platform_support_access: {
+        Args: { p_grant_id: string };
+        Returns: PlatformSupportGrantRow;
       };
       log_learner_record_access: {
         Args: { p_learner_id: string; p_access_type: 'view' | 'export' | 'print'; p_context: string };

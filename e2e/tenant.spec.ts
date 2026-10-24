@@ -42,5 +42,5 @@ test('a platform-level role with no tenant reaches the protected home directly',
   await page.goto('/');
   await expect(page).toHaveURL('http://localhost:5173/dashboard');
   await expect(page.getByRole('heading', { name: 'Welcome back, Lerato' })).toBeVisible();
-  await expect(page.getByRole('main').getByText('Platform Administration', { exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByText('Needs attention', { exact: true })).toBeVisible();
 });
