@@ -3156,6 +3156,68 @@ export type PlatformSupportGrantRow = {
   created_at: string;
 };
 
+// 20261024091000_platform_overview — counts for the platform-owner dashboard.
+export type PlatformOverview = {
+  generated_at: string;
+  schools: {
+    total: number;
+    active: number;
+    pending: number;
+    suspended: number;
+    created_30d: number;
+    without_education_area: number;
+    list: Array<{
+      id: string;
+      name: string;
+      status: string;
+      created_at: string;
+      learners: number;
+      staff: number;
+      guardians: number;
+    }>;
+  };
+  learners: { active: number };
+  users: {
+    total: number;
+    staff: number;
+    guardians: number;
+    learners: number;
+    platform: number;
+    signed_in_7d: number;
+    signed_in_30d: number;
+    demo_accounts: number;
+  };
+  security: {
+    privileged_accounts: number;
+    privileged_with_mfa: number;
+    platform_accounts: number;
+    platform_with_mfa: number;
+    platform_demo_accounts: number;
+    support_pending: number;
+    support_active: number;
+  };
+  health: {
+    latest_migration: string | null;
+    scheduled_job_failures_24h: number | null;
+    notifications_pending: number;
+    notifications_failed_7d: number;
+    unverified_payment_callbacks_7d: number;
+    ai_requests_7d: number;
+  };
+  compliance: {
+    open_data_requests: number;
+    overdue_data_requests: number;
+    open_amendment_requests: number;
+    open_content_safety_events: number;
+  };
+  government: {
+    education_areas: number;
+    active_official_assignments: number;
+    active_api_clients: number;
+  };
+  recent_admin_actions: Array<{ at: string; action: string; school: string | null; by: string }>;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -4177,6 +4239,10 @@ export type Database = {
           p_method?: ConsentMethod;
         };
         Returns: ParentalConsentRow;
+      };
+      get_platform_overview: {
+        Args: Record<string, never>;
+        Returns: PlatformOverview;
       };
       request_platform_support_access: {
         Args: { p_school_id: string; p_scopes: PlatformSupportScope[]; p_reason: string; p_duration_hours: number };
