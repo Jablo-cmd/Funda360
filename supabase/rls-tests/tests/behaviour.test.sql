@@ -117,7 +117,9 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 6. A platform admin sees behaviour incidents across tenants.
+-- 6. A platform admin has no standing access to behaviour incidents (a
+-- school-approved support grant is required since 20261024090000; see
+-- zzzzzzzz_platform_support_access.test.sql).
 do $$
 declare v_count int;
 begin
@@ -126,7 +128,7 @@ begin
   execute 'set local role authenticated';
   select count(*) into v_count from public.behaviour_incidents;
   execute 'reset role';
-  call test_util.record('a platform admin sees behaviour incidents across tenants', v_count >= 2, 'rows visible: ' || v_count);
+  call test_util.record('a platform admin without a support grant sees no behaviour incidents', v_count = 0, 'rows visible: ' || v_count);
 end $$;
 
 -- ---------------------------------------------------------------------------
