@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { fetchAllRows } from '@/lib/pagination';
-import type { AssessmentRow, AssessmentInsert, AssessmentResultRow } from '@/lib/database.types';
+import type { AssessmentRow, AssessmentInsert, AssessmentResultRow, AssessmentUpdate } from '@/lib/database.types';
 import type {
   Assessment,
   AssessmentResult,
@@ -108,7 +108,7 @@ async function updateAssessment(id: string, updates: UpdateAssessmentInput): Pro
   if (updates.maxMark !== undefined) payload.max_mark = updates.maxMark;
   if (updates.active !== undefined) payload.active = updates.active;
 
-  const { data, error } = await supabase.from('assessments').update(payload).eq('id', id).select('*').single();
+  const { data, error } = await supabase.from('assessments').update(payload as AssessmentUpdate).eq('id', id).select('*').single();
   if (error) throw error;
   return toAssessment(data);
 }

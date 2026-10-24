@@ -45,8 +45,12 @@ export function useNotifications(recipientProfileId: string | undefined): UseNot
   useEffect(() => {
     if (!recipientProfileId) return;
 
+    // Each subscriber needs its own channel name: the header bell and the
+    // Notifications page both use this hook, and realtime-js returns the
+    // already-subscribed channel for a repeated name, which then refuses
+    // new listeners (seen after the supabase-js 2.118 upgrade).
     const channel = supabase
-      .channel(`notifications:${recipientProfileId}`)
+      .channel(`notifications:${recipientProfileId}:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {

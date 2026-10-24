@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchAllRows } from '@/lib/pagination';
 import type {
   AdmissionApplicationRow,
+  AdmissionApplicationUpdate,
   AdmissionApplicationEventRow,
   AdmissionApplicationDocumentRow,
   AdmissionDocumentRequirementRow,
@@ -96,7 +97,7 @@ async function listApplications(
 ): Promise<AdmissionApplication[]> {
   const rows = await fetchAllRows<AdmissionApplicationRow>((from, to) => {
     let q = supabase.from('admission_applications').select('*').eq('school_id', schoolId);
-    if (filters.status) q = q.eq('status', filters.status);
+    if (filters.status) q = q.eq('status', filters.status as AdmissionApplicationRow['status']);
     if (filters.gradeId) q = q.eq('requested_grade_id', filters.gradeId);
     if (filters.academicYearId) q = q.eq('academic_year_id', filters.academicYearId);
     return q.order('created_at', { ascending: false }).range(from, to);
@@ -150,7 +151,12 @@ async function createApplication(schoolId: string, input: CreateApplicationInput
 
 /** Edits the free-text data on a pre-decision application (RLS + the protect trigger gate what may change). */
 async function updateApplicationData(id: string, patch: Record<string, unknown>): Promise<AdmissionApplication> {
-  const { data, error } = await supabase.from('admission_applications').update(patch).eq('id', id).select('*').single();
+  const { data, error } = await supabase
+    .from('admission_applications')
+    .update(patch as AdmissionApplicationUpdate)
+    .eq('id', id)
+    .select('*')
+    .single();
   if (error) throw error;
   return toApplication(data);
 }

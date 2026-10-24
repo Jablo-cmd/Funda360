@@ -28,7 +28,7 @@ export function LearnerTransportPage() {
         if(!a){if(!cancelled)setLoading(false);return;}
         const [r,s,at]=await Promise.all([
           supabase.from('transport_routes').select('id,name,code').eq('id',a.route_id).maybeSingle(),
-          supabase.from('transport_stops').select('id,name,address,pickup_time,dropoff_time').in('id',[a.pickup_stop_id,a.dropoff_stop_id].filter(Boolean)),
+          supabase.from('transport_stops').select('id,name,address,pickup_time,dropoff_time').in('id',[a.pickup_stop_id,a.dropoff_stop_id].filter((id): id is string => Boolean(id))),
           supabase.from('transport_attendance').select('schedule_id,status,recorded_at').eq('learner_id',a.learner_id).order('recorded_at',{ascending:false}).limit(10),
         ]);
         for(const result of [r,s,at]) if(result.error) throw result.error;

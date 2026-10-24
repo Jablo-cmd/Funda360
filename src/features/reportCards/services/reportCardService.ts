@@ -159,7 +159,7 @@ async function listCards(
     if (filters.classId) query = query.eq('class_id', filters.classId);
     if (filters.termId) query = query.eq('term_id', filters.termId);
     if (filters.learnerId) query = query.eq('learner_id', filters.learnerId);
-    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.status) query = query.eq('status', filters.status as ReportCardRow['status']);
     return query.order('generated_at', { ascending: false }).range(from, to);
   });
   return rows.map(toCard);

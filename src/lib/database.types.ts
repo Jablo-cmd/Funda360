@@ -3131,6 +3131,13 @@ export type DataSubjectRequestRow = {
 /** Tables written only through SECURITY DEFINER RPCs — clients never insert/update them directly. */
 type RpcWrittenTable<Row> = { Row: Row; Insert: never; Update: never };
 
+/**
+ * supabase-js 2.118 (postgrest-js) requires every table to declare its
+ * foreign-key relationships for typed embedding. Nothing here embeds
+ * through the typed client, so every table declares none.
+ */
+type WithRelationships<T> = { [K in keyof T]: T[K] & { Relationships: [] } };
+
 // 20261024090000_platform_support_access — school-approved, time-limited
 // support access for one platform user (written only through the RPCs).
 export type PlatformSupportScope = 'safeguarding' | 'medical' | 'behaviour' | 'messages';
@@ -3220,7 +3227,7 @@ export type PlatformOverview = {
 
 export type Database = {
   public: {
-    Tables: {
+    Tables: WithRelationships<{
       schools: {
         Row: SchoolRow;
         Insert: SchoolInsert;
@@ -3580,7 +3587,7 @@ export type Database = {
       data_subject_requests: RpcWrittenTable<DataSubjectRequestRow>;
       platform_support_grants: RpcWrittenTable<PlatformSupportGrantRow>;
 
-    };
+    }>;
     Views: Record<string, never>;
     Functions: {
       create_transport_assignment: {
