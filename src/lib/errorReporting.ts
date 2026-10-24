@@ -3,10 +3,12 @@
  * error and unhandled promise rejection is funnelled through reportError().
  *
  * Transport is pluggable and privacy-conscious:
- *  - If VITE_ERROR_REPORT_URL is set at build time, reports are POSTed there
- *    as JSON (navigator.sendBeacon when available, so they survive a page
- *    unload). Point it at Sentry's store endpoint, a log drain, or any
- *    collector.
+ *  - If VITE_SENTRY_DSN is set at build time, each report is sent to that
+ *    Sentry project as one event (src/lib/sentry.ts; no SDK, no user data).
+ *  - Otherwise, if VITE_ERROR_REPORT_URL is set, reports are POSTed there as
+ *    JSON, for a log drain or any other collector.
+ *  - Both use navigator.sendBeacon when available, so they survive a page
+ *    unload.
  *  - It always logs to the console, so errors are never silently dropped.
  *
  * A report carries the message, stack, route path (no query string — it can
@@ -14,6 +16,8 @@
  * names, emails or record contents. Reports are de-duplicated and capped
  * per page load so a render loop cannot flood the collector.
  */
+
+import { parseSentryDsn, toSentryEnvelope } from '@/lib/sentry';
 
 export interface ErrorReport {
   message: string;
@@ -72,25 +76,26 @@ export function reportError(error: unknown, context: string): ErrorReport | null
 
   console.error(`[funda360:${context}]`, error);
 
-  const url = import.meta.env.VITE_ERROR_REPORT_URL;
-  if (url) {
-    const body = JSON.stringify(report);
-    try {
-      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-        navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
-      } else {
-        void fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body,
-          keepalive: true,
-        });
-      }
-    } catch {
-      /* the reporter must never throw */
-    }
+  const sentry = parseSentryDsn(import.meta.env.VITE_SENTRY_DSN);
+  if (sentry) {
+    // text/plain keeps the request a simple CORS request; Sentry reads the envelope regardless.
+    send(sentry.envelopeUrl, toSentryEnvelope(report, sentry), 'text/plain;charset=UTF-8');
+  } else if (import.meta.env.VITE_ERROR_REPORT_URL) {
+    send(import.meta.env.VITE_ERROR_REPORT_URL, JSON.stringify(report), 'application/json');
   }
   return report;
+}
+
+function send(url: string, body: string, type: string): void {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      navigator.sendBeacon(url, new Blob([body], { type }));
+    } else {
+      void fetch(url, { method: 'POST', headers: { 'Content-Type': type }, body, keepalive: true });
+    }
+  } catch {
+    /* the reporter must never throw */
+  }
 }
 
 let installed = false;

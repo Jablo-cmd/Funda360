@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_APP_NAME?: string;
   /** Optional collector endpoint for client error reports (see src/lib/errorReporting.ts). */
   readonly VITE_ERROR_REPORT_URL?: string;
+  /** Optional Sentry DSN; when set, client errors go to that Sentry project (src/lib/sentry.ts). */
+  readonly VITE_SENTRY_DSN?: string;
   /** Optional release identifier attached to error reports. */
   readonly VITE_APP_VERSION?: string;
 }
