@@ -3,6 +3,7 @@ import { cn } from '@/lib/cn';
 import { useAuth } from '@/features/auth/context/authContext';
 import { useProfile } from '@/features/profile/context/profileContext';
 import { resolveNavForRole } from '@/features/rbac/constants/navigation';
+import { useTenant } from '@/features/tenant/context/tenantContext';
 
 export interface DashboardSidebarProps {
   onNavigate?: () => void;
@@ -11,12 +12,14 @@ export interface DashboardSidebarProps {
 export function DashboardSidebar({ onNavigate }: DashboardSidebarProps) {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { tenant } = useTenant();
 
   // The sidebar is composed from the role's actual usable capabilities —
   // every item here links somewhere the signed-in user can genuinely go.
   // There is no "show but disable" branch: an item a role cannot use is
-  // simply absent (see resolveNavForRole).
-  const sections = resolveNavForRole(user?.role ?? null);
+  // simply absent (see resolveNavForRole). Platform roles see a school's
+  // pages only while they are inside a school they chose.
+  const sections = resolveNavForRole(user?.role ?? null, { schoolSelected: tenant !== null });
 
   const fullName = profile ? `${profile.firstName} ${profile.lastName}`.trim() : null;
   const initials = fullName

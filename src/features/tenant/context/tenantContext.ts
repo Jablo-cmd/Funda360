@@ -14,6 +14,8 @@ export interface TenantContextValue {
   /** True while the initial (or a refreshed) availableSchools fetch is in flight. */
   availableSchoolsLoading: boolean;
   switchTenant: (schoolId: string) => Promise<void>;
+  /** Platform-level roles only: leave the selected school and return to the platform view. */
+  leaveTenant: () => void;
   /** Creates a new school (and adds it to availableSchools) — does NOT switch the active tenant to it; call switchTenant(school.id) afterward if that's wanted (CreateSchoolModal does; SchoolOnboardingWizardPage defers it). Platform-level roles only. */
   createSchool: (input: CreateSchoolInput) => Promise<School>;
   refetch: () => Promise<void>;
