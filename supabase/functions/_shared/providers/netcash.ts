@@ -10,6 +10,12 @@
 // the amount matches — (c) is enforced in Postgres by
 // settle_payment_intent(). We treat (a) as the signature check.
 //
+// DISABLED (audit 2026-10-23, S-1): M1 is the service key, which this
+// adapter puts in the payment form sent to the payer's browser, so the M1
+// check proves nothing. binding.ts refuses every Netcash callback and the
+// database refuses to enable a Netcash gateway until callbacks are confirmed
+// server-side with Netcash.
+//
 // Secrets (env): NETCASH_PAYNOW_SERVICE_KEY (also stored as merchant_config
 // for the outbound form; kept in env too so webhook verification never
 // depends on a client-writable value).

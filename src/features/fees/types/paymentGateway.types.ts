@@ -2,7 +2,12 @@ import type { PaymentProvider, PaymentMode, PaymentIntentStatus } from '@/lib/da
 
 export type { PaymentProvider, PaymentMode, PaymentIntentStatus };
 
-export const PAYMENT_PROVIDERS: PaymentProvider[] = ['payfast', 'ozow', 'peach', 'yoco', 'netcash'];
+/**
+ * Providers a school can choose. Netcash is left out: its callbacks cannot be
+ * authenticated yet, so the database refuses to enable it (audit 2026-10-23,
+ * S-1, migration 20261023090000).
+ */
+export const PAYMENT_PROVIDERS: PaymentProvider[] = ['payfast', 'ozow', 'peach', 'yoco'];
 
 export const PAYMENT_PROVIDER_LABELS: Record<PaymentProvider, string> = {
   payfast: 'PayFast',

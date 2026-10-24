@@ -122,6 +122,8 @@ Items 1-12 are merged to `main` (PRs #7 and #8):
     - Eval runner refuses if port 8000 is busy or any profile or Auth user is not `.test`.
     - Gates: `docs/FUNDA_AI_PILOT_READINESS.md` (18 gates, three stages).
 
+21. Forensic audit 2026-10-23 (after PR #9 merged): `docs/audits/FUNDA360_FORENSIC_AUDIT_2026-10-23.md`. The CI `migrate` job fails with `Invalid access token` (`SUPABASE_ACCESS_TOKEN`), so Edge Functions and Pages were not deployed. Production has all 84 migrations (applied at 10:27 by a non-CI path) but the pre-PR #9 frontend and the 2026-09-09 payments/notifications functions; `government-api` and `funda-ai` are not deployed. Open code findings: Netcash webhook forgeable (S-1), webhook dedupe before verification (S-2), admissions rate limit keyed on spoofable X-Forwarded-For (S-3). Later the same day: token replaced, all six functions deployed (Pages blocked by an empty `VITE_SUPABASE_ANON_KEY` secret); S-1..S-3 fixed in `20261023090000_payment_webhook_hardening`, `binding.ts`, `payments-initiate`, `admissions-public` + `guards.ts` (RLS 1097/1097, Deno 142/142).
+
 Last green run (2026-10-09, staging remediation, before commit):
 
 - typecheck, lint and build pass;
