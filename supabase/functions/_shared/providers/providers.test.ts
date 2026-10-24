@@ -6,7 +6,7 @@ import { hmacSha256Hex, sha256Hex, sha512Hex, timingSafeEqual } from './types.ts
 import { payfastAdapter, payfastSignature } from './payfast.ts';
 import { ozowResponseHash, ozowAdapter } from './ozow.ts';
 import { netcashAdapter } from './netcash.ts';
-import { yocoAdapter } from './yoco.ts';
+import { yocoAdapter, yocoTimestampFresh } from './yoco.ts';
 
 Deno.test('crypto helpers are deterministic and distinct', async () => {
   assertEquals(await sha256Hex('abc'), await sha256Hex('abc'));
@@ -140,4 +140,60 @@ Deno.test('Yoco webhook: missing signature secret means signatureValid=false', a
   assert(!result.signatureValid);
   assertEquals(result.outcome, 'succeeded');
   assertEquals(result.amount, 100);
+});
+
+async function signedYocoRequest(secret: string, timestamp: string): Promise<Request> {
+  const body = JSON.stringify({
+    type: 'payment.succeeded',
+    payload: { id: 'p_1', status: 'succeeded', amount: 10000, metadata: { reference: 'PI-1' } },
+  });
+  const key = await crypto.subtle.importKey(
+    'raw',
+    Uint8Array.from(atob(secret), (c) => c.charCodeAt(0)),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`evt_1.${timestamp}.${body}`));
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(sig)));
+  return new Request('https://fn.test/webhook', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'webhook-id': 'evt_1',
+      'webhook-timestamp': timestamp,
+      'webhook-signature': `v1,${b64}`,
+    },
+    body,
+  });
+}
+
+Deno.test('Yoco webhook: a correctly signed, fresh webhook verifies', async () => {
+  const secret = btoa('yoco-test-secret');
+  const now = String(Math.floor(Date.now() / 1000));
+  const result = await yocoAdapter.parseWebhook(await signedYocoRequest(secret, now), {
+    merchantConfig: {},
+    secrets: { YOCO_WEBHOOK_SECRET: `whsec_${secret}` },
+    mode: 'test',
+  });
+  assert(result.signatureValid);
+});
+
+Deno.test('Yoco webhook: a correctly signed but replayed (old) webhook is refused (S-11)', async () => {
+  const secret = btoa('yoco-test-secret');
+  const old = String(Math.floor(Date.now() / 1000) - 3600);
+  const result = await yocoAdapter.parseWebhook(await signedYocoRequest(secret, old), {
+    merchantConfig: {},
+    secrets: { YOCO_WEBHOOK_SECRET: `whsec_${secret}` },
+    mode: 'test',
+  });
+  assert(!result.signatureValid);
+});
+
+Deno.test('yocoTimestampFresh accepts five minutes either way and rejects junk', () => {
+  const now = 1_800_000_000_000;
+  assert(yocoTimestampFresh('1800000000', now));
+  assert(yocoTimestampFresh('1799999700', now));
+  assert(!yocoTimestampFresh('1799999699', now));
+  assert(!yocoTimestampFresh('abc', now));
 });

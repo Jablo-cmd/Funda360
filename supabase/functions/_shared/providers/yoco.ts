@@ -23,6 +23,15 @@ import { buf, timingSafeEqual } from './types.ts';
 
 const CHECKOUT_URL = 'https://payments.yoco.com/api/checkouts';
 
+/** Svix-style replay window: a signed webhook older or newer than this is refused (audit 2026-10-23, S-11). */
+export const YOCO_TIMESTAMP_TOLERANCE_SECONDS = 5 * 60;
+
+/** True when a webhook-timestamp header (Unix seconds) is within the tolerance of `nowMs`. */
+export function yocoTimestampFresh(timestamp: string, nowMs = Date.now()): boolean {
+  if (!/^\d{1,12}$/.test(timestamp)) return false;
+  return Math.abs(nowMs / 1000 - Number(timestamp)) <= YOCO_TIMESTAMP_TOLERANCE_SECONDS;
+}
+
 async function hmacSha256Base64(secretBytes: Uint8Array, input: string): Promise<string> {
   const key = await crypto.subtle.importKey('raw', buf(secretBytes), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, buf(new TextEncoder().encode(input)));
@@ -64,7 +73,7 @@ export const yocoAdapter: PaymentProviderAdapter = {
 
     let signatureValid = false;
     const rawSecret = ctx.secrets.YOCO_WEBHOOK_SECRET ?? '';
-    if (rawSecret && id && timestamp && sigHeader) {
+    if (rawSecret && id && timestamp && sigHeader && yocoTimestampFresh(timestamp)) {
       const secretBytes = Uint8Array.from(atob(rawSecret.replace(/^whsec_/, '')), (c) => c.charCodeAt(0));
       const expected = await hmacSha256Base64(secretBytes, `${id}.${timestamp}.${body}`);
       // The header is a space-separated list of `v1,<sig>` pairs.

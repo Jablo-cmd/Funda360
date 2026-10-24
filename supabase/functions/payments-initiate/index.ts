@@ -9,6 +9,10 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, json } from '../_shared/cors.ts';
 import { getAdapter, buildContext } from '../_shared/providers/index.ts';
+import { allowedOrigins, safeReturnUrl } from '../_shared/providers/returnUrl.ts';
+
+// The app origins a payer may be sent back to; anything else falls back to the app.
+const RETURN_ORIGINS = allowedOrigins(Deno.env.get('APP_ALLOWED_ORIGINS'));
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -69,8 +73,8 @@ Deno.serve(async (req) => {
         reference: intent.reference,
         amount: Number(intent.amount),
         currency: intent.currency,
-        returnUrl: `${intent.return_url ?? ''}?intent=${intent.id}`,
-        cancelUrl: `${intent.cancel_url ?? ''}?intent=${intent.id}`,
+        returnUrl: safeReturnUrl(intent.return_url, intent.id, RETURN_ORIGINS),
+        cancelUrl: safeReturnUrl(intent.cancel_url, intent.id, RETURN_ORIGINS),
         notifyUrl,
         itemName: `School fees — ${learnerName}`,
         itemDescription: intent.invoice_id ? `Invoice payment` : `Account payment`,
