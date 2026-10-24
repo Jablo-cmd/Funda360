@@ -85,25 +85,81 @@ export const NAV_MODEL: NavGroupDef[] = [
   {
     label: 'Overview',
     items: [
-      { label: 'Dashboard', path: '/dashboard', icon: GridIcon, end: true, hideForRoles: NO_SCHOOL_ROLES, platform: 'platform' },
+      {
+        label: 'Dashboard',
+        path: '/dashboard',
+        icon: GridIcon,
+        end: true,
+        hideForRoles: NO_SCHOOL_ROLES,
+        platform: 'platform',
+      },
     ],
   },
   {
     label: 'Platform',
     items: [
-      { label: 'Schools', path: '/schools', icon: BuildingIcon, permission: 'tenant.switch', platform: 'platform' },
-      { label: 'Users & Roles', path: '/users', icon: UsersIcon, permission: 'tenant.switch', platform: 'platform' },
-      { label: 'Support Access', path: '/support-access', icon: ShieldIcon, permission: 'tenant.switch', platform: 'platform' },
+      {
+        label: 'Schools',
+        path: '/schools',
+        icon: BuildingIcon,
+        permission: 'tenant.switch',
+        platform: 'platform',
+      },
+      {
+        label: 'Users & Roles',
+        path: '/users',
+        icon: UsersIcon,
+        permission: 'tenant.switch',
+        platform: 'platform',
+      },
+      {
+        label: 'Support Access',
+        path: '/support-access',
+        icon: ShieldIcon,
+        permission: 'tenant.switch',
+        platform: 'platform',
+      },
     ],
   },
   {
     label: 'Government',
     items: [
-      { label: 'Provincial Dashboard', path: '/province', icon: BuildingIcon, permission: 'government.view', platform: 'platform' },
-      { label: 'District Dashboard', path: '/district', icon: ChartIcon, permission: 'government.view', end: true, platform: 'platform' },
-      { label: 'Government Reports', path: '/reports/government', icon: ClipboardListIcon, permission: 'government.view', platform: 'platform' },
-      { label: 'Education Areas', path: '/district/areas', icon: LayersIcon, permission: 'government.manage', platform: 'platform' },
-      { label: 'Integrations', path: '/district/integrations', icon: ShieldIcon, permission: 'government.manage', platform: 'platform' },
+      {
+        label: 'Provincial Dashboard',
+        path: '/province',
+        icon: BuildingIcon,
+        permission: 'government.view',
+        platform: 'platform',
+      },
+      {
+        label: 'District Dashboard',
+        path: '/district',
+        icon: ChartIcon,
+        permission: 'government.view',
+        end: true,
+        platform: 'platform',
+      },
+      {
+        label: 'Government Reports',
+        path: '/reports/government',
+        icon: ClipboardListIcon,
+        permission: 'government.view',
+        platform: 'platform',
+      },
+      {
+        label: 'Education Areas',
+        path: '/district/areas',
+        icon: LayersIcon,
+        permission: 'government.manage',
+        platform: 'platform',
+      },
+      {
+        label: 'Integrations',
+        path: '/district/integrations',
+        icon: ShieldIcon,
+        permission: 'government.manage',
+        platform: 'platform',
+      },
     ],
   },
   {
@@ -123,7 +179,13 @@ export const NAV_MODEL: NavGroupDef[] = [
   {
     label: 'Admissions',
     items: [
-      { label: 'Applications', path: '/admissions', icon: ClipboardListIcon, permission: 'admission.view', end: true },
+      {
+        label: 'Applications',
+        path: '/admissions',
+        icon: ClipboardListIcon,
+        permission: 'admission.view',
+        end: true,
+      },
       {
         label: 'Document Requirements',
         path: '/admissions/requirements',
@@ -135,12 +197,38 @@ export const NAV_MODEL: NavGroupDef[] = [
   {
     label: 'Academics',
     items: [
-      { label: 'Academic Overview', path: '/academic', icon: LayersIcon, permission: 'academic.manage', end: true },
-      { label: 'Academic Years', path: '/academic/years', icon: CalendarIcon, permission: 'academic.manage' },
+      {
+        label: 'Academic Overview',
+        path: '/academic',
+        icon: LayersIcon,
+        permission: 'academic.manage',
+        end: true,
+      },
+      {
+        label: 'Academic Years',
+        path: '/academic/years',
+        icon: CalendarIcon,
+        permission: 'academic.manage',
+      },
       { label: 'Terms', path: '/academic/terms', icon: BookIcon, permission: 'academic.manage' },
-      { label: 'Grades', path: '/academic/grades', icon: LayersIcon, permission: 'academic.manage' },
-      { label: 'Classes', path: '/academic/classes', icon: ChalkboardIcon, permission: 'academic.manage' },
-      { label: 'Subjects', path: '/academic/subjects', icon: BookIcon, permission: 'academic.manage' },
+      {
+        label: 'Grades',
+        path: '/academic/grades',
+        icon: LayersIcon,
+        permission: 'academic.manage',
+      },
+      {
+        label: 'Classes',
+        path: '/academic/classes',
+        icon: ChalkboardIcon,
+        permission: 'academic.manage',
+      },
+      {
+        label: 'Subjects',
+        path: '/academic/subjects',
+        icon: BookIcon,
+        permission: 'academic.manage',
+      },
       {
         label: 'Teaching Assignments',
         path: '/academic/teaching-assignments',
@@ -168,29 +256,62 @@ export const NAV_MODEL: NavGroupDef[] = [
     label: 'Teaching',
     items: [
       { label: 'Attendance', path: '/attendance', icon: CheckIcon, permission: 'attendance.view' },
-      { label: 'Assessments', path: '/academic/assessments', icon: ChartIcon, permission: 'assessment.view' },
+      {
+        label: 'Assessments',
+        path: '/academic/assessments',
+        icon: ChartIcon,
+        permission: 'assessment.view',
+      },
       { label: 'Homework', path: '/homework', icon: BookIcon, permission: 'assessment.view' },
-      { label: 'Report Cards', path: '/report-cards', icon: ClipboardListIcon, permission: 'reportcard.view' },
+      {
+        label: 'Report Cards',
+        path: '/report-cards',
+        icon: ClipboardListIcon,
+        permission: 'reportcard.view',
+      },
       { label: 'Timetable', path: '/timetable', icon: CalendarIcon, permission: 'timetable.view' },
     ],
   },
   {
     label: 'Transport',
     items: [
-      { label: 'Transport Operations', path: '/transport', icon: CalendarIcon, permission: 'transport.view', end: true },
+      {
+        label: 'Transport Operations',
+        path: '/transport',
+        icon: CalendarIcon,
+        permission: 'transport.view',
+        end: true,
+      },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { label: 'Operations Hub', path: '/operations', icon: BuildingIcon, permission: 'operations.view', end: true },
+      {
+        label: 'Operations Hub',
+        path: '/operations',
+        icon: BuildingIcon,
+        permission: 'operations.view',
+        end: true,
+      },
     ],
   },
   {
     label: 'Finance',
     items: [
-      { label: 'Finance Overview', path: '/fees', icon: WalletIcon, permission: 'learner.view_financial', end: true },
-      { label: 'Invoices', path: '/fees/invoices', icon: WalletIcon, permission: 'learner.view_financial' },
+      {
+        label: 'Finance Overview',
+        path: '/fees',
+        icon: WalletIcon,
+        permission: 'learner.view_financial',
+        end: true,
+      },
+      {
+        label: 'Invoices',
+        path: '/fees/invoices',
+        icon: WalletIcon,
+        permission: 'learner.view_financial',
+      },
       {
         label: 'Bank Reconciliation',
         path: '/fees/reconciliation',
@@ -203,16 +324,42 @@ export const NAV_MODEL: NavGroupDef[] = [
         icon: LayersIcon,
         permission: 'learner.manage_financial',
       },
-      { label: 'Payment Settings', path: '/fees/settings', icon: GearIcon, permission: 'learner.manage_financial' },
+      {
+        label: 'Payment Settings',
+        path: '/fees/settings',
+        icon: GearIcon,
+        permission: 'learner.manage_financial',
+      },
     ],
   },
   {
     label: 'HR',
     items: [
-      { label: 'Employees', path: '/employees', icon: BriefcaseIcon, permission: 'employee.view', end: true },
-      { label: 'Departments', path: '/employees/departments', icon: LayersIcon, permission: 'employee.view' },
-      { label: 'Staff Attendance', path: '/employees/attendance', icon: CheckIcon, permission: 'employee.view' },
-      { label: 'Leave Requests', path: '/employees/leave', icon: CalendarIcon, permission: 'employee.view' },
+      {
+        label: 'Employees',
+        path: '/employees',
+        icon: BriefcaseIcon,
+        permission: 'employee.view',
+        end: true,
+      },
+      {
+        label: 'Departments',
+        path: '/employees/departments',
+        icon: LayersIcon,
+        permission: 'employee.view',
+      },
+      {
+        label: 'Staff Attendance',
+        path: '/employees/attendance',
+        icon: CheckIcon,
+        permission: 'employee.view',
+      },
+      {
+        label: 'Leave Requests',
+        path: '/employees/leave',
+        icon: CalendarIcon,
+        permission: 'employee.view',
+      },
     ],
   },
   {
@@ -220,8 +367,21 @@ export const NAV_MODEL: NavGroupDef[] = [
     items: [
       // Messaging needs the user's own school membership (my_conversation_ids),
       // which platform roles never have.
-      { label: 'Messages', path: '/messages', icon: ChatIcon, end: true, hideForRoles: NO_SCHOOL_ROLES, platform: 'never' },
-      { label: 'Announcements', path: '/announcements', icon: MegaphoneIcon, hideForRoles: NO_SCHOOL_ROLES, platform: 'never' },
+      {
+        label: 'Messages',
+        path: '/messages',
+        icon: ChatIcon,
+        end: true,
+        hideForRoles: NO_SCHOOL_ROLES,
+        platform: 'never',
+      },
+      {
+        label: 'Announcements',
+        path: '/announcements',
+        icon: MegaphoneIcon,
+        hideForRoles: NO_SCHOOL_ROLES,
+        platform: 'never',
+      },
       {
         label: 'Notification Preferences',
         path: '/notifications/settings',
@@ -245,9 +405,25 @@ export const NAV_MODEL: NavGroupDef[] = [
     label: 'Administration',
     items: [
       // Platform roles reach Users & Roles from the Platform group.
-      { label: 'Users & Roles', path: '/users', icon: UsersIcon, permission: 'profile.manage_any', platform: 'never' },
-      { label: 'School Profile', path: '/school/profile', icon: BuildingIcon, permission: 'school.manage' },
-      { label: 'Trust Center', path: '/compliance', icon: ShieldIcon, permission: 'compliance.view' },
+      {
+        label: 'Users & Roles',
+        path: '/users',
+        icon: UsersIcon,
+        permission: 'profile.manage_any',
+        platform: 'never',
+      },
+      {
+        label: 'School Profile',
+        path: '/school/profile',
+        icon: BuildingIcon,
+        permission: 'school.manage',
+      },
+      {
+        label: 'Trust Center',
+        path: '/compliance',
+        icon: ShieldIcon,
+        permission: 'compliance.view',
+      },
       { label: 'My Profile', path: '/my-profile', icon: UsersIcon, platform: 'platform' },
     ],
   },
@@ -258,7 +434,11 @@ export interface NavContext {
   schoolSelected?: boolean;
 }
 
-function itemVisible(role: UserRole | null | undefined, item: NavItemDef, context: NavContext): boolean {
+function itemVisible(
+  role: UserRole | null | undefined,
+  item: NavItemDef,
+  context: NavContext,
+): boolean {
   if (role && item.hideForRoles?.includes(role)) return false;
   if (isPlatformRole(role)) {
     const where = item.platform ?? 'school';
@@ -275,7 +455,10 @@ function itemVisible(role: UserRole | null | undefined, item: NavItemDef, contex
  * use, and any group with nothing left is dropped entirely. No disabled
  * rows, no placeholders.
  */
-export function resolveNavForRole(role: UserRole | null | undefined, context: NavContext = {}): NavGroupDef[] {
+export function resolveNavForRole(
+  role: UserRole | null | undefined,
+  context: NavContext = {},
+): NavGroupDef[] {
   return NAV_MODEL.map((group) => ({
     ...group,
     items: group.items.filter((item) => itemVisible(role, item, context)),
