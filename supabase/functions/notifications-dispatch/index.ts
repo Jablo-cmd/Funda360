@@ -22,11 +22,14 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders, json } from '../_shared/cors.ts';
 import { timingSafeEqual } from '../_shared/providers/types.ts';
+import { absoluteLink, DEFAULT_APP_BASE_URL } from '../_shared/notifications/links.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const dispatchSecret = Deno.env.get('NOTIFICATIONS_DISPATCH_SECRET') ?? '';
 
+// Messages carry a full link: an email or SMS cannot follow a bare app path.
+const APP_BASE_URL = Deno.env.get('APP_BASE_URL') ?? DEFAULT_APP_BASE_URL;
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
 const RESEND_FROM = Deno.env.get('RESEND_FROM') ?? 'Funda360 <notifications@funda360.app>';
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID') ?? '';
@@ -90,7 +93,8 @@ async function sendTwilio(from: string, to: string, body: string): Promise<Adapt
 function deliver(row: DeliveryRow, notification: NotificationRow): Promise<AdapterResult> {
   const to = (row.destination ?? '').trim();
   if (to.length === 0) return Promise.resolve({ ok: false, error: 'no_destination' });
-  const text = `${notification.body}${notification.link_path ? `\n\n${notification.link_path}` : ''}`;
+  const link = notification.link_path ? absoluteLink(notification.link_path, APP_BASE_URL) : '';
+  const text = `${notification.body}${link ? `\n\n${link}` : ''}`;
 
   if (row.channel === 'email') return sendEmail(to, notification.title, text);
   if (row.channel === 'sms') return sendTwilio(TWILIO_SMS_FROM, to, `${notification.title}\n${text}`);
