@@ -126,6 +126,14 @@ Items 1-12 are merged to `main` (PRs #7 and #8):
 
 22. Platform owner workspace (2026-10-24, `docs/PLATFORM_OWNER.md`). `20261024090000_platform_support_access`: platform roles lost standing access to every school's safeguarding, medical, behaviour and messages data (and all writes to the first three). They now request time-limited, read-only, aal2-only, personal support access per school; the school's owner/principal decides in Trust Center > Support access; everything audited. `get_learner_record_package` no longer leaks medical/behaviour to staff without those permissions. Sidebar: `isPlatformRole()` + nav `platform` field (platform menu; school pages only after Switch school, with a Leave school banner). Dashboard: `20261024091000_platform_overview` (`get_platform_overview()`, counts only) and a rebuilt `PlatformDashboard`. RLS 1123/1123.
 
+23. Post-audit batch (2026-10-24, branch `claude/fervent-curie-8ohhee`):
+    - B1 `20261024100000_notification_dispatch_schedule`: pg_cron `notifications-dispatch-tick` (every 2 min) calls `notifications-dispatch` via pg_net only when rows are due and the Vault secrets `notifications_dispatch_secret` + `project_url` exist; emails carry absolute links (`APP_BASE_URL`). Set-up: `docs/NOTIFICATIONS_DELIVERY.md`.
+    - B2 security: supabase-js 2.118 (+ `WithRelationships` wrapper in `database.types.ts`; realtime channel names are unique per subscription), DOMPurify fixed; build-time CSP meta tag (`vite.config.ts`, e2e `content-security-policy.spec.ts`); payment return URLs limited to `APP_ALLOWED_ORIGINS`; Yoco webhook timestamps within 5 min; `20261024101000_privilege_hardening` (anon has no table privileges, authenticated no TRUNCATE/TRIGGER/REFERENCES, search_path pinned on invoker functions); `auth-users.sql` removed.
+    - B3 `VITE_SENTRY_DSN` (envelope sent without the SDK, `src/lib/sentry.ts`), falls back to `VITE_ERROR_REPORT_URL`.
+    - B4 learner CSV import takes guardian columns, reuses guardians by email, links siblings to one guardian and invites new guardians.
+    - B5 `docs/PAYMENTS_GO_LIVE.md`. B6 `20261024102000_foreign_key_indexes`. B8 actions v5, Node 22.
+    - Green before push: typecheck, lint, build, 352 unit, RLS 1131/1131, Deno 150/150, Playwright 388/388.
+
 Last green run (2026-10-09, staging remediation, before commit):
 
 - typecheck, lint and build pass;
