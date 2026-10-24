@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { parseLearnerImportCsv, LEARNER_IMPORT_HEADERS } from './csvImport';
+import {
+  parseLearnerImportCsv,
+  LEARNER_IMPORT_HEADERS,
+  GUARDIAN_IMPORT_HEADERS,
+} from './csvImport';
 
 const HEADER_ROW = LEARNER_IMPORT_HEADERS.join(',');
 
-function validRow(overrides: Partial<Record<(typeof LEARNER_IMPORT_HEADERS)[number], string>> = {}): string {
+function validRow(
+  overrides: Partial<Record<(typeof LEARNER_IMPORT_HEADERS)[number], string>> = {},
+): string {
   const defaults = {
     learnerNumber: 'LRN-0001',
     admissionNumber: 'ADM-0001',
@@ -24,7 +30,11 @@ describe('parseLearnerImportCsv', () => {
     const summary = parseLearnerImportCsv(csv, new Set(), new Set());
     expect(summary.invalidCount).toBe(0);
     expect(summary.validRows).toHaveLength(1);
-    expect(summary.validRows[0]).toMatchObject({ learnerNumber: 'LRN-0001', firstName: 'Naledi', lastName: 'Dube' });
+    expect(summary.validRows[0]).toMatchObject({
+      learnerNumber: 'LRN-0001',
+      firstName: 'Naledi',
+      lastName: 'Dube',
+    });
   });
 
   it('reports a missing-column error and stops, when the header row is missing a required column', () => {
@@ -66,7 +76,9 @@ describe('parseLearnerImportCsv', () => {
     const summary = parseLearnerImportCsv(csv, new Set(), new Set());
     expect(summary.validRows).toHaveLength(1);
     expect(summary.invalidCount).toBe(1);
-    expect(summary.results[1]!.errors.some((e) => /duplicated elsewhere in this file/.test(e))).toBe(true);
+    expect(
+      summary.results[1]!.errors.some((e) => /duplicated elsewhere in this file/.test(e)),
+    ).toBe(true);
   });
 
   it('processes multiple independent valid rows', () => {
@@ -95,5 +107,58 @@ describe('parseLearnerImportCsv', () => {
     const summary = parseLearnerImportCsv(csv, new Set(), new Set());
     expect(summary.validRows).toHaveLength(2);
     expect(summary.invalidCount).toBe(1);
+  });
+});
+
+describe('parseLearnerImportCsv with guardian columns', () => {
+  const header = [...LEARNER_IMPORT_HEADERS, ...GUARDIAN_IMPORT_HEADERS].join(',');
+
+  it('keeps the guardian for each valid row, lower-cases the email and defaults the relationship', () => {
+    const csv = [
+      header,
+      `${validRow()},Thandi,Dube,Thandi.Dube@Example.com,0821234567,mother`,
+      `${validRow({ learnerNumber: 'LRN-0002', admissionNumber: 'ADM-0002', firstName: 'Sipho' })},Thandi,Dube,thandi.dube@example.com,,`,
+      `${validRow({ learnerNumber: 'LRN-0003', admissionNumber: 'ADM-0003' })},,,,,`,
+    ].join('\n');
+    const summary = parseLearnerImportCsv(csv, new Set(), new Set());
+    expect(summary.invalidCount).toBe(0);
+    expect(summary.validGuardians).toEqual([
+      {
+        firstName: 'Thandi',
+        lastName: 'Dube',
+        email: 'thandi.dube@example.com',
+        phone: '0821234567',
+        relationshipType: 'mother',
+      },
+      {
+        firstName: 'Thandi',
+        lastName: 'Dube',
+        email: 'thandi.dube@example.com',
+        phone: null,
+        relationshipType: 'legal_guardian',
+      },
+      null,
+    ]);
+  });
+
+  it('rejects a row with an incomplete guardian or an unknown relationship', () => {
+    const csv = [header, `${validRow()},Thandi,,not-an-email,,aunt`].join('\n');
+    const summary = parseLearnerImportCsv(csv, new Set(), new Set());
+    expect(summary.validRows).toHaveLength(0);
+    expect(summary.results[0]!.errors).toEqual([
+      'Guardian last name is required when a guardian is given.',
+      'Guardian email must be a valid email address.',
+      'Guardian relationship must be one of: mother, father, legal_guardian, grandparent, sibling, other.',
+    ]);
+  });
+
+  it('still accepts the original learner-only template', () => {
+    const summary = parseLearnerImportCsv(
+      [HEADER_ROW, validRow()].join('\n'),
+      new Set(),
+      new Set(),
+    );
+    expect(summary.validRows).toHaveLength(1);
+    expect(summary.validGuardians).toEqual([null]);
   });
 });
