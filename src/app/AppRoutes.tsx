@@ -55,6 +55,7 @@ const SchoolProfilePage = named(
   'SchoolProfilePage',
 );
 const SchoolsPage = named(() => import('@/features/tenant/pages/SchoolsPage'), 'SchoolsPage');
+const SupportAccessPage = named(() => import('@/features/supportAccess/pages/SupportAccessPage'), 'SupportAccessPage');
 const SchoolOnboardingWizardPage = named(
   () => import('@/features/tenant/pages/SchoolOnboardingWizardPage'),
   'SchoolOnboardingWizardPage',
@@ -361,6 +362,7 @@ export function AppRoutes() {
               <Route element={<RequirePermission permission="tenant.switch" />}>
                 <Route path="/schools" element={<SchoolsPage />} />
                 <Route path="/schools/onboard" element={<SchoolOnboardingWizardPage />} />
+                <Route path="/support-access" element={<SupportAccessPage />} />
               </Route>
 
               {/* User & role administration — gated on profile.manage_any,

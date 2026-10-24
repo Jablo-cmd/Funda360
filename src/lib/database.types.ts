@@ -3131,6 +3131,31 @@ export type DataSubjectRequestRow = {
 /** Tables written only through SECURITY DEFINER RPCs — clients never insert/update them directly. */
 type RpcWrittenTable<Row> = { Row: Row; Insert: never; Update: never };
 
+// 20261024090000_platform_support_access — school-approved, time-limited
+// support access for one platform user (written only through the RPCs).
+export type PlatformSupportScope = 'safeguarding' | 'medical' | 'behaviour' | 'messages';
+export type PlatformSupportGrantStatus = 'pending' | 'approved' | 'declined' | 'revoked';
+
+export type PlatformSupportGrantRow = {
+  id: string;
+  school_id: string;
+  requested_by: string;
+  requested_by_name: string;
+  requested_by_email: string | null;
+  scopes: PlatformSupportScope[];
+  reason: string;
+  duration_hours: number;
+  status: PlatformSupportGrantStatus;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  starts_at: string | null;
+  expires_at: string | null;
+  revoked_by: string | null;
+  revoked_at: string | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -3491,6 +3516,7 @@ export type Database = {
       content_safety_rules: RpcWrittenTable<ContentSafetyRuleRow>;
       content_safety_events: RpcWrittenTable<ContentSafetyEventRow>;
       data_subject_requests: RpcWrittenTable<DataSubjectRequestRow>;
+      platform_support_grants: RpcWrittenTable<PlatformSupportGrantRow>;
 
     };
     Views: Record<string, never>;
@@ -4151,6 +4177,18 @@ export type Database = {
           p_method?: ConsentMethod;
         };
         Returns: ParentalConsentRow;
+      };
+      request_platform_support_access: {
+        Args: { p_school_id: string; p_scopes: PlatformSupportScope[]; p_reason: string; p_duration_hours: number };
+        Returns: PlatformSupportGrantRow;
+      };
+      decide_platform_support_access: {
+        Args: { p_grant_id: string; p_approve: boolean; p_note?: string | null };
+        Returns: PlatformSupportGrantRow;
+      };
+      revoke_platform_support_access: {
+        Args: { p_grant_id: string };
+        Returns: PlatformSupportGrantRow;
       };
       log_learner_record_access: {
         Args: { p_learner_id: string; p_access_type: 'view' | 'export' | 'print'; p_context: string };

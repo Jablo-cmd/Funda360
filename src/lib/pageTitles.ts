@@ -18,6 +18,7 @@ const PAGE_TITLES: Array<[string, PageTitleEntry]> = [
   ['/my-profile', { title: 'My Profile', section: 'Administration' }],
   ['/school/profile', { title: 'School Profile', section: 'Administration' }],
   ['/schools', { title: 'Schools', section: 'Administration' }],
+  ['/support-access', { title: 'Support Access', section: 'Administration' }],
   ['/users', { title: 'Users & Roles', section: 'Administration' }],
   ['/academic/years', { title: 'Academic Years', section: 'Academics' }],
   ['/academic/terms', { title: 'Terms', section: 'Academics' }],

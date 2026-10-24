@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Tabs } from '@/components/ui/Tabs';
@@ -17,8 +18,9 @@ import { AuditTab } from '@/features/compliance/components/center/AuditTab';
 import { SafetyTab } from '@/features/compliance/components/center/SafetyTab';
 import { DisclosuresTab } from '@/features/compliance/components/center/DisclosuresTab';
 import { SettingsTab } from '@/features/compliance/components/center/SettingsTab';
+import { SupportAccessTab } from '@/features/compliance/components/center/SupportAccessTab';
 
-type TabKey = 'overview' | 'requests' | 'consent' | 'audit' | 'safety' | 'disclosures' | 'settings';
+type TabKey = 'overview' | 'requests' | 'consent' | 'audit' | 'safety' | 'disclosures' | 'support' | 'settings';
 
 /**
  * The Trust Center: one place where a school's compliance officers (owner,
@@ -31,7 +33,9 @@ export function ComplianceCenterPage() {
   const { user } = useAuth();
   const school = useCurrentSchool();
   const canManage = hasPermission(user?.role ?? null, 'compliance.manage');
-  const [tab, setTab] = useState<TabKey>('overview');
+  // Support-access notifications link to /compliance#support-access.
+  const { hash } = useLocation();
+  const [tab, setTab] = useState<TabKey>(hash === '#support-access' ? 'support' : 'overview');
   const overview = useAsyncData(
     () => (school ? getComplianceOverview(school.id) : Promise.resolve(null)),
     [school?.id],
@@ -66,6 +70,7 @@ export function ComplianceCenterPage() {
           { key: 'audit', label: 'Audit logs' },
           { key: 'safety', label: `Safe content${badge(open?.content_safety.open_events)}` },
           { key: 'disclosures', label: 'Disclosures' },
+          { key: 'support', label: 'Support access' },
           { key: 'settings', label: 'Settings' },
         ]}
         activeTab={tab}
@@ -93,6 +98,12 @@ export function ComplianceCenterPage() {
             <SafetyTab schoolId={school.id} canManage={canManage} onChanged={overview.reload} />
           )}
           {tab === 'disclosures' && <DisclosuresTab schoolId={school.id} canManage={canManage} />}
+          {tab === 'support' && (
+            <SupportAccessTab
+              schoolId={school.id}
+              canManage={user?.role === 'school_owner' || user?.role === 'principal'}
+            />
+          )}
           {tab === 'settings' && (
             <SettingsTab
               key={overview.data.settings.updated_at}
