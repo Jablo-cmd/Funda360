@@ -1,9 +1,10 @@
+import { toQrDataUri } from '@/features/mfa/utils/qr';
 import { supabase } from '@/lib/supabase';
 import type { Factor, AuthenticatorAssuranceLevels } from '@supabase/supabase-js';
 
 export interface EnrollmentResult {
   factorId: string;
-  /** `data:image/svg+xml;utf-8,<svg>` — ready to drop straight into an <img src>. */
+  /** `data:image/svg+xml;charset=utf-8,<svg>` — ready to drop straight into an <img src>. */
   qrCodeDataUri: string;
   /** Shown alongside the QR code for a user who can't scan it (manual entry into their authenticator app). */
   secret: string;
@@ -64,7 +65,7 @@ async function startEnrollment(): Promise<EnrollmentResult> {
   }
   return {
     factorId: data.id,
-    qrCodeDataUri: `data:image/svg+xml;utf-8,${encodeURIComponent(data.totp.qr_code)}`,
+    qrCodeDataUri: toQrDataUri(data.totp.qr_code),
     secret: data.totp.secret,
   };
 }
