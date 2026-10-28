@@ -30,7 +30,22 @@ async function listFactors(): Promise<Factor[]> {
 
 /** Starts TOTP enrollment. The returned factor is `unverified` until verifyEnrollment() succeeds — listFactors() won't count it as active MFA until then. */
 async function startEnrollment(): Promise<EnrollmentResult> {
-  const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', issuer: 'Funda360' });
+  // An earlier attempt that was never finished (for example the QR code did not load) leaves an unverified factor
+  // behind, and GoTrue refuses to enrol another one with the same friendly name. Clear those first, from a fresh
+  // read of the user, then give this attempt a unique name. Verified factors are never touched.
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  for (const factor of userData.user?.factors ?? []) {
+    if (factor.factor_type === 'totp' && factor.status === 'unverified') {
+      const { error: removeError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      if (removeError) throw removeError;
+    }
+  }
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    issuer: 'Funda360',
+    friendlyName: `Funda360 ${new Date().toISOString()}`,
+  });
   if (error) throw error;
   // enroll()'s return type is a { type: 'totp' } | { type: 'phone' } union
   // even though we only ever request 'totp' — narrow explicitly rather
