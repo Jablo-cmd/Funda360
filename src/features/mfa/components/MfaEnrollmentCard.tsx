@@ -28,7 +28,8 @@ export function MfaEnrollmentCard() {
       setEnrollment(result);
       setCode('');
     } catch (err) {
-      setActionError(getDbErrorMessage(err, 'Failed to start two-factor authentication setup.'));
+      const detail = err instanceof Error && err.message ? ` (${err.message})` : '';
+      setActionError(getDbErrorMessage(err, `Failed to start two-factor authentication setup.${detail}`));
     } finally {
       setIsWorking(false);
     }

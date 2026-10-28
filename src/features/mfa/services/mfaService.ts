@@ -28,32 +28,23 @@ async function listFactors(): Promise<Factor[]> {
   return factors.filter((factor) => factor.factor_type === 'totp' && factor.status === 'verified');
 }
 
-/**
- * Starts TOTP enrollment. The returned factor is `unverified` until
- * verifyEnrollment() succeeds — listFactors() won't count it as active MFA
- * until then.
- *
- * A setup abandoned by a reload or by leaving the page stays behind as an
- * unverified factor, and GoTrue refuses a second factor with the same
- * friendly name (`mfa_factor_name_conflict`). Every enroll used to send no
- * name, so one abandoned attempt blocked every retry (seen in production on
- * 2026-10-24). Leftover unverified TOTP factors are removed first (allowed
- * at aal1), and each attempt gets its own name.
- */
+/** Starts TOTP enrollment. The returned factor is `unverified` until verifyEnrollment() succeeds — listFactors() won't count it as active MFA until then. */
 async function startEnrollment(): Promise<EnrollmentResult> {
-  const { data: existing, error: listError } = await supabase.auth.mfa.listFactors();
-  if (listError) throw listError;
-  for (const factor of existing.all) {
+  // An earlier attempt that was never finished (for example the QR code did not load) leaves an unverified factor
+  // behind, and GoTrue refuses to enrol another one with the same friendly name. Clear those first, from a fresh
+  // read of the user, then give this attempt a unique name. Verified factors are never touched.
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  for (const factor of userData.user?.factors ?? []) {
     if (factor.factor_type === 'totp' && factor.status === 'unverified') {
-      const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
-      if (unenrollError) throw unenrollError;
+      const { error: removeError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      if (removeError) throw removeError;
     }
   }
-
   const { data, error } = await supabase.auth.mfa.enroll({
     factorType: 'totp',
     issuer: 'Funda360',
-    friendlyName: `Authenticator app (${new Date().toISOString()})`,
+    friendlyName: `Funda360 ${new Date().toISOString()}`,
   });
   if (error) throw error;
   // enroll()'s return type is a { type: 'totp' } | { type: 'phone' } union
@@ -72,15 +63,9 @@ async function startEnrollment(): Promise<EnrollmentResult> {
 
 /** Confirms enrollment with the 6-digit code from the user's authenticator app — promotes the session to aal2 on success. */
 async function verifyEnrollment(factorId: string, code: string): Promise<void> {
-  const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
-    factorId,
-  });
+  const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId });
   if (challengeError) throw challengeError;
-  const { error: verifyError } = await supabase.auth.mfa.verify({
-    factorId,
-    challengeId: challenge.id,
-    code,
-  });
+  const { error: verifyError } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code });
   if (verifyError) throw verifyError;
 }
 
@@ -112,10 +97,7 @@ async function challengeAndVerify(factorId: string, code: string): Promise<void>
   if (error) throw error;
 }
 
-async function getAssuranceLevel(): Promise<{
-  currentLevel: AuthenticatorAssuranceLevels | null;
-  nextLevel: AuthenticatorAssuranceLevels | null;
-}> {
+async function getAssuranceLevel(): Promise<{ currentLevel: AuthenticatorAssuranceLevels | null; nextLevel: AuthenticatorAssuranceLevels | null }> {
   const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (error) throw error;
   return { currentLevel: data.currentLevel, nextLevel: data.nextLevel };
