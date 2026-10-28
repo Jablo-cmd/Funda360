@@ -107,7 +107,7 @@ export function MfaEnrollmentCard() {
       ) : enrollment ? (
         <div className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col items-start gap-4 sm:flex-row">
-            <img src={enrollment.qrCodeDataUri} alt="Scan this QR code with your authenticator app" className="h-40 w-40 shrink-0 rounded-md border border-border bg-white p-2" />
+            <img src={enrollment.qrCodeDataUri} alt="Scan this QR code with your authenticator app" onError={() => setActionError('The QR code could not be shown. Enter the code below into your authenticator app instead.')} className="h-40 w-40 shrink-0 rounded-md border border-border bg-white p-2" />
             <div className="flex-1">
               <p className="text-sm text-content-secondary">
                 Scan this QR code with your authenticator app, or enter this code manually:
